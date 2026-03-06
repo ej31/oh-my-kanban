@@ -349,14 +349,28 @@ omk linear cycle list [--team TEAM_ID]   # List team cycles
 omk linear cycle get CYCLE_ID            # Get cycle details
 ```
 
-### omk github (or omk gh) — GitHub Project Management (coming soon)
+### omk github (or omk gh) — GitHub Project Management
+
+GitHub integration uses the [`gh` CLI](https://cli.github.com/) under the hood.
+Run `npx oh-my-kanban` to get guided through installing and authenticating `gh`.
 
 ```bash
-omk github issue list --owner OWNER --repo REPO
-omk github project list --owner OWNER
+# macOS
+brew install gh
+
+# Windows
+winget install --id GitHub.cli
+
+# Linux (Debian/Ubuntu)
+sudo apt install gh
+
+# Authenticate after installation
+gh auth login
 ```
 
-**Coming soon.**
+Once `gh` is installed and authenticated, run `npx oh-my-kanban` again to complete setup.
+
+> GitHub command support (`omk github issue list`, etc.) is coming soon.
 
 ## Output Formats
 
@@ -473,10 +487,10 @@ Output:
 
 | Feature | Implemented | Notes |
 |---------|:-----------:|-------|
-| Issues | ❌ | Coming soon |
-| Projects | ❌ | Coming soon |
+| Issues | ❌ | Coming soon (via `gh` CLI) |
+| Projects | ❌ | Coming soon (via `gh` CLI) |
 
-> GitHub integration is currently a stub. Requires GitHub REST API client integration.
+> GitHub integration is planned via the [`gh` CLI](https://cli.github.com/). Run `npx oh-my-kanban` to get guided through installing and authenticating `gh`.
 
 ### Notion / Jira
 
@@ -585,8 +599,9 @@ jq '.data | sort_by(.priority) | reverse | .[0:5]' report.json
 - [x] **Linear**
   - Provider subgroup: `omk linear` (or `omk ln`)
   - Supported: issues, teams, cycles, projects, states, labels, comments
-- [ ] **GitHub**
+- [ ] **GitHub** (via [`gh` CLI](https://cli.github.com/))
   - Provider subgroup: `omk github` (or `omk gh`)
+  - Run `npx oh-my-kanban` to get guided through `gh` installation and authentication
 - [ ] **Notion**
 - [ ] **Jira**
 

@@ -4,16 +4,22 @@
 import { intro, outro, cancel } from '@clack/prompts';
 import pc from 'picocolors';
 import { printLogo } from './ui/logo.js';
+import { promptLangSelect } from './prompts/lang-select.js';
 import { promptServiceSelect, type ServiceType } from './prompts/service-select.js';
 import { promptPlaneConfig } from './prompts/plane.js';
 import { promptLinearConfig } from './prompts/linear.js';
 import { promptGithubConfig } from './prompts/github.js';
 import { findPython, findPip, checkPythonVersion, installPackage } from './python.js';
 import { writeConfig, type PlaneConfig, type LinearConfig } from './config-writer.js';
+import { t } from './i18n.js';
+import { RestartWizard } from './restart.js';
 
-async function main(): Promise<void> {
-  printLogo();
-  intro(pc.bgCyan(pc.black(' oh-my-kanban 설정 위저드 ')));
+async function runSetup(): Promise<void> {
+  // 0. 언어 선택
+  await promptLangSelect();
+
+  const m = t();
+  intro(pc.bgCyan(pc.black(` ${m.intro} `)));
 
   // 1. 서비스 선택
   const service: ServiceType = await promptServiceSelect();
@@ -43,9 +49,7 @@ async function main(): Promise<void> {
   // 3. Python 환경 확인
   const python = findPython();
   if (!python) {
-    cancel(
-      pc.red('Python을 찾을 수 없습니다. https://www.python.org/downloads/ 에서 Python 3.10 이상을 설치하세요.')
-    );
+    cancel(pc.red(m.pythonNotFound));
     process.exit(1);
   }
 
@@ -58,7 +62,7 @@ async function main(): Promise<void> {
 
   const pip = findPip(python);
   if (!pip) {
-    cancel(pc.red('pip을 찾을 수 없습니다. Python과 pip이 올바르게 설치되어 있는지 확인하세요.'));
+    cancel(pc.red(m.pipNotFound));
     process.exit(1);
   }
 
@@ -74,14 +78,34 @@ async function main(): Promise<void> {
   try {
     await writeConfig(planeConfig, linearConfig);
   } catch (err) {
-    cancel(pc.red(`설정 파일 저장 실패: ${err instanceof Error ? err.message : String(err)}`));
+    cancel(pc.red(`${m.configSaveFailed}${err instanceof Error ? err.message : String(err)}`));
     process.exit(1);
   }
 
-  outro(pc.green('설정이 완료되었습니다! `omk` 명령어로 시작하세요.'));
+  const outroMsg =
+    service === 'plane' ? m.outroPlane : m.outroLinear;
+  outro(pc.green(outroMsg));
+}
+
+async function main(): Promise<void> {
+  printLogo();
+
+  // 처음으로 돌아가기 선택 시 언어 선택부터 재시작하는 루프
+  while (true) {
+    try {
+      await runSetup();
+      break;
+    } catch (err) {
+      if (err instanceof RestartWizard) {
+        // 언어 선택 화면부터 다시 시작
+        continue;
+      }
+      throw err;
+    }
+  }
 }
 
 main().catch((err: unknown) => {
-  console.error(pc.red('예상치 못한 오류가 발생했습니다:'), err);
+  console.error(pc.red(t().unexpectedError), err);
   process.exit(1);
 });
