@@ -77,6 +77,20 @@ export const messages = {
     outroPlane: 'Setup complete!\n  List issues:   omk work-item list\n  Create issue:  omk work-item create\n  List projects: omk project list',
     outroLinear: 'Setup complete!\n  List issues:   omk work-item list\n  Create issue:  omk work-item create',
     outro: 'Setup complete! Run `omk` to get started.',
+
+    // claude code scope
+    claudeScopeTitle: 'Claude Code Integration',
+    claudeScopeNote: 'oh-my-kanban can install hooks and MCP server config into Claude Code.\n\nProject scope is recommended because KANBAN settings differ per project\n— each project has its own workspace, API key, and team.',
+    claudeScopeSelect: 'Where should Claude Code settings (hooks, MCP) be installed?',
+    claudeScopeProject: 'Project scope  (Recommended)',
+    claudeScopeProjectHint: './.claude/settings.json — this project only',
+    claudeScopeUser: 'User scope',
+    claudeScopeUserHint: '~/.claude/settings.json — all projects globally',
+    claudeHooksInstalling: 'Installing hooks...',
+    claudeHooksInstalled: 'Hooks installed',
+    claudeHooksFailed: 'Hook installation failed — run manually: omk hooks install',
+    claudeMcpTitle: 'MCP Server Setup',
+    claudeMcpNote: 'Register oh-my-kanban as an MCP server in Claude Code.\nAdd to {path}:\n\n  {\n    "mcpServers": {\n      "oh-my-kanban": {\n        "command": "omk",\n        "args": ["mcp", "serve"]\n      }\n    }\n  }',
   },
   ko: {
     intro: 'oh-my-kanban 설정 위저드',
@@ -153,6 +167,20 @@ export const messages = {
     outroPlane: '설정이 완료되었습니다!\n  이슈 목록:    omk work-item list\n  이슈 생성:    omk work-item create\n  프로젝트 목록: omk project list',
     outroLinear: '설정이 완료되었습니다!\n  이슈 목록: omk work-item list\n  이슈 생성: omk work-item create',
     outro: '설정이 완료되었습니다! `omk` 명령어로 시작하세요.',
+
+    // claude code scope
+    claudeScopeTitle: 'Claude Code 연동 설정',
+    claudeScopeNote: 'oh-my-kanban이 Claude Code 훅과 MCP 서버 설정을 자동으로 등록할 수 있습니다.\n\nKANBAN은 프로젝트 단위로 설정이 모두 다르므로\n가급적 Project scope을 추천합니다.',
+    claudeScopeSelect: 'Claude Code 설정(훅, MCP)을 어디에 설치하시겠습니까?',
+    claudeScopeProject: 'Project scope  (추천)',
+    claudeScopeProjectHint: './.claude/settings.json — 이 프로젝트에만 적용',
+    claudeScopeUser: 'User scope',
+    claudeScopeUserHint: '~/.claude/settings.json — 모든 프로젝트에 전역 적용',
+    claudeHooksInstalling: '훅 설치 중...',
+    claudeHooksInstalled: '훅 설치 완료',
+    claudeHooksFailed: '훅 설치 실패 — 수동 실행: omk hooks install',
+    claudeMcpTitle: 'MCP 서버 설정',
+    claudeMcpNote: 'oh-my-kanban을 Claude Code MCP 서버로 등록하세요.\n{path} 에 아래 내용을 추가하세요:\n\n  {\n    "mcpServers": {\n      "oh-my-kanban": {\n        "command": "omk",\n        "args": ["mcp", "serve"]\n      }\n    }\n  }',
   },
 };
 

@@ -9,6 +9,7 @@ import { promptServiceSelect, type ServiceType } from './prompts/service-select.
 import { promptPlaneConfig } from './prompts/plane.js';
 import { promptLinearConfig } from './prompts/linear.js';
 import { promptGithubConfig } from './prompts/github.js';
+import { promptClaudeScope } from './prompts/claude-scope.js';
 import { findPython, findPip, checkPythonVersion, installPackage } from './python.js';
 import { writeConfig, type PlaneConfig, type LinearConfig } from './config-writer.js';
 import { t } from './i18n.js';
@@ -81,6 +82,9 @@ async function runSetup(): Promise<void> {
     cancel(pc.red(`${m.configSaveFailed}${err instanceof Error ? err.message : String(err)}`));
     process.exit(1);
   }
+
+  // 6. Claude Code 연동 설정 (scope 선택 + hooks 설치 + MCP 안내)
+  await promptClaudeScope(python);
 
   const outroMsg =
     service === 'plane' ? m.outroPlane : m.outroLinear;
