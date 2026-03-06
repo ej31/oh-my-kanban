@@ -57,9 +57,9 @@ export PLANE_WORKSPACE_SLUG="my-workspace"
 export PLANE_BASE_URL="https://api.plane.so"  # 또는 self-hosted URL
 
 # 환경변수만으로 전체 작업 가능
-omk work-item list -o json
-omk cycle create --name "Sprint 1" --start-date "2024-03-06" --end-date "2024-03-20"
-omk work-item create --name "Fix login bug" --state-id "..." --project "..."
+omk plane work-item list -o json
+omk plane cycle create --name "Sprint 1" --start-date "2024-03-06" --end-date "2024-03-20"
+omk plane work-item create --name "Fix login bug" --state-id "..." --project "..."
 ```
 
 ### 3단계: 사람이 사용 (대화형)
@@ -67,10 +67,10 @@ omk work-item create --name "Fix login bug" --state-id "..." --project "..."
 ```bash
 # 기본 프로필 사용
 omk config show
-omk work-item list
+omk plane work-item list
 
 # 특정 프로필 사용
-omk --profile production work-item list -o table
+omk --profile production plane work-item list -o table
 ```
 
 ## Configuration / 설정
@@ -100,7 +100,7 @@ output = "json"
 사용:
 
 ```bash
-omk --profile production work-item list
+omk --profile production plane work-item list
 ```
 
 ### 환경변수 우선순위
@@ -110,7 +110,7 @@ omk --profile production work-item list
 ```bash
 # 환경변수로 덮어쓰기
 PLANE_API_KEY="pl_xxxxxx" omk config show
-PLANE_WORKSPACE_SLUG="override-ws" omk work-item list
+PLANE_WORKSPACE_SLUG="override-ws" omk plane work-item list
 ```
 
 ### 설정 관리 커맨드
@@ -138,7 +138,7 @@ omk config profile use production
 ### 글로벌 옵션
 
 ```bash
-omk [OPTIONS] COMMAND [ARGS]
+omk [OPTIONS] PROVIDER [PROVIDER_OPTIONS] COMMAND [ARGS]
 ```
 
 | 옵션 | 환경변수 | 설명 |
@@ -149,9 +149,16 @@ omk [OPTIONS] COMMAND [ARGS]
 | `--profile PROFILE` | `PLANE_PROFILE` | 설정 프로필 (기본: `default`) |
 | `--version` | - | 버전 표시 |
 
-### 커맨드 그룹
+### Provider Subgroups
 
-#### config — 설정 관리
+omk는 provider별 서브그룹으로 커맨드를 분리합니다:
+- `omk plane` (또는 `omk pl`) — Plane 프로젝트 관리
+- `omk github` (또는 `omk gh`) — GitHub 프로젝트 관리 (향후 지원)
+- `omk config` — 설정 관리 (provider 독립)
+
+### 커맨드 레퍼런스
+
+#### omk config — 설정 관리 (provider 독립)
 
 ```bash
 omk config init                              # 대화형 초기 설정
@@ -161,86 +168,97 @@ omk config profile list                      # 프로필 목록
 omk config profile use NAME                  # 기본 프로필 변경
 ```
 
-#### work-item — 작업 항목 관리
+#### omk plane (또는 omk pl) — Plane 프로젝트 관리
+
+##### work-item — 작업 항목
 
 ```bash
 # 목록 조회
-omk work-item list [--all] [--per-page N] [--cursor CURSOR] [--priority PRIORITY]
+omk plane work-item list [--all] [--per-page N] [--cursor CURSOR] [--priority PRIORITY]
 
 # 상세 조회
-omk work-item get ITEM_ID_OR_IDENTIFIER
+omk plane work-item get ITEM_ID_OR_IDENTIFIER
 
 # 생성
-omk work-item create --name NAME [--state-id STATE] [--priority PRIORITY] [--description DESC] [--assignees USER1,USER2]
+omk plane work-item create --name NAME [--state-id STATE] [--priority PRIORITY] [--description DESC] [--assignees USER1,USER2]
 
 # 수정
-omk work-item update ITEM_ID [--name NAME] [--state-id STATE] [--priority PRIORITY]
+omk plane work-item update ITEM_ID [--name NAME] [--state-id STATE] [--priority PRIORITY]
 
 # 삭제
-omk work-item delete ITEM_ID [--force]
+omk plane work-item delete ITEM_ID [--force]
 
 # 검색
-omk work-item search QUERY
+omk plane work-item search QUERY
 
 # 관계 설정
-omk work-item relation create ITEM_ID --type TYPE --target TARGET_ITEM_ID
-omk work-item relation list ITEM_ID
-omk work-item relation delete ITEM_ID --target TARGET_ITEM_ID
+omk plane work-item relation create ITEM_ID --type TYPE --target TARGET_ITEM_ID
+omk plane work-item relation list ITEM_ID
+omk plane work-item relation delete ITEM_ID --target TARGET_ITEM_ID
 ```
 
-#### cycle — 반복 주기 관리
+##### cycle — 반복 주기
 
 ```bash
-omk cycle list [--all]
-omk cycle create --name NAME --owned-by USER_ID [--start-date DATE] [--end-date DATE]
-omk cycle get CYCLE_ID
-omk cycle update CYCLE_ID [--name NAME] [--start-date DATE] [--end-date DATE]
-omk cycle delete CYCLE_ID
-omk cycle list-work-items CYCLE_ID
-omk cycle add-work-items CYCLE_ID ITEM1 ITEM2 ...
-omk cycle remove-work-item CYCLE_ID ITEM_ID
+omk plane cycle list [--all]
+omk plane cycle create --name NAME --owned-by USER_ID [--start-date DATE] [--end-date DATE]
+omk plane cycle get CYCLE_ID
+omk plane cycle update CYCLE_ID [--name NAME] [--start-date DATE] [--end-date DATE]
+omk plane cycle delete CYCLE_ID
+omk plane cycle list-work-items CYCLE_ID
+omk plane cycle add-work-items CYCLE_ID ITEM1 ITEM2 ...
+omk plane cycle remove-work-item CYCLE_ID ITEM_ID
 ```
 
-#### module — 모듈 관리
+##### module — 모듈
 
 ```bash
-omk module list [--all]
-omk module create --name NAME [--status STATUS] [--start-date DATE] [--target-date DATE]
-omk module get MODULE_ID
-omk module update MODULE_ID [--name NAME] [--status STATUS]
-omk module delete MODULE_ID
-omk module list-work-items MODULE_ID
-omk module add-work-items MODULE_ID ITEM1 ITEM2 ...
+omk plane module list [--all]
+omk plane module create --name NAME [--status STATUS] [--start-date DATE] [--target-date DATE]
+omk plane module get MODULE_ID
+omk plane module update MODULE_ID [--name NAME] [--status STATUS]
+omk plane module delete MODULE_ID
+omk plane module list-work-items MODULE_ID
+omk plane module add-work-items MODULE_ID ITEM1 ITEM2 ...
 ```
 
-#### Other Commands / 기타 커맨드
+##### 기타 커맨드
 
 ```bash
-omk user list                              # 사용자 목록
-omk project list [--all]                   # 프로젝트 목록
-omk state list                             # 상태(state) 목록
-omk label list [--all]                     # 라벨 목록
-omk label create --name NAME [--color HEX] # 라벨 생성
+omk plane user list                              # 사용자 목록
+omk plane project list [--all]                   # 프로젝트 목록
+omk plane state list                             # 상태(state) 목록
+omk plane label list [--all]                     # 라벨 목록
+omk plane label create --name NAME [--color HEX] # 라벨 생성
 
-omk milestone list                         # 마일스톤 목록
-omk epic list                              # 에픽 목록
-omk page list                              # 페이지 목록
-omk intake list                            # 요청(Intake) 목록
+omk plane milestone list                         # 마일스톤 목록
+omk plane epic list                              # 에픽 목록
+omk plane page list                              # 페이지 목록
+omk plane intake list                            # 요청(Intake) 목록
 
-omk workspace list                         # 워크스페이스 정보
-omk teamspace list                         # 팀스페이스 목록
-omk initiative list                        # 이니셔티브 목록
+omk plane workspace list                         # 워크스페이스 정보
+omk plane teamspace list                         # 팀스페이스 목록
+omk plane initiative list                        # 이니셔티브 목록
 
-omk work-item-type list                    # 작업 항목 타입
-omk work-item-property list --type TYPE_ID # 사용자 정의 속성
+omk plane work-item-type list                    # 작업 항목 타입
+omk plane work-item-property list --type TYPE_ID # 사용자 정의 속성
 ```
+
+#### omk github (또는 omk gh) — GitHub 프로젝트 관리 (향후 지원)
+
+```bash
+omk github issue list --owner OWNER --repo REPO
+omk github project list --owner OWNER
+```
+
+**현재 구현 예정입니다.**
 
 ## Output Formats / 출력 형식
 
 ### Table (기본)
 
 ```bash
-omk work-item list
+omk plane work-item list
 ```
 
 ```
@@ -252,7 +270,7 @@ ID                                    NAME           PRIORITY  STATE      ASSIGN
 ### JSON (에이전트 자동화용)
 
 ```bash
-omk work-item list -o json
+omk plane work-item list -o json
 ```
 
 ```json
@@ -278,7 +296,7 @@ omk work-item list -o json
 ### Plain (스크립트 파싱용)
 
 ```bash
-omk work-item list -o plain
+omk plane work-item list -o plain
 ```
 
 ```
@@ -315,7 +333,7 @@ export PLANE_WORKSPACE_SLUG="my-workspace"
 export PLANE_PROJECT_ID="proj_uuid"
 
 # 1. 반복 생성
-CYCLE_ID=$(omk cycle create \
+CYCLE_ID=$(omk plane cycle create \
   --name "Sprint 1" \
   --owned-by "$USER_ID" \
   --start-date "2024-03-06" \
@@ -325,7 +343,7 @@ CYCLE_ID=$(omk cycle create \
 echo "생성된 반복: $CYCLE_ID"
 
 # 2. 작업 생성
-ITEM_ID=$(omk work-item create \
+ITEM_ID=$(omk plane work-item create \
   --name "Fix critical bug" \
   --priority high \
   --state-id "$STATE_ID" \
@@ -334,10 +352,10 @@ ITEM_ID=$(omk work-item create \
 echo "생성된 작업: $ITEM_ID"
 
 # 3. 반복에 작업 추가
-omk cycle add-work-items "$CYCLE_ID" "$ITEM_ID"
+omk plane cycle add-work-items "$CYCLE_ID" "$ITEM_ID"
 
 # 4. 사용자에게 할당
-omk work-item update "$ITEM_ID" --assignees "$ASSIGNEE_USER_ID"
+omk plane work-item update "$ITEM_ID" --assignees "$ASSIGNEE_USER_ID"
 
 echo "완료!"
 ```
@@ -346,13 +364,13 @@ echo "완료!"
 
 ```bash
 # Production 환경에서 작업 조회
-omk --profile production work-item list
+omk --profile production plane work-item list
 
 # Development 환경에서 작업 생성
-omk --profile development work-item create --name "New feature" --priority medium
+omk --profile development plane work-item create --name "New feature" --priority medium
 
 # 환경별 필터링
-omk --profile staging work-item search "bug" -o json | jq '.data[] | select(.priority=="urgent")'
+omk --profile staging plane work-item search "bug" -o json | jq '.data[] | select(.priority=="urgent")'
 ```
 
 ### 프로젝트 상태 리포트 생성
@@ -363,7 +381,7 @@ omk --profile staging work-item search "bug" -o json | jq '.data[] | select(.pri
 export PLANE_WORKSPACE_SLUG="my-workspace"
 
 # JSON 출력으로 리포트 생성
-omk work-item list --all -o json > report.json
+omk plane work-item list --all -o json > report.json
 
 # 상태별 개수 집계
 jq '[.data[] | .state] | group_by(.) | map({state: .[0], count: length})' report.json
@@ -376,7 +394,11 @@ jq '.data | sort_by(.priority) | reverse | .[0:5]' report.json
 
 - [x] **Plane** (plane.so, self-hosted)
   - Note: Developed against **Community Edition (self-hosted, free tier)**. Enterprise-only features are not implemented.
+  - Provider subgroup: `omk plane` (또는 `omk pl`)
+  - Examples: `omk plane work-item list`, `omk plane cycle create --name "Sprint 1"`, `omk pl work-item search "bug"`
 - [ ] **GitHub**
+  - Provider subgroup: `omk github` (또는 `omk gh`)
+  - Examples: `omk github issue list --owner ej31 --repo my-repo`, `omk github project list --owner ej31`
 - [ ] **Linear**
 - [ ] **Notion**
 - [ ] **Jira**
