@@ -473,7 +473,7 @@ omk plane work-item list -o plain
 | Issues | ❌ | 향후 구현 예정 |
 | Projects | ❌ | 향후 구현 예정 |
 
-> GitHub 통합은 현재 스텁(stub) 상태입니다. GitHub REST API 클라이언트 연동이 필요합니다.
+> GitHub 통합은 [`gh` CLI](https://cli.github.com/) 기반으로 구현 예정입니다. `npx oh-my-kanban`을 실행하면 `gh` 설치 및 인증을 안내합니다.
 
 ### Notion / Jira
 
@@ -585,8 +585,9 @@ jq '.data | sort_by(.priority) | reverse | .[0:5]' report.json
 - [x] **Linear**
   - 프로바이더 서브그룹: `omk linear` (또는 `omk ln`)
   - 지원: 이슈, 팀, 사이클, 프로젝트, 상태, 레이블, 댓글
-- [ ] **GitHub**
+- [ ] **GitHub** ([`gh` CLI](https://cli.github.com/) 기반)
   - 프로바이더 서브그룹: `omk github` (또는 `omk gh`)
+  - `npx oh-my-kanban` 실행 시 `gh` 설치 및 인증을 자동으로 안내합니다
 - [ ] **Notion**
 - [ ] **Jira**
 

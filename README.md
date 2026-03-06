@@ -283,14 +283,28 @@ omk linear cycle get CYCLE_ID
 
 Priority: `0`=none, `1`=urgent, `2`=high, `3`=medium, `4`=low
 
-#### omk github (or omk gh) — GitHub Project Management (coming soon)
+#### omk github (or omk gh) — GitHub Project Management
+
+GitHub integration uses the [`gh` CLI](https://cli.github.com/) under the hood.
+Run `npx oh-my-kanban` to get guided through installing and authenticating `gh`.
 
 ```bash
-omk github issue list --owner OWNER --repo REPO
-omk github project list --owner OWNER
+# macOS
+brew install gh
+
+# Windows
+winget install --id GitHub.cli
+
+# Linux (Debian/Ubuntu)
+sudo apt install gh
+
+# Authenticate after installation
+gh auth login
 ```
 
-**Coming soon.**
+Once `gh` is installed and authenticated, run `npx oh-my-kanban` again to complete setup.
+
+> GitHub command support (`omk github issue list`, etc.) is coming soon.
 
 ## Output Formats / 출력 형식
 
@@ -400,7 +414,7 @@ omk plane work-item list -o plain
 | Issues | ❌ | 향후 구현 예정 |
 | Projects | ❌ | 향후 구현 예정 |
 
-> GitHub 통합은 현재 스텁(stub) 상태입니다. GitHub REST API 클라이언트 연동이 필요합니다.
+> GitHub 통합은 `gh` CLI 기반으로 구현 예정입니다. `npx oh-my-kanban`을 실행하면 `gh` 설치 및 인증을 안내합니다.
 
 ### Notion / Jira
 
@@ -483,8 +497,9 @@ jq '.data | sort_by(.priority) | reverse | .[0:5]' report.json
   - Note: Developed against **Community Edition (self-hosted, free tier)**. Enterprise-only features are not implemented.
   - Provider subgroup: `omk plane` (or `omk pl`)
   - Examples: `omk plane work-item list`, `omk plane cycle create --name "Sprint 1"`, `omk pl work-item search "bug"`
-- [ ] **GitHub**
+- [ ] **GitHub** (via [`gh` CLI](https://cli.github.com/))
   - Provider subgroup: `omk github` (or `omk gh`)
+  - Run `npx oh-my-kanban` to get guided through `gh` installation and authentication
   - Examples: `omk github issue list --owner ej31 --repo my-repo`, `omk github project list --owner ej31`
 - [x] **Linear**
   - Provider subgroup: `omk linear` (or `omk ln`)

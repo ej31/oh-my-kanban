@@ -1,14 +1,16 @@
 import { select, isCancel } from '@clack/prompts';
+import { t } from '../i18n.js';
 
 export type ServiceType = 'plane' | 'linear' | 'github';
 
 export async function promptServiceSelect(): Promise<ServiceType> {
+  const m = t();
   const service = await select<ServiceType>({
-    message: '사용할 프로젝트 관리 서비스를 선택하세요',
+    message: m.selectService,
     options: [
-      { value: 'plane', label: 'Plane', hint: '오픈소스 프로젝트 관리' },
-      { value: 'linear', label: 'Linear', hint: 'SaaS 프로젝트 관리' },
-      { value: 'github', label: 'GitHub', hint: 'GitHub Issues / Projects' },
+      { value: 'plane', label: 'Plane', hint: m.planeHint },
+      { value: 'linear', label: 'Linear', hint: m.linearHint },
+      { value: 'github', label: 'GitHub', hint: m.githubHint },
     ],
   });
 

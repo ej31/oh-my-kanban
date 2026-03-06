@@ -1,5 +1,6 @@
 import { confirm, text, password, isCancel } from '@clack/prompts';
 import pc from 'picocolors';
+import { t } from '../i18n.js';
 
 export interface PlaneConfig {
   baseUrl: string;
@@ -27,26 +28,26 @@ export function extractWorkspaceSlug(input: string): string {
 }
 
 export async function promptPlaneConfig(): Promise<PlaneConfig> {
-  // self-hosted 여부 확인
+  const m = t();
+
   const isSelfHosted = await confirm({
-    message: 'Plane을 직접 호스팅(self-hosted)하고 있나요?',
+    message: m.isSelfHosted,
   });
 
   if (isCancel(isSelfHosted)) {
     process.exit(0);
   }
 
-  // 서버 URL
   const baseUrl = await text({
-    message: 'Plane 서버 URL을 입력하세요',
+    message: m.planeServerUrl,
     defaultValue: 'https://api.plane.so',
     placeholder: 'https://api.plane.so',
     validate(value) {
-      if (!value.trim()) return 'URL을 입력해주세요';
+      if (!value.trim()) return m.planeUrlRequired;
       try {
         new URL(value);
       } catch {
-        return '올바른 URL 형식이 아닙니다';
+        return m.planeUrlInvalid;
       }
     },
   });
@@ -55,11 +56,10 @@ export async function promptPlaneConfig(): Promise<PlaneConfig> {
     process.exit(0);
   }
 
-  // API 키 (마스킹)
   const apiKey = await password({
-    message: 'Plane API 키를 입력하세요',
+    message: m.planeApiKey,
     validate(value) {
-      if (!value.trim()) return 'API 키를 입력해주세요';
+      if (!value.trim()) return m.planeApiKeyRequired;
     },
   });
 
@@ -67,12 +67,11 @@ export async function promptPlaneConfig(): Promise<PlaneConfig> {
     process.exit(0);
   }
 
-  // workspace slug (URL 또는 slug 직접 입력)
   const workspaceInput = await text({
-    message: 'Workspace URL 또는 slug를 입력하세요',
-    placeholder: 'https://app.plane.so/my-workspace/projects/... 또는 my-workspace',
+    message: m.planeWorkspace,
+    placeholder: m.planeWorkspacePlaceholder,
     validate(value) {
-      if (!value.trim()) return 'Workspace 정보를 입력해주세요';
+      if (!value.trim()) return m.planeWorkspaceRequired;
     },
   });
 

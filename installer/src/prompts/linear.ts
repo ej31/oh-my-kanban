@@ -1,4 +1,5 @@
 import { password, text, isCancel } from '@clack/prompts';
+import { t } from '../i18n.js';
 
 export interface LinearConfig {
   apiKey: string;
@@ -6,11 +7,12 @@ export interface LinearConfig {
 }
 
 export async function promptLinearConfig(): Promise<LinearConfig> {
-  // API 키 (마스킹)
+  const m = t();
+
   const apiKey = await password({
-    message: 'Linear API 키를 입력하세요',
+    message: m.linearApiKey,
     validate(value) {
-      if (!value.trim()) return 'API 키를 입력해주세요';
+      if (!value.trim()) return m.linearApiKeyRequired;
     },
   });
 
@@ -18,12 +20,11 @@ export async function promptLinearConfig(): Promise<LinearConfig> {
     process.exit(0);
   }
 
-  // Team ID
   const teamId = await text({
-    message: 'Linear Team ID를 입력하세요',
-    placeholder: 'team_xxxxxxxx',
+    message: m.linearTeamId,
+    placeholder: m.linearTeamIdPlaceholder,
     validate(value) {
-      if (!value.trim()) return 'Team ID를 입력해주세요';
+      if (!value.trim()) return m.linearTeamIdRequired;
     },
   });
 
