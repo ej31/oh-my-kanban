@@ -56,7 +56,8 @@ Follow the format: `type(scope): description`
 Types: `feat`, `fix`, `docs`, `refactor`, `style`, `perf`, `test`, `chore`
 
 Example:
-```
+
+```text
 feat(cycle): add archive command
 fix(auth): handle missing API key gracefully
 ```
