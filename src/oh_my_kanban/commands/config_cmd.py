@@ -12,6 +12,9 @@ from oh_my_kanban.config import CONFIG_FILE, list_profiles, load_config, save_co
 # plane.so 클라우드 API URL
 _CLOUD_API_URL = "https://api.plane.so"
 
+# config set 명령에서 허용하는 키 목록
+_ALLOWED_KEYS = {"base_url", "api_key", "workspace_slug", "project_id", "output"}
+
 
 def _extract_slug_from_url(url: str) -> str:
     """URL에서 워크스페이스 슬러그를 추출한다.
@@ -205,10 +208,9 @@ def config_set(key: str, value: str, profile: str) -> None:
     사용 가능한 키:
       base_url, api_key, workspace_slug, project_id, output
     """
-    허용_키 = {"base_url", "api_key", "workspace_slug", "project_id", "output"}
-    if key not in 허용_키:
+    if key not in _ALLOWED_KEYS:
         raise click.UsageError(
-            f"알 수 없는 키: '{key}'\n허용 키: {', '.join(sorted(허용_키))}"
+            f"알 수 없는 키: '{key}'\n허용 키: {', '.join(sorted(_ALLOWED_KEYS))}"
         )
 
     if key == "output" and value not in ("json", "table", "plain"):

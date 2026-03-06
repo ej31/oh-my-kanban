@@ -93,7 +93,9 @@ def cycle_create(
 
     # 현재 사용자 ID를 owned_by로 사용
     me = ctx.client.users.get_me()
-    owned_by = me.id if me.id else ""
+    if not me.id:
+        raise click.UsageError("현재 사용자 ID를 가져올 수 없습니다.")
+    owned_by = me.id
 
     data = CreateCycle(
         name=name,
@@ -149,8 +151,7 @@ def cycle_delete(ctx: CliContext, cycle_id: str) -> None:
     ws = ctx.workspace
 
     if not confirm_delete("사이클", cycle_id):
-        click.echo("삭제를 취소했습니다.", err=True)
-        return
+        raise click.Abort()
 
     ctx.client.cycles.delete(ws, project_id, cycle_id)
     click.echo(f"사이클 '{cycle_id}'을(를) 삭제했습니다.")
