@@ -44,8 +44,10 @@ an individual is officially representing the community in public spaces.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported by opening a [GitHub issue](https://github.com/ej31/oh-my-kanban/issues)
-or contacting the maintainers directly via GitHub.
+reported privately by opening a
+[GitHub Security Advisory](https://github.com/ej31/oh-my-kanban/security/advisories/new)
+or contacting the maintainers directly via private GitHub message.
+Do **not** use public GitHub issues for reporting sensitive conduct incidents.
 
 All complaints will be reviewed and investigated promptly and fairly.
 
