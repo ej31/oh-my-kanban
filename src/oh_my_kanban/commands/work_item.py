@@ -46,6 +46,24 @@ _RELATION_TYPE_CHOICES = click.Choice(
     ]
 )
 
+# Plane Cloud API URL (Enterprise Edition이 기본 제공됨)
+_PLANE_CLOUD_API_URL = "https://api.plane.so"
+
+
+def _require_enterprise(ctx: CliContext, feature: str) -> None:
+    """Enterprise Edition 전용 기능 사용 전 서버 에디션을 사전 검증한다.
+
+    Plane Cloud(api.plane.so)는 기본적으로 Enterprise이므로 통과한다.
+    Self-hosted Community Edition 환경에서는 UsageError를 발생시킨다.
+    """
+    if ctx._base_url.rstrip("/").startswith(_PLANE_CLOUD_API_URL):
+        return  # Cloud는 Enterprise 기본 제공
+    raise click.UsageError(
+        f"'{feature}' 기능은 Plane Enterprise Edition 이상에서만 사용 가능합니다.\n"
+        f"현재 서버: {ctx._base_url}\n"
+        "Plane Cloud(https://api.plane.so) 또는 Enterprise Edition을 사용하세요."
+    )
+
 
 def _validate_date(ctx: click.Context, param: click.Parameter, value: str | None) -> str | None:
     """날짜 형식(YYYY-MM-DD)을 CLI 경계에서 검증한다.
@@ -483,6 +501,7 @@ def relation_list(ctx: CliContext, work_item_id: str) -> None:
 
     blocking, blocked_by, duplicate, relates_to 등 유형별로 출력한다.
     """
+    _require_enterprise(ctx, "work-item relation")
     project_id = ctx.require_project()
     result = ctx.client.work_items.relations.list(ctx.workspace, project_id, work_item_id)
 
@@ -526,6 +545,7 @@ def relation_create(
     ctx: CliContext, work_item_id: str, related_work_item: str, relation_type: str
 ) -> None:
     """작업 항목 간 관계를 생성한다."""
+    _require_enterprise(ctx, "work-item relation")
     from plane.models.work_items import CreateWorkItemRelation
 
     project_id = ctx.require_project()
@@ -541,6 +561,7 @@ def relation_create(
 @handle_api_error
 def relation_delete(ctx: CliContext, work_item_id: str, related_work_item: str) -> None:
     """작업 항목 관계를 제거한다."""
+    _require_enterprise(ctx, "work-item relation")
     from plane.models.work_items import RemoveWorkItemRelation
 
     project_id = ctx.require_project()
@@ -691,6 +712,7 @@ def worklog() -> None:
 @handle_api_error
 def worklog_list(ctx: CliContext, work_item_id: str) -> None:
     """작업 항목의 작업 로그 목록을 조회한다."""
+    _require_enterprise(ctx, "work-item worklog")
     project_id = ctx.require_project()
     results = ctx.client.work_items.work_logs.list(ctx.workspace, project_id, work_item_id)
     format_output(
@@ -713,6 +735,7 @@ def worklog_create(
     description: str | None,
 ) -> None:
     """작업 로그를 기록한다."""
+    _require_enterprise(ctx, "work-item worklog")
     from plane.models.work_items import CreateWorkItemWorkLog
 
     project_id = ctx.require_project()
@@ -738,6 +761,7 @@ def worklog_update(
     description: str | None,
 ) -> None:
     """작업 로그를 수정한다."""
+    _require_enterprise(ctx, "work-item worklog")
     from plane.models.work_items import UpdateWorkItemWorkLog
 
     project_id = ctx.require_project()
@@ -755,6 +779,7 @@ def worklog_update(
 @handle_api_error
 def worklog_delete(ctx: CliContext, work_item_id: str, worklog_id: str) -> None:
     """작업 로그를 삭제한다."""
+    _require_enterprise(ctx, "work-item worklog")
     project_id = ctx.require_project()
 
     if not confirm_delete("작업 로그", worklog_id):
