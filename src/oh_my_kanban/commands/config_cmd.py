@@ -204,6 +204,19 @@ def config_show(profile: str) -> None:
     click.echo("환경변수로 덮어쓰기 가능:")
     click.echo("  PLANE_BASE_URL, PLANE_API_KEY, PLANE_WORKSPACE_SLUG, PLANE_PROJECT_ID")
 
+    # Linear 설정 섹션
+    click.echo()
+    click.echo("--- Linear ---")
+    linear_key = cfg.linear_api_key
+    if linear_key and len(linear_key) > 8:
+        masked_linear_key = linear_key[:8] + "***"
+    elif linear_key:
+        masked_linear_key = "****"
+    else:
+        masked_linear_key = "(미설정)"
+    click.echo(f"linear_api_key  : {masked_linear_key}")
+    click.echo(f"linear_team_id  : {cfg.linear_team_id or '(미설정)'}")
+
 
 @config.command("set")
 @click.argument("key")
