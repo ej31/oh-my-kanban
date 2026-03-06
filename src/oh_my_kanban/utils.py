@@ -1,0 +1,62 @@
+"""공통 헬퍼: 페이지네이션, 식별자 파싱 등."""
+
+from __future__ import annotations
+
+import re
+from typing import Any, Callable
+
+
+def fetch_all_pages(
+    fetcher: Callable[..., Any],
+    *args: Any,
+    per_page: int = 100,
+    **kwargs: Any,
+) -> list[Any]:
+    """모든 페이지를 순회하며 results를 합쳐 반환한다."""
+    all_results: list[Any] = []
+    cursor: str | None = None
+
+    while True:
+        response = fetcher(*args, cursor=cursor, per_page=per_page, **kwargs)
+        results = getattr(response, "results", [])
+        all_results.extend(results)
+
+        if not getattr(response, "next_page_results", False):
+            break
+        cursor = getattr(response, "next_cursor", None)
+        if not cursor:
+            break
+
+    return all_results
+
+
+# PROJECT-123 형식 패턴 (대문자 식별자 + 숫자)
+_IDENTIFIER_PATTERN = re.compile(r"^([A-Z][A-Z0-9_]*)-(\d+)$")
+
+
+def parse_work_item_ref(ref: str) -> tuple[str, int] | None:
+    """
+    'PROJECT-123' 형식을 (project_identifier, issue_number)로 파싱한다.
+    일치하지 않으면 None 반환 (UUID로 처리).
+    """
+    m = _IDENTIFIER_PATTERN.match(ref.upper())
+    if m:
+        return m.group(1), int(m.group(2))
+    return None
+
+
+def confirm_delete(resource_type: str, resource_id: str) -> bool:
+    """삭제 전 사용자 확인을 요청한다."""
+    import click
+
+    return click.confirm(f"{resource_type} '{resource_id}'를 삭제하시겠습니까?")
+
+
+def truncate(text: str | None, max_len: int = 60) -> str:
+    """긴 텍스트를 잘라 표시한다."""
+    if not text:
+        return ""
+    text = str(text)
+    if len(text) > max_len:
+        return text[: max_len - 3] + "..."
+    return text

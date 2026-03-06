@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "oh-my-kanban"
+version = "0.1.0"
+description = "멀티 플랫폼 프로젝트 관리 CLI (Plane, Linear, GitHub, GitLab, Jira)"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "plane-sdk>=0.2.6",
+    "click>=8.0",
+    "rich>=13.0",
+    "tomli>=2.0; python_version < '3.11'",
+]
+
+[project.scripts]
+omk = "oh_my_kanban.cli:cli"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["oh_my_kanban*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
