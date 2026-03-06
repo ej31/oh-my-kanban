@@ -19,9 +19,9 @@ _ALLOWED_KEYS = {f for f in Config.__dataclass_fields__ if f != "profile"}
 def _save_config_safe(data: dict, profile: str = "default") -> None:
     """save_config 호출 실패를 Click 친화적 UsageError로 변환한다."""
     try:
-        _save_config_safe(data, profile=profile)
+        save_config(data, profile=profile)
     except (OSError, ValueError) as e:
-        raise click.UsageError(str(e))
+        raise click.UsageError(str(e)) from e
 
 
 def _extract_slug_from_url(url: str) -> str:

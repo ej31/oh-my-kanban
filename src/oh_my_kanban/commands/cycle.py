@@ -30,7 +30,7 @@ def cycle() -> None:
 def cycle_list(ctx: CliContext, per_page: int, fetch_all: bool) -> None:
     """사이클 목록을 조회한다."""
     project_id = ctx.require_project()
-    ws = ctx.workspace
+    ws = ctx.require_workspace()
 
     if fetch_all:
         results = fetch_all_pages(
@@ -52,7 +52,7 @@ def cycle_list(ctx: CliContext, per_page: int, fetch_all: bool) -> None:
 def cycle_archived(ctx: CliContext) -> None:
     """아카이브된 사이클 목록을 조회한다."""
     project_id = ctx.require_project()
-    ws = ctx.workspace
+    ws = ctx.require_workspace()
 
     response = ctx.client.cycles.list_archived(ws, project_id)
     format_output(response.results, ctx.output, columns=_CYCLE_COLUMNS)
@@ -65,7 +65,7 @@ def cycle_archived(ctx: CliContext) -> None:
 def cycle_get(ctx: CliContext, cycle_id: str) -> None:
     """사이클 상세 정보를 조회한다."""
     project_id = ctx.require_project()
-    ws = ctx.workspace
+    ws = ctx.require_workspace()
 
     result = ctx.client.cycles.retrieve(ws, project_id, cycle_id)
     format_output(result, ctx.output)
@@ -89,7 +89,7 @@ def cycle_create(
     from plane.models.cycles import CreateCycle
 
     project_id = ctx.require_project()
-    ws = ctx.workspace
+    ws = ctx.require_workspace()
 
     # 현재 사용자 ID를 owned_by로 사용
     me = ctx.client.users.get_me()
@@ -129,7 +129,7 @@ def cycle_update(
     from plane.models.cycles import UpdateCycle
 
     project_id = ctx.require_project()
-    ws = ctx.workspace
+    ws = ctx.require_workspace()
 
     data = UpdateCycle(
         name=name,
@@ -148,7 +148,7 @@ def cycle_update(
 def cycle_delete(ctx: CliContext, cycle_id: str) -> None:
     """사이클을 삭제한다."""
     project_id = ctx.require_project()
-    ws = ctx.workspace
+    ws = ctx.require_workspace()
 
     if not confirm_delete("사이클", cycle_id):
         raise click.Abort()
@@ -164,7 +164,7 @@ def cycle_delete(ctx: CliContext, cycle_id: str) -> None:
 def cycle_archive(ctx: CliContext, cycle_id: str) -> None:
     """사이클을 아카이브한다."""
     project_id = ctx.require_project()
-    ws = ctx.workspace
+    ws = ctx.require_workspace()
 
     ctx.client.cycles.archive(ws, project_id, cycle_id)
     click.echo(f"사이클 '{cycle_id}'을(를) 아카이브했습니다.")
@@ -177,7 +177,7 @@ def cycle_archive(ctx: CliContext, cycle_id: str) -> None:
 def cycle_unarchive(ctx: CliContext, cycle_id: str) -> None:
     """사이클 아카이브를 해제한다."""
     project_id = ctx.require_project()
-    ws = ctx.workspace
+    ws = ctx.require_workspace()
 
     ctx.client.cycles.unarchive(ws, project_id, cycle_id)
     click.echo(f"사이클 '{cycle_id}'의 아카이브를 해제했습니다.")
@@ -192,7 +192,7 @@ def cycle_unarchive(ctx: CliContext, cycle_id: str) -> None:
 def cycle_items(ctx: CliContext, cycle_id: str, per_page: int, fetch_all: bool) -> None:
     """사이클에 포함된 워크 아이템 목록을 조회한다."""
     project_id = ctx.require_project()
-    ws = ctx.workspace
+    ws = ctx.require_workspace()
 
     if fetch_all:
         results = fetch_all_pages(
@@ -224,7 +224,7 @@ def cycle_items(ctx: CliContext, cycle_id: str, per_page: int, fetch_all: bool) 
 def cycle_add_items(ctx: CliContext, cycle_id: str, items: tuple[str, ...]) -> None:
     """사이클에 워크 아이템을 추가한다."""
     project_id = ctx.require_project()
-    ws = ctx.workspace
+    ws = ctx.require_workspace()
 
     ctx.client.cycles.add_work_items(ws, project_id, cycle_id, issue_ids=list(items))
     click.echo(f"워크 아이템 {len(items)}개를 사이클 '{cycle_id}'에 추가했습니다.")
@@ -238,7 +238,7 @@ def cycle_add_items(ctx: CliContext, cycle_id: str, items: tuple[str, ...]) -> N
 def cycle_remove_item(ctx: CliContext, cycle_id: str, work_item_id: str) -> None:
     """사이클에서 워크 아이템을 제거한다."""
     project_id = ctx.require_project()
-    ws = ctx.workspace
+    ws = ctx.require_workspace()
 
     ctx.client.cycles.remove_work_item(ws, project_id, cycle_id, work_item_id)
     click.echo(f"워크 아이템 '{work_item_id}'을(를) 사이클 '{cycle_id}'에서 제거했습니다.")
@@ -254,7 +254,7 @@ def cycle_transfer(ctx: CliContext, cycle_id: str, target: str) -> None:
     from plane.models.cycles import TransferCycleWorkItemsRequest
 
     project_id = ctx.require_project()
-    ws = ctx.workspace
+    ws = ctx.require_workspace()
 
     data = TransferCycleWorkItemsRequest(new_cycle_id=target)
     ctx.client.cycles.transfer_work_items(ws, project_id, cycle_id, data=data)

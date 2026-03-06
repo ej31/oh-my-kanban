@@ -255,7 +255,7 @@ omk github issue list --owner OWNER --repo REPO
 omk github project list --owner OWNER
 ```
 
-**현재 구현 예정입니다.**
+**Coming soon.**
 
 ## Output Formats / 출력 형식
 
