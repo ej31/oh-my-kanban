@@ -238,7 +238,9 @@ omk plane label create --name NAME [--color HEX] # Create label
 
 omk plane milestone list                         # List milestones
 omk plane epic list                              # List epics (list/get only)
+omk plane epic get EPIC_ID                       # Get epic details
 omk plane page get PAGE_ID                       # Get page (get/create only)
+omk plane page create --name NAME [--workspace]  # Create page (project or workspace scope)
 omk plane intake list                            # List intake requests
 
 omk plane workspace members                      # List workspace members
@@ -345,69 +347,73 @@ omk plane work-item list -o plain
 
 ## Server Compatibility
 
-> 개발 기준: **Plane Community Edition (무료 자가호스팅)**
-> 무료 플랜에서 제공하는 기능을 우선 구현합니다. 유료/Enterprise 전용 기능은 구현 범위에 포함되지 않습니다.
+> Development target: **Plane Community Edition (free, self-hosted)**
+> Free-tier features are implemented first. Enterprise-only features are out of scope.
 
 ### Plane
 
-| 기능 | 구현 | plane.so | Self-hosted CE | 비고 |
-|------|:----:|:--------:|:--------------:|------|
-| Work Items (CRUD) | ✅ | ✅ | ✅ | 댓글·링크·관계·활동·첨부파일·작업로그 포함 |
-| Cycles (CRUD) | ✅ | ✅ | ✅ | 아이템 추가·제거 포함 |
-| Modules (CRUD) | ✅ | ✅ | ✅ | 아이템 추가 포함 |
-| Milestones (CRUD) | ✅ | ✅ | ✅ | 아이템 추가·제거 포함 |
-| Intake (CRUD) | ✅ | ✅ | ✅ | 상태 승인·거부 포함 |
-| Initiatives (CRUD) | ✅ | ✅ | ✅ | 에픽·레이블·프로젝트 연결 포함 |
-| Teamspaces (CRUD) | ✅ | ✅ | ✅ | 멤버·프로젝트 관리 포함 |
+| Feature | Implemented | plane.so | Self-hosted CE | Notes |
+|---------|:-----------:|:--------:|:--------------:|-------|
+| Work Items (CRUD) | ✅ | ✅ | ✅ | Comments, links, activities, attachments included |
+| Work Item Relations | ✅ | ✅ | ❌ | plane.so & Enterprise only; not available on CE |
+| Work Item Worklogs | ✅ | ✅ | ❌ | plane.so & Enterprise only; not available on CE |
+| Cycles (CRUD) | ✅ | ✅ | ✅ | Includes item add/remove |
+| Modules (CRUD) | ✅ | ✅ | ✅ | Includes item add |
+| Milestones (CRUD) | ✅ | ✅ | ✅ | Includes item add/remove |
+| Intake (CRUD) | ✅ | ✅ | ✅ | Includes approve/reject |
+| Initiatives (CRUD) | ✅ | ✅ | ✅ | Includes epics, labels, projects |
+| Teamspaces (CRUD) | ✅ | ✅ | ✅ | Includes members, projects |
 | Stickies (CRUD) | ✅ | ✅ | ✅ | - |
 | Work Item Types (CRUD) | ✅ | ✅ | ✅ | - |
-| Custom Properties (CRUD) | ✅ | ✅ | ✅ | 옵션·값 관리 포함 |
+| Custom Properties (CRUD) | ✅ | ✅ | ✅ | Includes options and values |
 | Users / Members | ✅ | ✅ | ✅ | me, workspace members |
-| Pages | ⚠️ | ✅ | ✅ | get·create만 구현 |
-| Epics | ⚠️ | ✅ | ✅ | list·get만 구현 |
-| States | ⚠️ | ✅ | ✅ | list만 구현 |
-| Labels | ⚠️ | ✅ | ✅ | list·create만 구현 |
-| Projects | ⚠️ | ✅ | ✅ | list만 구현 |
-| Workspace Features | ⚠️ | ✅ | ✅ | list만 구현 (read-only) |
-| Customers (CRUD) | ✅ | ✅ | ❌ | Enterprise 전용 (CE 미지원) |
+| Project Pages | ⚠️ | ✅ | ✅ | get and create only |
+| Workspace Pages | ⚠️ | ✅ | ❌ | Enterprise only on self-hosted CE |
+| Epics | ⚠️ | ✅ | ✅ | list and get only |
+| States | ⚠️ | ✅ | ✅ | list only |
+| Labels | ⚠️ | ✅ | ✅ | list and create only |
+| Projects | ⚠️ | ✅ | ✅ | list only |
+| Workspace Features | ⚠️ | ✅ | ✅ | list only (read-only) |
+| Customers (CRUD) | ✅ | ✅ | ❌ | Enterprise only (not available on CE) |
 
-#### 부분 구현 사유
+#### Partial Implementation Reasons
 
-| 기능 | 미구현 범위 | 사유 |
-|------|------------|------|
-| Pages | list·update·delete | Plane Python SDK가 해당 엔드포인트를 미지원 |
-| Epics | create·update·delete | Epic은 Work Item Type의 특수 케이스. Plane API의 Epic CRUD가 CE에서 제한적으로 제공되어 조회만 지원 |
-| States | create·update·delete | 프로젝트 설정 리소스로, 자동화 파이프라인에서 직접 생성·삭제 수요가 낮아 list 우선 구현 |
-| Labels | get·update·delete | 자동화 파이프라인에서 레이블 수정·삭제 수요가 낮아 후순위 |
-| Projects | create·update·delete | 관리자 작업으로 CLI 자동화 범위 밖으로 판단 |
+| Feature | Missing | Reason |
+|---------|---------|--------|
+| Project Pages | list, update, delete | Not supported by the Plane Python SDK |
+| Workspace Pages | list, update, delete | Not supported by the Plane Python SDK; Enterprise only on CE |
+| Epics | create, update, delete | Epic is a special case of Work Item Type; Epic CRUD API is limited in CE |
+| States | create, update, delete | System resource managed in project settings; low automation demand for mutations |
+| Labels | get, update, delete | Low automation demand for label mutations |
+| Projects | create, update, delete | Admin-level operation; considered out of scope for CLI automation |
 
 ### Linear
 
-| 기능 | 구현 | 비고 |
-|------|:----:|------|
-| Issues (CRUD) | ✅ | 댓글 포함 |
-| Teams | ✅ | list·get |
+| Feature | Implemented | Notes |
+|---------|:-----------:|-------|
+| Issues (CRUD) | ✅ | Includes comments |
+| Teams | ✅ | list, get |
 | States | ✅ | list |
-| Labels | ✅ | list·get |
-| Projects | ✅ | list·get |
-| Cycles | ✅ | list·get |
+| Labels | ✅ | list, get |
+| Projects | ✅ | list, get |
+| Cycles | ✅ | list, get |
 | Users | ✅ | me |
 
 ### GitHub
 
-| 기능 | 구현 | 비고 |
-|------|:----:|------|
-| Issues | ❌ | 향후 구현 예정 |
-| Projects | ❌ | 향후 구현 예정 |
+| Feature | Implemented | Notes |
+|---------|:-----------:|-------|
+| Issues | ❌ | Coming soon |
+| Projects | ❌ | Coming soon |
 
-> GitHub 통합은 현재 스텁(stub) 상태입니다. GitHub REST API 클라이언트 연동이 필요합니다.
+> GitHub integration is currently a stub. Requires GitHub REST API client integration.
 
 ### Notion / Jira
 
-| 기능 | 구현 | 비고 |
-|------|:----:|------|
-| Notion | ❌ | 미착수 |
-| Jira | ❌ | 미착수 |
+| Feature | Implemented | Notes |
+|---------|:-----------:|-------|
+| Notion | ❌ | Not started |
+| Jira | ❌ | Not started |
 
 ## Examples
 
@@ -457,7 +463,7 @@ omk --profile production plane work-item list
 omk --profile development plane work-item create --name "New feature" --priority medium
 
 # Filter by environment
-omk --profile staging plane work-item search "bug" -o json | jq '.data[] | select(.priority=="urgent")'
+omk --profile staging plane work-item search --query "bug" -o json | jq '.data[] | select(.priority=="urgent")'
 ```
 
 ### Example 3: Generate Project Status Report
@@ -482,7 +488,7 @@ jq '.data | sort_by(.priority) | reverse | .[0:5]' report.json
 - [x] **Plane** (plane.so, self-hosted)
   - Note: Developed against **Community Edition (self-hosted, free tier)**. Enterprise-only features are not implemented.
   - Provider subgroup: `omk plane` (or `omk pl`)
-  - Examples: `omk plane work-item list`, `omk plane cycle create --name "Sprint 1"`, `omk pl work-item search "bug"`
+  - Examples: `omk plane work-item list`, `omk plane cycle create --name "Sprint 1"`, `omk pl work-item search --query "bug"`
 - [ ] **GitHub**
   - Provider subgroup: `omk github` (or `omk gh`)
   - Examples: `omk github issue list --owner ej31 --repo my-repo`, `omk github project list --owner ej31`
