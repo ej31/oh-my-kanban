@@ -273,7 +273,9 @@ omk plane label create --name NAME [--color HEX]   # Create label
 
 omk plane milestone list                           # List milestones
 omk plane epic list                                # List epics (list/get only)
+omk plane epic get EPIC_ID                         # Get epic details
 omk plane page get PAGE_ID                         # Get page (get/create only)
+omk plane page create --name NAME [--workspace]    # Create page (project or workspace scope)
 omk plane intake list                              # List intake requests
 
 omk plane workspace members                        # List workspace members
@@ -436,7 +438,9 @@ Output:
 
 | Feature | Implemented | plane.so | Self-hosted CE | Notes |
 |---------|:-----------:|:--------:|:--------------:|-------|
-| Work Items (CRUD) | ✅ | ✅ | ✅ | Includes comments, links, relations, activities, attachments, worklogs |
+| Work Items (CRUD) | ✅ | ✅ | ✅ | Includes comments, links, activities, attachments |
+| Work Item Relations | ✅ | ✅ | ❌ | plane.so & Enterprise only; not available on CE |
+| Work Item Worklogs | ✅ | ✅ | ❌ | plane.so & Enterprise only; not available on CE |
 | Cycles (CRUD) | ✅ | ✅ | ✅ | Includes item add/remove |
 | Modules (CRUD) | ✅ | ✅ | ✅ | Includes item add |
 | Milestones (CRUD) | ✅ | ✅ | ✅ | Includes item add/remove |
@@ -447,7 +451,8 @@ Output:
 | Work Item Types (CRUD) | ✅ | ✅ | ✅ | - |
 | Custom Properties (CRUD) | ✅ | ✅ | ✅ | Includes options and values |
 | Users / Members | ✅ | ✅ | ✅ | me, workspace members |
-| Pages | ⚠️ | ✅ | ✅ | get and create only |
+| Project Pages | ⚠️ | ✅ | ✅ | get and create only |
+| Workspace Pages | ⚠️ | ✅ | ❌ | Enterprise only on self-hosted CE |
 | Epics | ⚠️ | ✅ | ✅ | list and get only |
 | States | ⚠️ | ✅ | ✅ | list only |
 | Labels | ⚠️ | ✅ | ✅ | list and create only |
@@ -459,7 +464,8 @@ Output:
 
 | Feature | Missing | Reason |
 |---------|---------|--------|
-| Pages | list, update, delete | Not supported by the Plane Python SDK |
+| Project Pages | list, update, delete | Not supported by the Plane Python SDK |
+| Workspace Pages | list, update, delete | Not supported by the Plane Python SDK; Enterprise only on CE |
 | Epics | create, update, delete | Epic is a special case of Work Item Type; Epic CRUD API is limited in CE |
 | States | create, update, delete | System resource managed in project settings; low automation demand for mutations |
 | Labels | get, update, delete | Low automation demand for label mutations |
@@ -565,7 +571,7 @@ omk --profile production plane work-item list
 omk --profile development plane work-item create --name "New feature" --priority medium
 
 # Filter by environment
-omk --profile staging plane work-item search "bug" -o json | jq '.data[] | select(.priority=="urgent")'
+omk --profile staging plane work-item search --query "bug" -o json | jq '.data[] | select(.priority=="urgent")'
 ```
 
 ### Generate Project Status Report

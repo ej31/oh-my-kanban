@@ -1,6 +1,6 @@
 {
   "name": "oh-my-kanban",
-  "version": "0.1.9",
+  "version": "0.2.4",
   "description": "Interactive setup wizard for oh-my-kanban — multi-platform project management CLI for AI agents (Plane, Linear, and more)",
   "type": "module",
   "bin": {

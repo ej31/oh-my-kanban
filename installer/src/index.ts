@@ -12,10 +12,9 @@ import { promptGithubConfig } from './prompts/github.js';
 import { findPython, findPip, checkPythonVersion, installPackage } from './python.js';
 import { writeConfig, type PlaneConfig, type LinearConfig } from './config-writer.js';
 import { t } from './i18n.js';
+import { RestartWizard } from './restart.js';
 
-async function main(): Promise<void> {
-  printLogo();
-
+async function runSetup(): Promise<void> {
   // 0. 언어 선택
   await promptLangSelect();
 
@@ -83,7 +82,27 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  outro(pc.green(m.outro));
+  const outroMsg =
+    service === 'plane' ? m.outroPlane : m.outroLinear;
+  outro(pc.green(outroMsg));
+}
+
+async function main(): Promise<void> {
+  printLogo();
+
+  // 처음으로 돌아가기 선택 시 언어 선택부터 재시작하는 루프
+  while (true) {
+    try {
+      await runSetup();
+      break;
+    } catch (err) {
+      if (err instanceof RestartWizard) {
+        // 언어 선택 화면부터 다시 시작
+        continue;
+      }
+      throw err;
+    }
+  }
 }
 
 main().catch((err: unknown) => {

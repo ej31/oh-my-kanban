@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import re
+import stat
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -140,6 +141,11 @@ def save_config(data: dict, profile: str = "default") -> None:
         lines.append("")
 
     CONFIG_FILE.write_text("\n".join(lines), encoding="utf-8")
+    # API 키가 포함되므로 소유자만 읽기/쓰기 가능하도록 권한 제한 (0o600)
+    try:
+        CONFIG_FILE.chmod(stat.S_IRUSR | stat.S_IWUSR)
+    except OSError:
+        pass  # Windows 등 chmod 미지원 환경에서는 무시
 
 
 def list_profiles() -> list[str]:

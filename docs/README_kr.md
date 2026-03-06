@@ -287,7 +287,9 @@ omk plane label create --name NAME [--color HEX]     # 라벨 생성
 
 omk plane milestone list                             # 마일스톤 목록
 omk plane epic list                                  # 에픽 목록 (list·get만)
+omk plane epic get EPIC_ID                           # 에픽 상세 조회
 omk plane page get PAGE_ID                           # 페이지 조회 (get·create만)
+omk plane page create --name NAME [--workspace]      # 페이지 생성 (프로젝트 또는 워크스페이스 범위)
 omk plane intake list                                # 요청(Intake) 목록
 
 omk plane workspace members                          # 워크스페이스 멤버 목록
@@ -425,7 +427,9 @@ omk plane work-item list -o plain
 
 | 기능 | 구현 | plane.so | Self-hosted CE | 비고 |
 |------|:----:|:--------:|:--------------:|------|
-| Work Items (CRUD) | ✅ | ✅ | ✅ | 댓글·링크·관계·활동·첨부파일·작업로그 포함 |
+| Work Items (CRUD) | ✅ | ✅ | ✅ | 댓글·링크·활동·첨부파일 포함 |
+| 작업 항목 관계 (Relations) | ✅ | ✅ | ❌ | plane.so & Enterprise 전용; CE 미지원 |
+| 작업 항목 로그 (Worklogs) | ✅ | ✅ | ❌ | plane.so & Enterprise 전용; CE 미지원 |
 | Cycles (CRUD) | ✅ | ✅ | ✅ | 아이템 추가·제거 포함 |
 | Modules (CRUD) | ✅ | ✅ | ✅ | 아이템 추가 포함 |
 | Milestones (CRUD) | ✅ | ✅ | ✅ | 아이템 추가·제거 포함 |
@@ -436,7 +440,8 @@ omk plane work-item list -o plain
 | Work Item Types (CRUD) | ✅ | ✅ | ✅ | - |
 | Custom Properties (CRUD) | ✅ | ✅ | ✅ | 옵션·값 관리 포함 |
 | Users / Members | ✅ | ✅ | ✅ | me, workspace members |
-| Pages | ⚠️ | ✅ | ✅ | get·create만 구현 |
+| 프로젝트 페이지 | ⚠️ | ✅ | ✅ | get·create만 구현 |
+| 워크스페이스 페이지 | ⚠️ | ✅ | ❌ | CE 자가호스팅에서 Enterprise 전용 |
 | Epics | ⚠️ | ✅ | ✅ | list·get만 구현 |
 | States | ⚠️ | ✅ | ✅ | list만 구현 |
 | Labels | ⚠️ | ✅ | ✅ | list·create만 구현 |
@@ -448,7 +453,8 @@ omk plane work-item list -o plain
 
 | 기능 | 미구현 범위 | 사유 |
 |------|------------|------|
-| Pages | list·update·delete | Plane Python SDK가 해당 엔드포인트를 미지원 |
+| 프로젝트 페이지 | list·update·delete | Plane Python SDK가 해당 엔드포인트를 미지원 |
+| 워크스페이스 페이지 | list·update·delete | Plane Python SDK 미지원; CE에서 Enterprise 전용 |
 | Epics | create·update·delete | Epic은 Work Item Type의 특수 케이스. Plane API의 Epic CRUD가 CE에서 제한적으로 제공되어 조회만 지원 |
 | States | create·update·delete | 프로젝트 설정 리소스로, 자동화 파이프라인에서 직접 생성·삭제 수요가 낮아 list 우선 구현 |
 | Labels | get·update·delete | 자동화 파이프라인에서 레이블 수정·삭제 수요가 낮아 후순위 |
@@ -556,7 +562,7 @@ omk --profile production plane work-item list
 omk --profile development plane work-item create --name "새 기능" --priority medium
 
 # Staging 환경에서 필터링
-omk --profile staging plane work-item search "버그" -o json | jq '.data[] | select(.priority=="urgent")'
+omk --profile staging plane work-item search --query "버그" -o json | jq '.data[] | select(.priority=="urgent")'
 ```
 
 ### 예제 4: 프로젝트 상태 리포트 생성
