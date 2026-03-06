@@ -1,4 +1,4 @@
-import { confirm, text, password, isCancel, spinner } from '@clack/prompts';
+import { confirm, text, password, select, isCancel, spinner } from '@clack/prompts';
 import pc from 'picocolors';
 import { t } from '../i18n.js';
 
@@ -127,51 +127,89 @@ export async function promptPlaneConfig(): Promise<PlaneConfig> {
     // authFailed → 루프 상단에서 API Key만 재입력
   }
 
-  // Workspace slug 입력 + 실제 API 검증 루프
-  let workspaceSlug = '';
-  while (true) {
-    const workspaceInput = await text({
-      message: m.planeWorkspace,
-      placeholder: m.planeWorkspacePlaceholder,
-      validate(value) {
-        if (!value.trim()) return m.planeWorkspaceRequired;
-      },
+  // API Key 검증 성공 후 워크스페이스 목록 자동 조회
+  const sw = spinner();
+  sw.start(m.planeFetchingWorkspaces);
+
+  let workspaces: { slug: string; name: string }[] = [];
+  try {
+    const res = await fetch(`${baseUrl}/api/v1/workspaces/`, {
+      headers: { 'X-Api-Key': apiKey },
+      signal: AbortSignal.timeout(PLANE_API_TIMEOUT_MS),
     });
-
-    if (isCancel(workspaceInput)) {
-      process.exit(0);
+    if (res.ok) {
+      const json = (await res.json()) as { slug: string; name: string }[];
+      workspaces = Array.isArray(json) ? json.filter((w) => w.slug && w.name) : [];
     }
+  } catch {
+    // 조회 실패 시 수동 입력으로 폴백
+  }
+  sw.stop();
 
-    const slug = extractWorkspaceSlug(workspaceInput as string);
-    const s = spinner();
-    s.start(m.planeValidating);
-    let valid = false;
+  // 워크스페이스 선택 또는 수동 입력
+  let workspaceSlug = '';
 
-    try {
-      // /api/v1/workspaces/{slug}/projects/ — slug 검증에 사용 가능한 엔드포인트
-      // /api/v1/workspaces/{slug}/ 는 일부 self-hosted 버전에서 401을 반환하므로 projects/ 사용
-      const res = await fetch(`${baseUrl}/api/v1/workspaces/${slug}/projects/`, {
-        headers: { 'X-Api-Key': apiKey },
-        signal: AbortSignal.timeout(PLANE_API_TIMEOUT_MS),
+  if (workspaces.length > 0) {
+    // 워크스페이스 목록 조회 성공 → select 프롬프트
+    while (true) {
+      const selected = await select<string>({
+        message: m.planeSelectWorkspace,
+        options: workspaces.map((w) => ({ value: w.slug, label: w.name, hint: w.slug })),
       });
 
-      if (res.status === 404 || res.status === 403) {
-        // 404: slug 없음 / 403: Plane이 존재하지 않는 workspace에 접근 시 403으로 응답
-        s.stop(pc.red(`✗ ${m.planeWorkspaceNotFound}`));
-      } else if (res.status === 401) {
-        s.stop(pc.red(`✗ ${m.planeAuthFailed}`));
-      } else if (!res.ok) {
-        s.stop(pc.red(`✗ ${m.planeConnectFailed}`));
-      } else {
-        s.stop(pc.green('✓'));
-        workspaceSlug = slug;
-        valid = true;
+      if (isCancel(selected)) {
+        process.exit(0);
       }
-    } catch {
-      s.stop(pc.red(`✗ ${m.planeConnectFailed}`));
-    }
 
-    if (valid) break;
+      workspaceSlug = selected as string;
+      break;
+    }
+  } else {
+    // 워크스페이스 목록 조회 실패 → 수동 입력 + 검증
+    while (true) {
+      const workspaceInput = await text({
+        message: m.planeWorkspace,
+        placeholder: m.planeWorkspacePlaceholder,
+        validate(value) {
+          if (!value.trim()) return m.planeWorkspaceRequired;
+        },
+      });
+
+      if (isCancel(workspaceInput)) {
+        process.exit(0);
+      }
+
+      const slug = extractWorkspaceSlug(workspaceInput as string);
+      const s = spinner();
+      s.start(m.planeValidating);
+      let valid = false;
+
+      try {
+        // /api/v1/workspaces/{slug}/projects/ — slug 검증에 사용 가능한 엔드포인트
+        // /api/v1/workspaces/{slug}/ 는 일부 self-hosted 버전에서 401을 반환하므로 projects/ 사용
+        const res = await fetch(`${baseUrl}/api/v1/workspaces/${slug}/projects/`, {
+          headers: { 'X-Api-Key': apiKey },
+          signal: AbortSignal.timeout(PLANE_API_TIMEOUT_MS),
+        });
+
+        if (res.status === 404 || res.status === 403) {
+          // 404: slug 없음 / 403: Plane이 존재하지 않는 workspace에 접근 시 403으로 응답
+          s.stop(pc.red(`✗ ${m.planeWorkspaceNotFound}`));
+        } else if (res.status === 401) {
+          s.stop(pc.red(`✗ ${m.planeAuthFailed}`));
+        } else if (!res.ok) {
+          s.stop(pc.red(`✗ ${m.planeConnectFailed}`));
+        } else {
+          s.stop(pc.green('✓'));
+          workspaceSlug = slug;
+          valid = true;
+        }
+      } catch {
+        s.stop(pc.red(`✗ ${m.planeConnectFailed}`));
+      }
+
+      if (valid) break;
+    }
   }
 
   console.log(pc.cyan(`  workspace slug: ${pc.bold(workspaceSlug)}`));

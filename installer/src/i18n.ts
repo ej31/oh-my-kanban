@@ -29,6 +29,9 @@ export const messages = {
     planeConnectFailed: 'Cannot connect to Plane server — check your URL',
     planeAuthFailed: 'Invalid API key',
     planeWorkspaceNotFound: 'Workspace not found — check your slug',
+    planeFetchingWorkspaces: 'Fetching workspaces...',
+    planeSelectWorkspace: 'Select your workspace',
+    planeNoWorkspacesFound: 'No workspaces found — enter slug manually',
 
     // linear
     linearApiKey: 'Linear API key',
@@ -102,6 +105,9 @@ export const messages = {
     planeConnectFailed: 'Plane 서버에 연결할 수 없습니다 — URL을 확인해주세요',
     planeAuthFailed: 'API 키가 올바르지 않습니다',
     planeWorkspaceNotFound: 'Workspace를 찾을 수 없습니다 — slug를 확인해주세요',
+    planeFetchingWorkspaces: '워크스페이스 목록 조회 중...',
+    planeSelectWorkspace: '사용할 워크스페이스를 선택하세요',
+    planeNoWorkspacesFound: '워크스페이스를 찾을 수 없어 직접 입력합니다',
 
     // linear
     linearApiKey: 'Linear API 키를 입력하세요',
