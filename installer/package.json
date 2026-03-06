@@ -1,0 +1,28 @@
+{
+  "name": "oh-my-kanban",
+  "version": "0.1.0",
+  "description": "Interactive setup wizard for oh-my-kanban CLI",
+  "type": "module",
+  "bin": {
+    "oh-my-kanban": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "dev": "tsup src/index.ts --format esm --watch",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.9.1",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "tsup": "^8.4.0",
+    "typescript": "^5.7.3",
+    "vitest": "^3.1.1",
+    "@types/node": "^22.0.0"
+  },
+  "files": ["dist"],
+  "engines": { "node": ">=18" },
+  "keywords": ["plane", "linear", "kanban", "cli", "setup"],
+  "license": "MIT"
+}
