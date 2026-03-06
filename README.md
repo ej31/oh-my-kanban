@@ -1,4 +1,7 @@
-# oh-my-kanban | 오마이칸반
+| [한국어](docs/README_kr.md) | [ENGLISH](docs/README_en.md) |
+|---|---|
+
+# oh-my-kanban
 
 > Multi-platform project management CLI — built for AI agents first, humans second.
 
@@ -9,15 +12,15 @@
 
 ## Why oh-my-kanban?
 
-AI 에이전트 중심의 프로젝트 관리 CLI입니다.
+oh-my-kanban is a lightweight CLI designed for **AI agent automation workflows**.
 
-- **Zero-interaction mode** — 환경변수만으로 완전 자동화
-- **Machine-readable output** — JSON 형식으로 에이전트 파이프라인 연동
-- **Full Plane CRUD** — work items, cycles, modules, intake, pages, users, states, labels 등 완전 지원
-- **Multi-workspace support** — 프로필 기반 복수 워크스페이스 관리
-- **Self-hosted friendly** — Plane CE(무료 버전) 기준 개발
+- **Zero-interaction mode** — Full automation via environment variables
+- **Machine-readable output** — JSON format for agent pipeline integration
+- **Full Plane CRUD** — Complete support for work items, cycles, modules, intake, pages, users, states, labels, and more
+- **Multi-workspace support** — Profile-based management of multiple environments
+- **Self-hosted friendly** — Built and tested on Plane Community Edition (free, self-hosted)
 
-## Installation / 설치
+## Installation
 
 ### PyPI
 
@@ -33,55 +36,55 @@ cd oh-my-kanban
 pip install -e .
 ```
 
-## Quick Start / 빠른 시작
+## Quick Start
 
-### 1단계: 설정 초기화 (대화형)
+### Step 1: Initialize Configuration (Interactive)
 
 ```bash
 omk config init
 ```
 
-다음 정보를 입력합니다:
+Provide the following information:
 
-- **서버 종류**: plane.so 클라우드 또는 self-hosted
-- **API 키**: [API 토큰 발급](https://app.plane.so/profile/api-tokens/)
-- **워크스페이스 슬러그**: URL 또는 직접 입력
+- **Server type**: plane.so cloud or self-hosted
+- **API key**: [Generate API token](https://app.plane.so/profile/api-tokens/)
+- **Workspace slug**: Extract from URL or enter directly
 
-### 2단계: 에이전트 모드 (환경변수 자동화)
+### Step 2: Agent Mode (Environment Variable Automation)
 
-사람이 개입하지 않고 에이전트가 자동으로 처리하려면:
+For unattended automation with AI agents:
 
 ```bash
 export PLANE_API_KEY="pl_xxxxxxxxxx"
 export PLANE_WORKSPACE_SLUG="my-workspace"
-export PLANE_BASE_URL="https://api.plane.so"  # 또는 self-hosted URL
+export PLANE_BASE_URL="https://api.plane.so"  # or self-hosted URL
 
-# 환경변수만으로 전체 작업 가능
+# Full automation via environment variables
 omk plane work-item list -o json
 omk plane cycle create --name "Sprint 1" --start-date "2024-03-06" --end-date "2024-03-20"
 omk plane work-item create --name "Fix login bug" --state-id "..." --project "..."
 ```
 
-### 3단계: 사람이 사용 (대화형)
+### Step 3: Interactive Mode (Human Usage)
 
 ```bash
-# 기본 프로필 사용
+# Use default profile
 omk config show
 omk plane work-item list
 
-# 특정 프로필 사용
+# Use specific profile
 omk --profile production plane work-item list -o table
 ```
 
-## Configuration / 설정
+## Configuration
 
-### 설정 파일 위치
+### Configuration File Location
 
 ```
 ~/.config/oh-my-kanban/config.toml
 ```
 
-### 프로필 기반 다중 워크스페이스
+### Profile-Based Multi-Workspace Management
 
 ```toml
 [default]
@@ -97,107 +100,107 @@ workspace_slug = "prod-workspace"
 output = "json"
 ```
 
-사용:
+Usage:
 
 ```bash
 omk --profile production plane work-item list
 ```
 
-### 환경변수 우선순위
+### Environment Variable Priority
 
-명령행 옵션 > 환경변수 > 설정 파일 > 기본값
+Command-line options > Environment variables > Configuration file > Defaults
 
 ```bash
-# 환경변수로 덮어쓰기
+# Override via environment variable
 PLANE_API_KEY="pl_xxxxxx" omk config show
 PLANE_WORKSPACE_SLUG="override-ws" omk plane work-item list
 ```
 
-### 설정 관리 커맨드
+### Configuration Management Commands
 
 ```bash
-# 설정 초기화 (대화형)
+# Initialize configuration (interactive)
 omk config init
 
-# 현재 설정 확인 (API 키는 마스킹)
+# Display current configuration (API key masked)
 omk config show
 
-# 특정 값 변경
+# Set specific value
 omk config set workspace_slug my-new-workspace
 omk config set output json
 
-# 프로필 목록
+# List profiles
 omk config profile list
 
-# 기본 프로필 변경
+# Change default profile
 omk config profile use production
 ```
 
-## Command Reference / 명령어 레퍼런스
+## Command Reference
 
-### 글로벌 옵션
+### Global Options
 
 ```bash
 omk [OPTIONS] PROVIDER [PROVIDER_OPTIONS] COMMAND [ARGS]
 ```
 
-| 옵션 | 환경변수 | 설명 |
-|------|---------|------|
-| `--workspace, -w SLUG` | `PLANE_WORKSPACE_SLUG` | 워크스페이스 슬러그 |
-| `--project, -p ID` | `PLANE_PROJECT_ID` | 프로젝트 UUID |
-| `--output, -o FORMAT` | - | 출력 포맷: `table` \| `json` \| `plain` (기본: `table`) |
-| `--profile PROFILE` | `PLANE_PROFILE` | 설정 프로필 (기본: `default`) |
-| `--version` | - | 버전 표시 |
+| Option | Environment Variable | Description |
+|--------|----------------------|-------------|
+| `--workspace, -w SLUG` | `PLANE_WORKSPACE_SLUG` | Workspace slug |
+| `--project, -p ID` | `PLANE_PROJECT_ID` | Project UUID |
+| `--output, -o FORMAT` | - | Output format: `table` \| `json` \| `plain` (default: `table`) |
+| `--profile PROFILE` | `PLANE_PROFILE` | Configuration profile (default: `default`) |
+| `--version` | - | Show version |
 
 ### Provider Subgroups
 
-omk는 provider별 서브그룹으로 커맨드를 분리합니다:
-- `omk plane` (또는 `omk pl`) — Plane 프로젝트 관리
-- `omk github` (또는 `omk gh`) — GitHub 프로젝트 관리 (향후 지원)
-- `omk config` — 설정 관리 (provider 독립)
+omk separates commands by provider:
+- `omk plane` (or `omk pl`) — Plane project management
+- `omk github` (or `omk gh`) — GitHub project management (coming soon)
+- `omk config` — Configuration management (provider-independent)
 
-### 커맨드 레퍼런스
+### Command Reference
 
-#### omk config — 설정 관리 (provider 독립)
+#### omk config — Configuration Management (provider-independent)
 
 ```bash
-omk config init                              # 대화형 초기 설정
-omk config show [--profile PROFILE]          # 현재 설정 확인
-omk config set KEY VALUE [--profile PROFILE] # 설정 값 변경
-omk config profile list                      # 프로필 목록
-omk config profile use NAME                  # 기본 프로필 변경
+omk config init                              # Initialize configuration (interactive)
+omk config show [--profile PROFILE]          # Display current configuration
+omk config set KEY VALUE [--profile PROFILE] # Change setting value
+omk config profile list                      # List profiles
+omk config profile use NAME                  # Change default profile
 ```
 
-#### omk plane (또는 omk pl) — Plane 프로젝트 관리
+#### omk plane (or omk pl) — Plane Project Management
 
-##### work-item — 작업 항목
+##### work-item — Work Items
 
 ```bash
-# 목록 조회
+# List work items
 omk plane work-item list [--all] [--per-page N] [--cursor CURSOR] [--priority PRIORITY]
 
-# 상세 조회
+# Get work item details
 omk plane work-item get ITEM_ID_OR_IDENTIFIER
 
-# 생성
-omk plane work-item create --name NAME [--state-id STATE] [--priority PRIORITY] [--description DESC] [--assignees USER1,USER2]
+# Create work item
+omk plane work-item create --name NAME [--state STATE_ID] [--priority PRIORITY] [--description DESC] [--assignee USER_ID]
 
-# 수정
-omk plane work-item update ITEM_ID [--name NAME] [--state-id STATE] [--priority PRIORITY]
+# Update work item
+omk plane work-item update ITEM_ID [--name NAME] [--state STATE_ID] [--priority PRIORITY]
 
-# 삭제
+# Delete work item
 omk plane work-item delete ITEM_ID [--force]
 
-# 검색
+# Search work items
 omk plane work-item search QUERY
 
-# 관계 설정
-omk plane work-item relation create ITEM_ID --type TYPE --target TARGET_ITEM_ID
+# Manage relationships
+omk plane work-item relation create ITEM_ID --related-work-item ITEM_ID2 --relation-type blocking
 omk plane work-item relation list ITEM_ID
-omk plane work-item relation delete ITEM_ID --target TARGET_ITEM_ID
+omk plane work-item relation delete ITEM_ID --related-work-item ITEM_ID2
 ```
 
-##### cycle — 반복 주기
+##### cycle — Cycles/Sprints
 
 ```bash
 omk plane cycle list [--all]
@@ -205,12 +208,12 @@ omk plane cycle create --name NAME --owned-by USER_ID [--start-date DATE] [--end
 omk plane cycle get CYCLE_ID
 omk plane cycle update CYCLE_ID [--name NAME] [--start-date DATE] [--end-date DATE]
 omk plane cycle delete CYCLE_ID
-omk plane cycle list-work-items CYCLE_ID
-omk plane cycle add-work-items CYCLE_ID ITEM1 ITEM2 ...
-omk plane cycle remove-work-item CYCLE_ID ITEM_ID
+omk plane cycle items CYCLE_ID
+omk plane cycle add-items CYCLE_ID --items ITEM1 --items ITEM2
+omk plane cycle remove-item CYCLE_ID ITEM_ID
 ```
 
-##### module — 모듈
+##### module — Modules
 
 ```bash
 omk plane module list [--all]
@@ -218,33 +221,34 @@ omk plane module create --name NAME [--status STATUS] [--start-date DATE] [--tar
 omk plane module get MODULE_ID
 omk plane module update MODULE_ID [--name NAME] [--status STATUS]
 omk plane module delete MODULE_ID
-omk plane module list-work-items MODULE_ID
-omk plane module add-work-items MODULE_ID ITEM1 ITEM2 ...
+omk plane module items MODULE_ID
+omk plane module add-items MODULE_ID --items ITEM1 --items ITEM2
 ```
 
-##### 기타 커맨드
+##### Other Commands
 
 ```bash
-omk plane user list                              # 사용자 목록
-omk plane project list [--all]                   # 프로젝트 목록
-omk plane state list                             # 상태(state) 목록
-omk plane label list [--all]                     # 라벨 목록
-omk plane label create --name NAME [--color HEX] # 라벨 생성
+omk plane user me                               # Get current user info
+omk plane project list [--all]                   # List projects
+omk plane state list                             # List states
+omk plane label list [--all]                     # List labels
+omk plane label create --name NAME [--color HEX] # Create label
 
-omk plane milestone list                         # 마일스톤 목록
-omk plane epic list                              # 에픽 목록
-omk plane page list                              # 페이지 목록
-omk plane intake list                            # 요청(Intake) 목록
+omk plane milestone list                         # List milestones
+omk plane epic list                              # List epics
+omk plane page list                              # List pages
+omk plane intake list                            # List intake requests
 
-omk plane workspace list                         # 워크스페이스 정보
-omk plane teamspace list                         # 팀스페이스 목록
-omk plane initiative list                        # 이니셔티브 목록
+omk plane workspace members                      # List workspace members
+omk plane workspace features                     # List workspace features
+omk plane teamspace list                         # List teamspaces
+omk plane initiative list                        # List initiatives
 
-omk plane work-item-type list                    # 작업 항목 타입
-omk plane work-item-property list --type TYPE_ID # 사용자 정의 속성
+omk plane work-item-type list                    # List work item types
+omk plane work-item-property list --type TYPE_ID # List custom properties
 ```
 
-#### omk github (또는 omk gh) — GitHub 프로젝트 관리 (향후 지원)
+#### omk github (or omk gh) — GitHub Project Management (coming soon)
 
 ```bash
 omk github issue list --owner OWNER --repo REPO
@@ -255,7 +259,7 @@ omk github project list --owner OWNER
 
 ## Output Formats / 출력 형식
 
-### Table (기본)
+### Table (Default)
 
 ```bash
 omk plane work-item list
@@ -267,7 +271,7 @@ ID                                    NAME           PRIORITY  STATE      ASSIGN
 87654321-abcd-ef12-3456-7890abcdef12  Add dark mode  medium    To Do      bob, charlie
 ```
 
-### JSON (에이전트 자동화용)
+### JSON (Agent Automation)
 
 ```bash
 omk plane work-item list -o json
@@ -293,7 +297,7 @@ omk plane work-item list -o json
 }
 ```
 
-### Plain (스크립트 파싱용)
+### Plain (Script Parsing)
 
 ```bash
 omk plane work-item list -o plain
@@ -304,26 +308,26 @@ omk plane work-item list -o plain
 87654321-abcd-ef12-3456-7890abcdef12|Add dark mode|medium|To Do|bob,charlie
 ```
 
-## Server Compatibility / 서버 호환성
+## Server Compatibility
 
-| 기능 | plane.so | Self-hosted CE | 비고 |
-|------|----------|----------------|------|
+| Feature | plane.so | Self-hosted CE | Note |
+|---------|----------|----------------|------|
 | Work Items | ✅ | ✅ | - |
 | Cycles | ✅ | ✅ | - |
 | Modules | ✅ | ✅ | - |
 | Milestones | ✅ | ✅ | - |
 | Pages | ✅ | ✅ | - |
 | Intake | ✅ | ✅ | - |
-| Custom Properties | ✅ | ⚠️ | CE에서 제한됨 |
-| Epics | ✅ | ⚠️ | CE에서 제한됨 |
+| Custom Properties | ✅ | ⚠️ | Limited on CE |
+| Epics | ✅ | ⚠️ | Limited on CE |
 | Initiatives | ✅ | ✅ | - |
 
-**참고**: 현재 self-hosted Community Edition(무료 버전) 기준으로 개발되었습니다.
-Enterprise 전용 기능은 미구현 상태입니다.
+**Note**: Development is based on Plane Community Edition (self-hosted, free tier).
+Enterprise-only features are not implemented.
 
-## Examples / 예제
+## Examples
 
-### 에이전트 파이프라인: 반복 생성 → 작업 생성 → 할당
+### Example 1: Agent Pipeline — Create Cycle → Create Work Item → Assign
 
 ```bash
 #!/bin/bash
@@ -340,7 +344,7 @@ CYCLE_ID=$(omk plane cycle create \
   --end-date "2024-03-20" \
   -o json | jq -r '.data.id')
 
-echo "생성된 반복: $CYCLE_ID"
+echo "Created cycle: $CYCLE_ID"
 
 # 2. 작업 생성
 ITEM_ID=$(omk plane work-item create \
@@ -349,7 +353,7 @@ ITEM_ID=$(omk plane work-item create \
   --state-id "$STATE_ID" \
   -o json | jq -r '.data.id')
 
-echo "생성된 작업: $ITEM_ID"
+echo "Created work item: $ITEM_ID"
 
 # 3. 반복에 작업 추가
 omk plane cycle add-work-items "$CYCLE_ID" "$ITEM_ID"
@@ -357,10 +361,10 @@ omk plane cycle add-work-items "$CYCLE_ID" "$ITEM_ID"
 # 4. 사용자에게 할당
 omk plane work-item update "$ITEM_ID" --assignees "$ASSIGNEE_USER_ID"
 
-echo "완료!"
+echo "Done!"
 ```
 
-### 다중 워크스페이스 관리
+### Example 2: Multi-Workspace Management
 
 ```bash
 # Production 환경에서 작업 조회
@@ -373,7 +377,7 @@ omk --profile development plane work-item create --name "New feature" --priority
 omk --profile staging plane work-item search "bug" -o json | jq '.data[] | select(.priority=="urgent")'
 ```
 
-### 프로젝트 상태 리포트 생성
+### Example 3: Generate Project Status Report
 
 ```bash
 #!/bin/bash
@@ -383,14 +387,14 @@ export PLANE_WORKSPACE_SLUG="my-workspace"
 # JSON 출력으로 리포트 생성
 omk plane work-item list --all -o json > report.json
 
-# 상태별 개수 집계
+# Group by status and count
 jq '[.data[] | .state] | group_by(.) | map({state: .[0], count: length})' report.json
 
-# 우선순위별 상위 5개 작업
+# Get top 5 work items by priority
 jq '.data | sort_by(.priority) | reverse | .[0:5]' report.json
 ```
 
-## Roadmap / 로드맵
+## Roadmap
 
 - [x] **Plane** (plane.so, self-hosted)
   - Note: Developed against **Community Edition (self-hosted, free tier)**. Enterprise-only features are not implemented.
@@ -403,9 +407,9 @@ jq '.data | sort_by(.priority) | reverse | .[0:5]' report.json
 - [ ] **Notion**
 - [ ] **Jira**
 
-## Contributing / 개발 참여
+## Contributing
 
-### 환경 설정
+### Environment Setup
 
 ```bash
 git clone https://github.com/ej31/oh-my-kanban.git
@@ -413,19 +417,19 @@ cd oh-my-kanban
 pip install -e ".[dev]"
 ```
 
-### 코드 스타일
+### Code Style
 
 - Python 3.10+
 - Ruff lint rules: E, F, I, UP, B
 - Line length: 100
 
-### 테스트
+### Testing
 
 ```bash
 pytest tests/
 ```
 
-### Pull Request
+### Pull Request Process
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feat/your-feature`
