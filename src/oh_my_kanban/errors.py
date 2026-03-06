@@ -53,7 +53,7 @@ def _format_http_error(e: Exception) -> str:
                 detail = "; ".join(str(d) for d in detail)
             # 404 + "Page not found"는 엔터프라이즈 전용 기능일 가능성이 높음
             if status_code == 404 and "Page not found" in str(detail):
-                return f"{base}. 이 기능은 현재 서버에서 지원하지 않습니다 (Plane Enterprise 전용일 수 있습니다)"
+                return f"{base}. This feature is not currently supported on this server (may require Plane Enterprise)"
             return f"{base}: {detail}"
 
     return base

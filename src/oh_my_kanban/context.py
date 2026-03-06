@@ -43,10 +43,10 @@ class CliContext:
         """project_id가 필요한 커맨드에서 호출. 없으면 명확한 에러."""
         if not self.project:
             raise click.UsageError(
-                "프로젝트 ID가 필요합니다. 다음 중 하나를 사용하세요:\n"
+                "Project is required. Use one of:\n"
                 "  --project <UUID>\n"
-                "  PLANE_PROJECT_ID 환경변수\n"
-                "  CLAUDE.md에 plane_context.project_id 설정"
+                "  PLANE_PROJECT_ID env var\n"
+                "  CLAUDE.md plane_context.project_id"
             )
         return self.project
 
@@ -54,6 +54,6 @@ class CliContext:
         """workspace 슬러그가 필요한 커맨드에서 호출. 없으면 명확한 에러."""
         if not self.workspace:
             raise click.UsageError(
-                "워크스페이스 슬러그가 필요합니다. --workspace 옵션 또는 PLANE_WORKSPACE_SLUG 환경변수를 설정하세요."
+                "Workspace slug is required. Set --workspace or PLANE_WORKSPACE_SLUG env var."
             )
         return self.workspace
