@@ -28,7 +28,12 @@ def cli(
     output: str | None,
     profile: str,
 ) -> None:
-    """Plane CLI - 경량 프로젝트 관리 도구.
+    """oh-my-kanban - 경량 프로젝트 관리 CLI.
+
+    커맨드 구조:
+      omk plane <command>   Plane 프로젝트 관리 (pl은 단축 alias)
+      omk github <command>  GitHub 프로젝트 관리 (gh는 단축 alias)
+      omk config <command>  설정 관리 (provider 독립)
 
     환경변수: PLANE_API_KEY, PLANE_WORKSPACE_SLUG, PLANE_PROJECT_ID, PLANE_BASE_URL
     """
@@ -52,8 +57,17 @@ def cli(
 
 # ── 커맨드 그룹 등록 ──────────────────────────────────────────────────────
 def _register_commands() -> None:
-    from oh_my_kanban.commands.agent_run import agent_run
+    # config는 최상위 유지 (provider 독립적)
     from oh_my_kanban.commands.config_cmd import config
+    cli.add_command(config)
+
+    # ── GitHub 커맨드 그룹 ─────────────────────────────────────────────
+    from oh_my_kanban.commands.github_stub import github
+    cli.add_command(github, name="github")
+    cli.add_command(github, name="gh")  # alias
+
+    # ── Plane 커맨드 그룹 ─────────────────────────────────────────────
+    from oh_my_kanban.commands.agent_run import agent_run
     from oh_my_kanban.commands.customer import customer
     from oh_my_kanban.commands.cycle import cycle
     from oh_my_kanban.commands.epic import epic
@@ -73,26 +87,34 @@ def _register_commands() -> None:
     from oh_my_kanban.commands.work_item_type import work_item_type
     from oh_my_kanban.commands.workspace import workspace
 
-    cli.add_command(config)
-    cli.add_command(user)
-    cli.add_command(workspace)
-    cli.add_command(project)
-    cli.add_command(state)
-    cli.add_command(label)
-    cli.add_command(work_item, name="work-item")
-    cli.add_command(cycle)
-    cli.add_command(module)
-    cli.add_command(milestone)
-    cli.add_command(epic)
-    cli.add_command(page)
-    cli.add_command(intake)
-    cli.add_command(initiative)
-    cli.add_command(teamspace)
-    cli.add_command(customer)
-    cli.add_command(work_item_type, name="work-item-type")
-    cli.add_command(work_item_property, name="work-item-property")
-    cli.add_command(agent_run, name="agent-run")
-    cli.add_command(sticky)
+    # plane 서브그룹 생성
+    plane = click.Group(
+        "plane",
+        help="Plane 프로젝트 관리 (Work Items, Cycles, Modules 등).\n\n'pl'은 'plane'의 단축 alias입니다.",
+    )
+
+    plane.add_command(user)
+    plane.add_command(workspace)
+    plane.add_command(project)
+    plane.add_command(state)
+    plane.add_command(label)
+    plane.add_command(work_item, name="work-item")
+    plane.add_command(cycle)
+    plane.add_command(module)
+    plane.add_command(milestone)
+    plane.add_command(epic)
+    plane.add_command(page)
+    plane.add_command(intake)
+    plane.add_command(initiative)
+    plane.add_command(teamspace)
+    plane.add_command(customer)
+    plane.add_command(work_item_type, name="work-item-type")
+    plane.add_command(work_item_property, name="work-item-property")
+    plane.add_command(agent_run, name="agent-run")
+    plane.add_command(sticky)
+
+    cli.add_command(plane, name="plane")
+    cli.add_command(plane, name="pl")  # alias
 
 
 _register_commands()
