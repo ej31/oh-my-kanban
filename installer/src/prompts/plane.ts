@@ -1,5 +1,10 @@
-import { confirm, text, password, isCancel } from '@clack/prompts';
+import { confirm, text, password, isCancel, spinner, cancel } from '@clack/prompts';
 import pc from 'picocolors';
+import {
+  validatePlaneApiKeyFormat,
+  validateWorkspaceSlugFormat,
+  testPlaneConnection,
+} from '../validators/plane.js';
 
 export interface PlaneConfig {
   baseUrl: string;
@@ -36,7 +41,7 @@ export async function promptPlaneConfig(): Promise<PlaneConfig> {
     process.exit(0);
   }
 
-  // 서버 URL
+  // 서버 URL — URL 형식 검증
   const baseUrl = await text({
     message: 'Plane 서버 URL을 입력하세요',
     defaultValue: 'https://api.plane.so',
@@ -46,7 +51,7 @@ export async function promptPlaneConfig(): Promise<PlaneConfig> {
       try {
         new URL(value);
       } catch {
-        return '올바른 URL 형식이 아닙니다';
+        return '올바른 URL 형식이 아닙니다 (예: https://api.plane.so)';
       }
     },
   });
@@ -55,11 +60,11 @@ export async function promptPlaneConfig(): Promise<PlaneConfig> {
     process.exit(0);
   }
 
-  // API 키 (마스킹)
+  // API 키 (마스킹) — 형식 검증 포함
   const apiKey = await password({
     message: 'Plane API 키를 입력하세요',
     validate(value) {
-      if (!value.trim()) return 'API 키를 입력해주세요';
+      return validatePlaneApiKeyFormat(value);
     },
   });
 
@@ -67,12 +72,14 @@ export async function promptPlaneConfig(): Promise<PlaneConfig> {
     process.exit(0);
   }
 
-  // workspace slug (URL 또는 slug 직접 입력)
+  // workspace slug (URL 또는 slug 직접 입력) — 추출 후 형식 검증
   const workspaceInput = await text({
     message: 'Workspace URL 또는 slug를 입력하세요',
     placeholder: 'https://app.plane.so/my-workspace/projects/... 또는 my-workspace',
     validate(value) {
       if (!value.trim()) return 'Workspace 정보를 입력해주세요';
+      const slug = extractWorkspaceSlug(value);
+      return validateWorkspaceSlugFormat(slug);
     },
   });
 
@@ -81,8 +88,25 @@ export async function promptPlaneConfig(): Promise<PlaneConfig> {
   }
 
   const workspaceSlug = extractWorkspaceSlug(workspaceInput as string);
-
   console.log(pc.cyan(`  workspace slug: ${pc.bold(workspaceSlug)}`));
+
+  // 실제 API 연결 테스트
+  const s = spinner();
+  s.start('Plane API 연결을 확인하는 중...');
+
+  const result = await testPlaneConnection(
+    baseUrl as string,
+    apiKey as string,
+    workspaceSlug
+  );
+
+  if (!result.ok) {
+    s.stop(pc.red(`연결 실패: ${result.error}`));
+    cancel('입력한 값을 확인한 후 다시 시도하세요.');
+    process.exit(1);
+  }
+
+  s.stop(pc.green('Plane API 연결 성공'));
 
   return {
     baseUrl: baseUrl as string,
