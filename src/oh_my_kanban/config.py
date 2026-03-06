@@ -37,6 +37,8 @@ class Config:
     project_id: str = ""
     output: str = "table"
     profile: str = "default"
+    linear_api_key: str = ""
+    linear_team_id: str = ""
 
 
 def detect_project_id() -> str:
@@ -79,6 +81,10 @@ def load_config(profile: str = "default") -> Config:
     cfg.api_key = os.environ.get("PLANE_API_KEY", cfg.api_key)
     cfg.workspace_slug = os.environ.get("PLANE_WORKSPACE_SLUG", cfg.workspace_slug)
     cfg.project_id = os.environ.get("PLANE_PROJECT_ID", cfg.project_id)
+    if env_val := os.environ.get("LINEAR_API_KEY"):
+        cfg.linear_api_key = env_val
+    if env_val := os.environ.get("LINEAR_TEAM_ID"):
+        cfg.linear_team_id = env_val
 
     # 3. CLAUDE.md에서 project_id 자동 감지 (env/config에 없을 때)
     if not cfg.project_id:

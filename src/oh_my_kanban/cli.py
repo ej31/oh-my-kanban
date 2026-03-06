@@ -116,5 +116,10 @@ def _register_commands() -> None:
     cli.add_command(plane, name="plane")
     cli.add_command(plane, name="pl")  # alias
 
+    # ── Linear 커맨드 그룹 ────────────────────────────────────────────
+    from oh_my_kanban.commands.linear import linear
+    cli.add_command(linear, name="linear")
+    cli.add_command(linear, name="ln")  # alias
+
 
 _register_commands()
