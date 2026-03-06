@@ -1,0 +1,557 @@
+# Instincts generated from https://github.com/ej31/oh-my-kanban
+# Generated: 2026-03-06T07:35:29.769Z
+# Version: 2.0
+
+---
+id: oh-my-kanban-commit-conventional
+trigger: "when writing a commit message"
+confidence: 0.85
+domain: git
+source: repo-analysis
+source_repo: https://github.com/ej31/oh-my-kanban
+---
+
+# Oh My Kanban Commit Conventional
+
+## Action
+
+Use conventional commit format with prefixes: docs, chore, refactor, fix, test
+
+## Evidence
+
+- 10 commits analyzed
+- Detected conventional commit pattern
+- Examples: refactor(test): python-review 반영 -- DRY 제거 및 import 구조 정리, fix(test): 코드 리뷰 지적 사항 반영 -- mock 경로 불일치 수정
+
+---
+id: oh-my-kanban-commit-length
+trigger: "when writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: https://github.com/ej31/oh-my-kanban
+---
+
+# Oh My Kanban Commit Length
+
+## Action
+
+Write moderate-length commit messages (~50 characters)
+
+## Evidence
+
+- Average commit message length: 50 chars
+- Based on 10 commits
+
+---
+id: oh-my-kanban-naming-files
+trigger: "when creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/ej31/oh-my-kanban
+---
+
+# Oh My Kanban Naming Files
+
+## Action
+
+Use snake_case naming convention
+
+## Evidence
+
+- Analyzed file naming patterns in repository
+- Dominant pattern: snake_case
+
+---
+id: oh-my-kanban-export-style
+trigger: "when exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/ej31/oh-my-kanban
+---
+
+# Oh My Kanban Export Style
+
+## Action
+
+Prefer mixed exports
+
+## Evidence
+
+- Export pattern analysis
+- Dominant style: mixed
+
+---
+id: oh-my-kanban-test-separate
+trigger: "when writing tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/ej31/oh-my-kanban
+---
+
+# Oh My Kanban Test Separate
+
+## Action
+
+Place tests in the tests/ or __tests__/ directory, mirroring src structure
+
+## Evidence
+
+- Separate test directory pattern detected
+- Tests live in dedicated test folders
+
+---
+id: oh-my-kanban-workflow-feature-development
+trigger: "when implementing a new feature"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/ej31/oh-my-kanban
+---
+
+# Oh My Kanban Workflow Feature Development
+
+## Action
+
+Follow the feature-development workflow:
+1. Add feature implementation
+2. Add tests for feature
+3. Update documentation
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~18x per month
+- Files: **/*.test.*
+
+---
+id: oh-my-kanban-workflow-refactoring
+trigger: "when refactoring code"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/ej31/oh-my-kanban
+---
+
+# Oh My Kanban Workflow Refactoring
+
+## Action
+
+Follow the refactoring workflow:
+1. Ensure tests pass before refactor
+2. Refactor code structure
+3. Verify tests still pass
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~12x per month
+- Files: src/**/*
+
+---
+id: oh-my-kanban-workflow-test-suite-addition
+trigger: "when doing test suite addition"
+confidence: 0.65
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/ej31/oh-my-kanban
+---
+
+# Oh My Kanban Workflow Test Suite Addition
+
+## Action
+
+Follow the test-suite-addition workflow:
+1. Create test files in tests/ directory
+2. Add test helpers and fixtures
+3. Update pyproject.toml with test dependencies
+4. Update uv.lock after dependency changes
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~3x per month
+- Files: tests/test_*.py, tests/conftest.py, tests/helpers.py
+
+---
+id: oh-my-kanban-workflow-documentation-update
+trigger: "when doing documentation update"
+confidence: 0.7
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/ej31/oh-my-kanban
+---
+
+# Oh My Kanban Workflow Documentation Update
+
+## Action
+
+Follow the documentation-update workflow:
+1. Update README.md with new command structure
+2. Update language-specific documentation files
+3. Update AGENTS.md for AI integration
+4. Update internal documentation outlines
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~4x per month
+- Files: README.md, docs/README_en.md, docs/README_kr.md
+
+---
+id: oh-my-kanban-workflow-defensive-coding-hardening
+trigger: "when doing defensive coding hardening"
+confidence: 0.65
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/ej31/oh-my-kanban
+---
+
+# Oh My Kanban Workflow Defensive Coding Hardening
+
+## Action
+
+Follow the defensive-coding-hardening workflow:
+1. Add input validation and guards
+2. Improve error handling and exception translation
+3. Add defensive checks for None/empty values
+4. Standardize error message language
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~3x per month
+- Files: src/oh_my_kanban/config.py, src/oh_my_kanban/errors.py, src/oh_my_kanban/context.py
+
+---
+id: oh-my-kanban-workflow-cli-command-refactoring
+trigger: "when doing cli command refactoring"
+confidence: 0.6
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/ej31/oh-my-kanban
+---
+
+# Oh My Kanban Workflow Cli Command Refactoring
+
+## Action
+
+Follow the cli-command-refactoring workflow:
+1. Extract common validation logic to context methods
+2. Update command files to use centralized helpers
+3. Modify CLI structure in cli.py
+4. Update command imports and organization
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~2x per month
+- Files: src/oh_my_kanban/cli.py, src/oh_my_kanban/context.py, src/oh_my_kanban/commands/*.py
+
+---
+id: oh-my-kanban-workflow-new-provider-integration
+trigger: "when doing new provider integration"
+confidence: 0.55
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/ej31/oh-my-kanban
+---
+
+# Oh My Kanban Workflow New Provider Integration
+
+## Action
+
+Follow the new-provider-integration workflow:
+1. Create provider-specific client and context modules
+2. Implement provider error handling
+3. Add provider commands under commands/{provider}/
+4. Update config.py with provider-specific fields
+5. Register provider subgroup in cli.py
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~1x per month
+- Files: src/oh_my_kanban/{provider}_client.py, src/oh_my_kanban/{provider}_context.py, src/oh_my_kanban/{provider}_errors.py
+
+---
+id: oh-my-kanban-conventional-commit-format
+trigger: "When writing a commit message"
+confidence: 0.9
+domain: git
+source: repo-analysis
+source_repo: ej31/oh-my-kanban
+---
+
+# Oh My Kanban Conventional Commit Format
+
+## Action
+
+Use conventional commit format with prefix (feat|fix|docs|chore|refactor|test) and 50-character average length
+
+## Evidence
+
+- All 8 example commits use conventional format
+- Consistent prefixes across commit history
+
+---
+id: oh-my-kanban-bilingual-commit-messages
+trigger: "When writing commit descriptions"
+confidence: 0.8
+domain: git
+source: repo-analysis
+source_repo: ej31/oh-my-kanban
+---
+
+# Oh My Kanban Bilingual Commit Messages
+
+## Action
+
+Use Korean for detailed explanations and code review feedback
+
+## Evidence
+
+- refactor(test): python-review 반영 -- DRY 제거 및 import 구조 정리
+- fix(test): 코드 리뷰 지적 사항 반영 -- mock 경로 불일치 수정
+
+---
+id: oh-my-kanban-snake-case-files
+trigger: "When creating new Python files"
+confidence: 0.85
+domain: code-style
+source: repo-analysis
+source_repo: ej31/oh-my-kanban
+---
+
+# Oh My Kanban Snake Case Files
+
+## Action
+
+Name files using snake_case convention
+
+## Evidence
+
+- oh_my_kanban module structure
+- test files pattern
+
+---
+id: oh-my-kanban-camel-case-functions
+trigger: "When defining functions"
+confidence: 0.75
+domain: code-style
+source: repo-analysis
+source_repo: ej31/oh-my-kanban
+---
+
+# Oh My Kanban Camel Case Functions
+
+## Action
+
+Use camelCase naming convention
+
+## Evidence
+
+- Detected naming convention pattern in codeStyle analysis
+
+---
+id: oh-my-kanban-pascal-case-classes
+trigger: "When defining classes"
+confidence: 0.75
+domain: code-style
+source: repo-analysis
+source_repo: ej31/oh-my-kanban
+---
+
+# Oh My Kanban Pascal Case Classes
+
+## Action
+
+Use PascalCase naming convention
+
+## Evidence
+
+- Detected naming convention pattern in codeStyle analysis
+
+---
+id: oh-my-kanban-comprehensive-e2e-tests
+trigger: "When adding new CLI functionality"
+confidence: 0.9
+domain: testing
+source: repo-analysis
+source_repo: ej31/oh-my-kanban
+---
+
+# Oh My Kanban Comprehensive E2e Tests
+
+## Action
+
+Create comprehensive E2E tests covering all command variations and edge cases
+
+## Evidence
+
+- test: Plane / Linear / GitHub stub 전 기능 E2E 테스트 127개 추가
+- test-suite-addition workflow with 3x/month frequency
+
+---
+id: oh-my-kanban-test-helpers-pattern
+trigger: "When creating test suites"
+confidence: 0.85
+domain: testing
+source: repo-analysis
+source_repo: ej31/oh-my-kanban
+---
+
+# Oh My Kanban Test Helpers Pattern
+
+## Action
+
+Create test helpers and fixtures in tests/helpers.py and tests/conftest.py
+
+## Evidence
+
+- test-suite-addition workflow mentions tests/helpers.py and tests/conftest.py
+- Separate test location architecture
+
+---
+id: oh-my-kanban-provider-subgroup-structure
+trigger: "When adding new external service integration"
+confidence: 0.8
+domain: architecture
+source: repo-analysis
+source_repo: ej31/oh-my-kanban
+---
+
+# Oh My Kanban Provider Subgroup Structure
+
+## Action
+
+Create provider subgroup with commands under oh_my_kanban/commands/{provider}/ and register in cli.py
+
+## Evidence
+
+- feat: provider subgroup 구조 도입 (omk plane/pl, omk github/gh)
+- new-provider-integration workflow pattern
+
+---
+id: oh-my-kanban-defensive-coding-first
+trigger: "When implementing new features or fixing bugs"
+confidence: 0.85
+domain: code-style
+source: repo-analysis
+source_repo: ej31/oh-my-kanban
+---
+
+# Oh My Kanban Defensive Coding First
+
+## Action
+
+Add input validation, error handling, and defensive checks for None/empty values
+
+## Evidence
+
+- chore: defensive coding hardening + docs internationalization
+- defensive-coding-hardening workflow with 3x/month frequency
+
+---
+id: oh-my-kanban-multilingual-docs
+trigger: "When updating documentation"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: ej31/oh-my-kanban
+---
+
+# Oh My Kanban Multilingual Docs
+
+## Action
+
+Update both English (docs/README_en.md) and Korean (docs/README_kr.md) versions
+
+## Evidence
+
+- docs: 마크다운 문서 전체를 최신 CLI 버전에 맞게 업데이트
+- documentation-update workflow includes language-specific files
+
+---
+id: oh-my-kanban-cli-context-extraction
+trigger: "When refactoring CLI commands"
+confidence: 0.8
+domain: architecture
+source: repo-analysis
+source_repo: ej31/oh-my-kanban
+---
+
+# Oh My Kanban Cli Context Extraction
+
+## Action
+
+Extract common validation logic to context.py methods and update commands to use centralized helpers
+
+## Evidence
+
+- cli-command-refactoring workflow pattern
+- context.py appears in multiple workflow file lists
+
+---
+id: oh-my-kanban-test-before-refactor
+trigger: "When starting code refactoring"
+confidence: 0.85
+domain: workflow
+source: repo-analysis
+source_repo: ej31/oh-my-kanban
+---
+
+# Oh My Kanban Test Before Refactor
+
+## Action
+
+Ensure tests pass before refactor, then verify tests still pass after changes
+
+## Evidence
+
+- refactoring workflow: 'Ensure tests pass before refactor' and 'Verify tests still pass'
+- 12 frequency refactoring workflow
+
+---
+id: oh-my-kanban-update-deps-after-tests
+trigger: "When adding test dependencies"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: ej31/oh-my-kanban
+---
+
+# Oh My Kanban Update Deps After Tests
+
+## Action
+
+Update pyproject.toml with test dependencies and regenerate uv.lock
+
+## Evidence
+
+- test-suite-addition workflow includes pyproject.toml and uv.lock updates
+- Consistent pattern in workflow steps
+
+---
+id: oh-my-kanban-agents-integration-docs
+trigger: "When updating AI integration features"
+confidence: 0.8
+domain: workflow
+source: repo-analysis
+source_repo: ej31/oh-my-kanban
+---
+
+# Oh My Kanban Agents Integration Docs
+
+## Action
+
+Update AGENTS.md file for AI agent integration guidance
+
+## Evidence
+
+- docs: add AGENTS.md for AI agent integration guide
+- AGENTS.md appears in documentation-update workflow
+
