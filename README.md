@@ -157,6 +157,7 @@ omk [OPTIONS] PROVIDER [PROVIDER_OPTIONS] COMMAND [ARGS]
 
 omk separates commands by provider:
 - `omk plane` (or `omk pl`) — Plane project management
+- `omk linear` (or `omk ln`) — Linear project management
 - `omk github` (or `omk gh`) — GitHub project management (coming soon)
 - `omk config` — Configuration management (provider-independent)
 
@@ -248,6 +249,37 @@ omk plane initiative list                        # List initiatives
 omk plane work-item-type list                    # List work item types
 omk plane work-item-property list --type TYPE_ID # List custom properties
 ```
+
+#### omk linear (or omk ln) — Linear Project Management
+
+Set `LINEAR_API_KEY` before use. Optionally set `LINEAR_TEAM_ID` as a default team.
+
+```bash
+omk linear me                                          # Current user info
+omk linear team list                                   # List teams
+omk linear team get TEAM_ID
+
+omk linear issue list [--team TEAM_ID] [--first N]
+omk linear issue get ISSUE_ID_OR_KEY                   # UUID or KEY-123 format
+omk linear issue create --title TITLE --team TEAM_ID [--priority 0-4] [--state STATE_ID]
+omk linear issue update ISSUE_ID [--title TITLE] [--priority 0-4] [--state STATE_ID] [--assignee USER_ID] [--description DESC]
+omk linear issue delete ISSUE_ID
+
+omk linear issue comment list ISSUE_ID
+omk linear issue comment create ISSUE_ID --body "Comment text"
+
+omk linear state list [--team TEAM_ID]                 # Workflow states
+omk linear label list [--team TEAM_ID]                 # Labels
+omk linear label get LABEL_ID
+
+omk linear project list [--first N]                    # Projects
+omk linear project get PROJECT_ID
+
+omk linear cycle list [--team TEAM_ID]                 # Cycles
+omk linear cycle get CYCLE_ID
+```
+
+Priority: `0`=none, `1`=urgent, `2`=high, `3`=medium, `4`=low
 
 #### omk github (or omk gh) — GitHub Project Management (coming soon)
 
@@ -403,7 +435,9 @@ jq '.data | sort_by(.priority) | reverse | .[0:5]' report.json
 - [ ] **GitHub**
   - Provider subgroup: `omk github` (or `omk gh`)
   - Examples: `omk github issue list --owner ej31 --repo my-repo`, `omk github project list --owner ej31`
-- [ ] **Linear**
+- [x] **Linear**
+  - Provider subgroup: `omk linear` (or `omk ln`)
+  - Examples: `omk linear issue list`, `omk linear issue create --title "Bug" --team TEAM_ID`, `omk ln team list`
 - [ ] **Notion**
 - [ ] **Jira**
 
