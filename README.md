@@ -415,6 +415,28 @@ omk plane work-item list -o plain
 | Notion | ❌ | Not started |
 | Jira | ❌ | Not started |
 
+## Session Tracking
+
+### Automatic Context Recovery After `/compact`
+
+When Claude Code restarts after a `/compact` command execution, oh-my-kanban automatically recovers your session context through the `SessionStart(compact)` hook.
+
+**Recovered Context:**
+
+- Session objective summary
+- Key topics and list of modified files
+- Request count and warning statistics
+- Plane Work Item details (title, description, recent comments)
+
+The hook automatically fetches Plane WI metadata from the API, so Claude doesn't need to re-query task contents after `/compact`.
+
+**Limitations:**
+
+- Maximum 3 Work Items retrieved
+- Total context limit: 3,000 characters
+  - Per WI description: 600 characters
+  - Per WI comments (up to 5): 300 characters
+
 ## Examples
 
 ### Example 1: Agent Pipeline — Create Cycle → Create Work Item → Assign
