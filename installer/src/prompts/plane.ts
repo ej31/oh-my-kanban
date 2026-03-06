@@ -80,7 +80,8 @@ export async function promptPlaneConfig(): Promise<PlaneConfig> {
     let validationResult: 'ok' | 'authFailed' | 'connectFailed' = 'connectFailed';
 
     try {
-      const res = await fetch(`${baseUrl}/api/v1/workspaces/`, {
+      // /api/v1/users/me/ — 모든 Plane 버전에서 API Key 검증에 사용 가능한 엔드포인트
+      const res = await fetch(`${baseUrl}/api/v1/users/me/`, {
         headers: { 'X-Api-Key': apiKeyRaw as string },
         signal: AbortSignal.timeout(PLANE_API_TIMEOUT_MS),
       });
@@ -147,14 +148,17 @@ export async function promptPlaneConfig(): Promise<PlaneConfig> {
     let valid = false;
 
     try {
-      const res = await fetch(`${baseUrl}/api/v1/workspaces/${slug}/`, {
+      // /api/v1/workspaces/{slug}/projects/ — slug 검증에 사용 가능한 엔드포인트
+      // /api/v1/workspaces/{slug}/ 는 일부 self-hosted 버전에서 401을 반환하므로 projects/ 사용
+      const res = await fetch(`${baseUrl}/api/v1/workspaces/${slug}/projects/`, {
         headers: { 'X-Api-Key': apiKey },
         signal: AbortSignal.timeout(PLANE_API_TIMEOUT_MS),
       });
 
-      if (res.status === 404) {
+      if (res.status === 404 || res.status === 403) {
+        // 404: slug 없음 / 403: Plane이 존재하지 않는 workspace에 접근 시 403으로 응답
         s.stop(pc.red(`✗ ${m.planeWorkspaceNotFound}`));
-      } else if (res.status === 401 || res.status === 403) {
+      } else if (res.status === 401) {
         s.stop(pc.red(`✗ ${m.planeAuthFailed}`));
       } else if (!res.ok) {
         s.stop(pc.red(`✗ ${m.planeConnectFailed}`));
