@@ -13,4 +13,3 @@ def github() -> None:
 
     'gh'는 'github'의 단축 alias입니다.
     """
-    pass

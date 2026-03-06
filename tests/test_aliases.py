@@ -55,7 +55,9 @@ def test_pl_subcommand_work_item_help(runner):
     result = runner.invoke(cli, ["pl", "work-item", "--help"])
     assert result.exit_code == 0
     # work-item 커맨드의 도움말이 출력되어야 함
-    assert "work-item" in result.output.lower() or "work_item" in result.output.lower() or result.output.strip()
+    output_lower = result.output.lower()
+    assert "work-item" in output_lower or "work_item" in output_lower
+    assert "usage" in output_lower or "options" in output_lower or "commands" in output_lower
 
 
 def test_plane_and_pl_exit_codes_match(runner):

@@ -3,6 +3,23 @@
 from oh_my_kanban.cli import cli
 
 
+def extract_top_level_commands(help_output: str) -> list[str]:
+    """--help 출력에서 최상위 커맨드 목록을 파싱한다."""
+    commands: list[str] = []
+    in_commands_section = False
+    for line in help_output.splitlines():
+        if "Commands:" in line:
+            in_commands_section = True
+            continue
+        if in_commands_section:
+            stripped = line.strip()
+            if stripped and not stripped.startswith("#"):
+                cmd_name = stripped.split()[0] if stripped.split() else ""
+                if cmd_name:
+                    commands.append(cmd_name)
+    return commands
+
+
 # ---------------------------------------------------------------------------
 # 최상위 커맨드 구조
 # ---------------------------------------------------------------------------
@@ -33,21 +50,7 @@ def test_top_level_does_not_show_work_item_directly(runner):
     """최상위 --help에 work-item이 직접 노출되면 안 된다. plane 하위에 있어야 한다."""
     result = runner.invoke(cli, ["--help"])
     assert result.exit_code == 0
-    # work-item은 plane 서브그룹 하위에만 있어야 함
-    lines = result.output.splitlines()
-    # Commands: 섹션에서 work-item이 직접 나타나지 않아야 함
-    top_level_commands = []
-    in_commands_section = False
-    for line in lines:
-        if "Commands:" in line:
-            in_commands_section = True
-            continue
-        if in_commands_section:
-            stripped = line.strip()
-            if stripped and not stripped.startswith("#"):
-                cmd_name = stripped.split()[0] if stripped.split() else ""
-                if cmd_name:
-                    top_level_commands.append(cmd_name)
+    top_level_commands = extract_top_level_commands(result.output)
     assert "work-item" not in top_level_commands
 
 
@@ -55,19 +58,7 @@ def test_top_level_does_not_show_cycle_directly(runner):
     """최상위 --help에 cycle이 직접 노출되면 안 된다."""
     result = runner.invoke(cli, ["--help"])
     assert result.exit_code == 0
-    lines = result.output.splitlines()
-    top_level_commands = []
-    in_commands_section = False
-    for line in lines:
-        if "Commands:" in line:
-            in_commands_section = True
-            continue
-        if in_commands_section:
-            stripped = line.strip()
-            if stripped:
-                cmd_name = stripped.split()[0] if stripped.split() else ""
-                if cmd_name:
-                    top_level_commands.append(cmd_name)
+    top_level_commands = extract_top_level_commands(result.output)
     assert "cycle" not in top_level_commands
 
 
