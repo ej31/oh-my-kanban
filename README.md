@@ -57,12 +57,13 @@ For unattended automation with AI agents:
 ```bash
 export PLANE_API_KEY="pl_xxxxxxxxxx"
 export PLANE_WORKSPACE_SLUG="my-workspace"
+export PLANE_PROJECT_ID="your-project-id"  # required for project-scoped commands
 export PLANE_BASE_URL="https://api.plane.so"  # or self-hosted URL
 
 # Full automation via environment variables
 omk plane work-item list -o json
 omk plane cycle create --name "Sprint 1" --start-date "2024-03-06" --end-date "2024-03-20"
-omk plane work-item create --name "Fix login bug" --state-id "..." --project "..."
+omk plane work-item create --name "Fix login bug" --state-id "..."
 ```
 
 ### Step 3: Interactive Mode (Human Usage)
