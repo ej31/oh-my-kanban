@@ -125,7 +125,6 @@ def config_init() -> None:
     api_key = click.prompt(
         "API 키",
         default=env_api_key or existing.api_key or "",
-        hide_input=True,
         prompt_suffix=" (PLANE_API_KEY): ",
     )
 

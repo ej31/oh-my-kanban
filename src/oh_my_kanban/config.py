@@ -11,6 +11,12 @@ from pathlib import Path
 # 프로필 이름 허용 문자: 영문자, 숫자, 하이픈, 밑줄만 허용 (TOML 섹션 헤더 인젝션 방지)
 _PROFILE_NAME_RE = re.compile(r'^[a-zA-Z0-9_-]+$')
 
+# 저장 허용 설정 키 화이트리스트 (임의 키 TOML 인젝션 방지)
+_ALLOWED_CONFIG_KEYS = frozenset({
+    "base_url", "api_key", "workspace_slug", "project_id",
+    "output", "linear_api_key", "linear_team_id",
+})
+
 if sys.version_info >= (3, 11):
     import tomllib
 else:
@@ -72,8 +78,9 @@ def load_config(profile: str = "default") -> Config:
             cfg.workspace_slug = section.get("workspace_slug", cfg.workspace_slug)
             cfg.project_id = section.get("project_id", cfg.project_id)
             cfg.output = section.get("output", cfg.output)
+            cfg.linear_api_key = section.get("linear_api_key", cfg.linear_api_key)
+            cfg.linear_team_id = section.get("linear_team_id", cfg.linear_team_id)
         except (OSError, tomllib.TOMLDecodeError) as e:
-            import sys
             print(f"경고: 설정 파일 파싱 오류 ({CONFIG_FILE}): {e}", file=sys.stderr)
 
     # 2. 환경변수 오버라이드
@@ -114,8 +121,10 @@ def save_config(data: dict, profile: str = "default") -> None:
                 "Refusing to overwrite to prevent data loss."
             ) from e
 
-    # 프로필 업데이트
-    existing.setdefault(profile, {}).update(data)
+    # 허용 키만 필터링 (임의 키 인젝션 방지), 불변 방식으로 병합
+    filtered = {k: v for k, v in data.items() if k in _ALLOWED_CONFIG_KEYS}
+    section = {**existing.get(profile, {}), **filtered}
+    existing = {**existing, profile: section}
 
     # TOML 직렬화 (tomllib은 읽기 전용이므로 직접 작성)
     # 값에 따옴표/백슬래시/개행이 포함될 수 있으므로 이스케이프 처리
@@ -142,6 +151,5 @@ def list_profiles() -> list[str]:
             data = tomllib.load(f)
         return list(data.keys())
     except (OSError, tomllib.TOMLDecodeError) as e:
-        import sys
         print(f"경고: 프로필 목록 읽기 실패 ({CONFIG_FILE}): {e}", file=sys.stderr)
         return []

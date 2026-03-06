@@ -37,3 +37,7 @@ env/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+
+# installer (Node.js)
+installer/node_modules/
+installer/dist/
