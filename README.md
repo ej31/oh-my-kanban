@@ -205,7 +205,7 @@ omk plane work-item relation delete ITEM_ID --related-work-item ITEM_ID2
 
 ```bash
 omk plane cycle list [--all]
-omk plane cycle create --name NAME --owned-by USER_ID [--start-date DATE] [--end-date DATE]
+omk plane cycle create --name NAME [--start-date DATE] [--end-date DATE]
 omk plane cycle get CYCLE_ID
 omk plane cycle update CYCLE_ID [--name NAME] [--start-date DATE] [--end-date DATE]
 omk plane cycle delete CYCLE_ID
@@ -337,10 +337,9 @@ export PLANE_API_KEY="pl_xxxxxx"
 export PLANE_WORKSPACE_SLUG="my-workspace"
 export PLANE_PROJECT_ID="proj_uuid"
 
-# 1. Create cycle
+# 1. Create cycle (ownership is derived automatically from the authenticated user)
 CYCLE_ID=$(omk plane cycle create \
   --name "Sprint 1" \
-  --owned-by "$USER_ID" \
   --start-date "2024-03-06" \
   --end-date "2024-03-20" \
   -o json | jq -r '.data.id')
@@ -357,7 +356,7 @@ ITEM_ID=$(omk plane work-item create \
 echo "Created work item: $ITEM_ID"
 
 # 3. Add work item to cycle
-omk plane cycle add-work-items "$CYCLE_ID" "$ITEM_ID"
+omk plane cycle add-items "$CYCLE_ID" --items "$ITEM_ID"
 
 # 4. Assign to user
 omk plane work-item update "$ITEM_ID" --assignees "$ASSIGNEE_USER_ID"
