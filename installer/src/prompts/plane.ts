@@ -87,6 +87,7 @@ export async function promptPlaneConfig(): Promise<PlaneConfig> {
     process.exit(0);
   }
 
+  const normalizedApiKey = (apiKey as string).trim();
   const workspaceSlug = extractWorkspaceSlug(workspaceInput as string);
   console.log(pc.cyan(`  workspace slug: ${pc.bold(workspaceSlug)}`));
 
@@ -96,7 +97,7 @@ export async function promptPlaneConfig(): Promise<PlaneConfig> {
 
   const result = await testPlaneConnection(
     baseUrl as string,
-    apiKey as string,
+    normalizedApiKey,
     workspaceSlug
   );
 
@@ -110,7 +111,7 @@ export async function promptPlaneConfig(): Promise<PlaneConfig> {
 
   return {
     baseUrl: baseUrl as string,
-    apiKey: apiKey as string,
+    apiKey: normalizedApiKey,
     workspaceSlug,
   };
 }

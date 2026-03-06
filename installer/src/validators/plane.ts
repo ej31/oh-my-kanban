@@ -1,7 +1,7 @@
 // Plane 입력값 검증 모듈
 
 /**
- * Workspace slug 형식: 소문자·숫자·하이픈, 2자 이상
+ * Workspace slug 형식: 소문자·숫자·하이픈
  * 하이픈으로 시작하거나 끝나는 것은 허용하지 않는다.
  */
 const SLUG_REGEX = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
@@ -28,7 +28,7 @@ export function validatePlaneApiKeyFormat(value: string): string | undefined {
 export function validateWorkspaceSlugFormat(value: string): string | undefined {
   if (!value.trim()) return 'Workspace slug를 입력해주세요';
   if (!SLUG_REGEX.test(value.trim())) {
-    return 'Workspace slug는 소문자, 숫자, 하이픈(-)만 사용할 수 있으며 2자 이상이어야 합니다';
+    return 'Workspace slug는 소문자, 숫자, 하이픈(-)만 사용할 수 있으며 하이픈으로 시작하거나 끝날 수 없습니다';
   }
 }
 

@@ -1,5 +1,5 @@
 // Plane validator 단위 테스트
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   validatePlaneApiKeyFormat,
   validateWorkspaceSlugFormat,
@@ -72,6 +72,10 @@ describe('testPlaneConnection', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('정상 응답 시 ok: true 반환', async () => {

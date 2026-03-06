@@ -37,11 +37,14 @@ export async function promptLinearConfig(): Promise<LinearConfig> {
     process.exit(0);
   }
 
+  const normalizedApiKey = (apiKey as string).trim();
+  const normalizedTeamId = (teamId as string).trim();
+
   // 실제 API 연결 테스트
   const s = spinner();
   s.start('Linear API 연결을 확인하는 중...');
 
-  const result = await testLinearConnection(apiKey as string, teamId as string);
+  const result = await testLinearConnection(normalizedApiKey, normalizedTeamId);
 
   if (!result.ok) {
     s.stop(pc.red(`연결 실패: ${result.error}`));
@@ -52,7 +55,7 @@ export async function promptLinearConfig(): Promise<LinearConfig> {
   s.stop(pc.green('Linear API 연결 성공'));
 
   return {
-    apiKey: apiKey as string,
-    teamId: teamId as string,
+    apiKey: normalizedApiKey,
+    teamId: normalizedTeamId,
   };
 }
