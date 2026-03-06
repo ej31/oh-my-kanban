@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import click
-from datetime import datetime
+from datetime import date
 
 from oh_my_kanban.context import CliContext
 from oh_my_kanban.errors import handle_api_error
@@ -48,11 +48,14 @@ _RELATION_TYPE_CHOICES = click.Choice(
 
 
 def _validate_date(ctx: click.Context, param: click.Parameter, value: str | None) -> str | None:
-    """날짜 형식(YYYY-MM-DD)을 CLI 경계에서 검증한다."""
+    """날짜 형식(YYYY-MM-DD)을 CLI 경계에서 검증한다.
+
+    date.fromisoformat()을 사용해 zero-padding 없는 입력(2026-3-6 등)을 거부한다.
+    """
     if value is None:
         return None
     try:
-        datetime.strptime(value, "%Y-%m-%d")
+        date.fromisoformat(value)
         return value
     except ValueError:
         raise click.BadParameter(f"날짜 형식은 YYYY-MM-DD여야 합니다: {value}")

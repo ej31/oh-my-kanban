@@ -7,13 +7,13 @@ import re
 
 import click
 
-from oh_my_kanban.config import CONFIG_FILE, list_profiles, load_config, save_config
+from oh_my_kanban.config import CONFIG_FILE, Config, list_profiles, load_config, save_config
 
 # plane.so 클라우드 API URL
 _CLOUD_API_URL = "https://api.plane.so"
 
-# config set 명령에서 허용하는 키 목록
-_ALLOWED_KEYS = {"base_url", "api_key", "workspace_slug", "project_id", "output"}
+# Config 클래스에서 허용 키를 동적으로 파생 — 필드 추가 시 자동 반영
+_ALLOWED_KEYS = {f for f in Config.__dataclass_fields__ if f != "profile"}
 
 
 def _extract_slug_from_url(url: str) -> str:

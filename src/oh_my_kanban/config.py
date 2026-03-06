@@ -8,6 +8,9 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
+# 프로필 이름 허용 문자: 영문자, 숫자, 하이픈, 밑줄만 허용 (TOML 섹션 헤더 인젝션 방지)
+_PROFILE_NAME_RE = re.compile(r'^[a-zA-Z0-9_-]+$')
+
 if sys.version_info >= (3, 11):
     import tomllib
 else:
@@ -100,9 +103,10 @@ def save_config(data: dict, profile: str = "default") -> None:
             with open(CONFIG_FILE, "rb") as f:
                 existing = tomllib.load(f)
         except (OSError, tomllib.TOMLDecodeError) as e:
-            import sys
-            print(f"경고: 기존 설정 로드 실패, 덮어씁니다: {e}", file=sys.stderr)
-            existing = {}
+            raise OSError(
+                f"Cannot read config file ({CONFIG_FILE}): {e}. "
+                "Refusing to overwrite to prevent data loss."
+            ) from e
 
     # 프로필 업데이트
     existing.setdefault(profile, {}).update(data)
@@ -111,6 +115,10 @@ def save_config(data: dict, profile: str = "default") -> None:
     # 값에 따옴표/백슬래시/개행이 포함될 수 있으므로 이스케이프 처리
     lines = []
     for prof, values in existing.items():
+        if not _PROFILE_NAME_RE.match(prof):
+            raise ValueError(
+                f"Invalid profile name '{prof}': only letters, digits, hyphens, and underscores are allowed."
+            )
         lines.append(f"[{prof}]")
         for k, v in values.items():
             lines.append(f'{k} = "{_escape_toml_string(str(v))}"')

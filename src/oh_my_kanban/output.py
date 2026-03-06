@@ -25,12 +25,12 @@ def format_output(
     title: str | None = None,
 ) -> None:
     """데이터를 지정된 포맷으로 stdout에 출력한다."""
-    # None 입력은 빈 결과로 처리
+    # None 입력: 비-JSON은 "결과 없음", JSON은 null ([] 아님 — 단일 조회는 배열 아님)
     if data is None:
         if fmt != "json":
             click_echo_err("결과 없음")
         else:
-            sys.stdout.write("[]\n")
+            sys.stdout.write("null\n")
         return
 
     # 리스트가 아닌 경우 단일 항목으로 처리
