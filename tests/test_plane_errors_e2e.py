@@ -1,68 +1,25 @@
 """Plane 에러 처리 및 경계 조건 E2E 테스트."""
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
-
-import pytest
-from click.testing import CliRunner
+from unittest.mock import patch
 
 from oh_my_kanban.cli import cli
-from oh_my_kanban.context import CliContext
-
-
-def _paginated(items: list) -> MagicMock:
-    resp = MagicMock()
-    resp.results = items
-    resp.next_page_results = False
-    return resp
-
-
-@pytest.fixture
-def ctx() -> CliContext:
-    context = CliContext(
-        _base_url="https://api.plane.so",
-        _api_key="test-api-key",
-        workspace="test-workspace",
-        project="test-project-id",
-        output="json",
-    )
-    context._client = MagicMock()
-    return context
-
-
-@pytest.fixture
-def runner() -> CliRunner:
-    return CliRunner()
-
+from oh_my_kanban.commands.cycle import cycle
+from oh_my_kanban.commands.label import label
+from oh_my_kanban.commands.work_item import work_item
+from oh_my_kanban.commands.workspace import workspace
+from oh_my_kanban.config import Config
 
 # ─── API 키 없을 때 ────────────────────────────────────────────────────────────
 
 
 class TestMissingApiKey:
-    def test_work_item_list_without_api_key_fails(self, runner):
-        from oh_my_kanban.commands.work_item import work_item
-
-        no_key_ctx = CliContext(
-            _base_url="https://api.plane.so",
-            _api_key="",
-            workspace="test-workspace",
-            project="test-project-id",
-            output="json",
-        )
-        result = runner.invoke(work_item, ["list"], obj=no_key_ctx)
+    def test_work_item_list_without_api_key_fails(self, runner, no_api_key_ctx):
+        result = runner.invoke(work_item, ["list"], obj=no_api_key_ctx)
         assert result.exit_code != 0
 
-    def test_cycle_list_without_api_key_fails(self, runner):
-        from oh_my_kanban.commands.cycle import cycle
-
-        no_key_ctx = CliContext(
-            _base_url="https://api.plane.so",
-            _api_key="",
-            workspace="test-workspace",
-            project="test-project-id",
-            output="json",
-        )
-        result = runner.invoke(cycle, ["list"], obj=no_key_ctx)
+    def test_cycle_list_without_api_key_fails(self, runner, no_api_key_ctx):
+        result = runner.invoke(cycle, ["list"], obj=no_api_key_ctx)
         assert result.exit_code != 0
 
 
@@ -70,46 +27,16 @@ class TestMissingApiKey:
 
 
 class TestMissingProject:
-    def test_work_item_list_without_project_fails(self, runner):
-        from oh_my_kanban.commands.work_item import work_item
-
-        ctx = CliContext(
-            _base_url="https://api.plane.so",
-            _api_key="test-api-key",
-            workspace="test-workspace",
-            project="",
-            output="json",
-        )
-        ctx._client = MagicMock()
-        result = runner.invoke(work_item, ["list"], obj=ctx)
+    def test_work_item_list_without_project_fails(self, runner, no_project_ctx):
+        result = runner.invoke(work_item, ["list"], obj=no_project_ctx)
         assert result.exit_code != 0
 
-    def test_work_item_create_without_project_fails(self, runner):
-        from oh_my_kanban.commands.work_item import work_item
-
-        ctx = CliContext(
-            _base_url="https://api.plane.so",
-            _api_key="test-api-key",
-            workspace="test-workspace",
-            project="",
-            output="json",
-        )
-        ctx._client = MagicMock()
-        result = runner.invoke(work_item, ["create", "--name", "Task"], obj=ctx)
+    def test_work_item_create_without_project_fails(self, runner, no_project_ctx):
+        result = runner.invoke(work_item, ["create", "--name", "Task"], obj=no_project_ctx)
         assert result.exit_code != 0
 
-    def test_label_list_without_project_fails(self, runner):
-        from oh_my_kanban.commands.label import label
-
-        ctx = CliContext(
-            _base_url="https://api.plane.so",
-            _api_key="test-api-key",
-            workspace="test-workspace",
-            project="",
-            output="json",
-        )
-        ctx._client = MagicMock()
-        result = runner.invoke(label, ["list"], obj=ctx)
+    def test_label_list_without_project_fails(self, runner, no_project_ctx):
+        result = runner.invoke(label, ["list"], obj=no_project_ctx)
         assert result.exit_code != 0
 
 
@@ -117,18 +44,8 @@ class TestMissingProject:
 
 
 class TestMissingWorkspace:
-    def test_workspace_members_without_workspace_fails(self, runner):
-        from oh_my_kanban.commands.workspace import workspace
-
-        ctx = CliContext(
-            _base_url="https://api.plane.so",
-            _api_key="test-api-key",
-            workspace="",
-            project="",
-            output="json",
-        )
-        ctx._client = MagicMock()
-        result = runner.invoke(workspace, ["members"], obj=ctx)
+    def test_workspace_members_without_workspace_fails(self, runner, no_workspace_ctx):
+        result = runner.invoke(workspace, ["members"], obj=no_workspace_ctx)
         assert result.exit_code != 0
 
 
@@ -137,24 +54,18 @@ class TestMissingWorkspace:
 
 class TestInvalidDateFormat:
     def test_work_item_create_bad_start_date(self, runner, ctx):
-        from oh_my_kanban.commands.work_item import work_item
-
         result = runner.invoke(
             work_item, ["create", "--name", "Task", "--start-date", "not-a-date"], obj=ctx
         )
         assert result.exit_code != 0
 
     def test_work_item_create_bad_target_date(self, runner, ctx):
-        from oh_my_kanban.commands.work_item import work_item
-
         result = runner.invoke(
             work_item, ["create", "--name", "Task", "--target-date", "2026/01/01"], obj=ctx
         )
         assert result.exit_code != 0
 
     def test_work_item_update_bad_start_date(self, runner, ctx):
-        from oh_my_kanban.commands.work_item import work_item
-
         result = runner.invoke(
             work_item, ["update", "wi-001", "--start-date", "13-01-2026"], obj=ctx
         )
@@ -165,22 +76,12 @@ class TestInvalidDateFormat:
 
 
 class TestHttpErrorHandling:
-    def test_401_error_exits_with_77(self, runner, ctx):
-        from oh_my_kanban.commands.work_item import work_item
-
-        err = Exception()
-        err.status_code = 401  # type: ignore[attr-defined]
-        err.response = {"detail": "Unauthorized"}  # type: ignore[attr-defined]
-        ctx.client.work_items.list.side_effect = err
-
-        # plane.errors.errors.HttpError로 처리되려면 isinstance 체크가 필요
-        # 여기서는 일반 Exception도 handle_api_error에서 처리됨
+    def test_401_error_exits_nonzero(self, runner, ctx):
+        ctx.client.work_items.list.side_effect = Exception("Unauthorized")
         result = runner.invoke(work_item, ["list"], obj=ctx)
         assert result.exit_code != 0
 
     def test_404_error_exits_nonzero(self, runner, ctx):
-        from oh_my_kanban.commands.work_item import work_item
-
         ctx.client.work_items.retrieve.side_effect = Exception("Not found")
         result = runner.invoke(work_item, ["get", "nonexistent-id"], obj=ctx)
         assert result.exit_code != 0
@@ -191,22 +92,16 @@ class TestHttpErrorHandling:
 
 class TestInvalidChoices:
     def test_work_item_list_invalid_priority(self, runner, ctx):
-        from oh_my_kanban.commands.work_item import work_item
-
         result = runner.invoke(work_item, ["list", "--priority", "SUPER_HIGH"], obj=ctx)
         assert result.exit_code != 0
 
     def test_work_item_create_invalid_priority(self, runner, ctx):
-        from oh_my_kanban.commands.work_item import work_item
-
         result = runner.invoke(
             work_item, ["create", "--name", "Task", "--priority", "INVALID"], obj=ctx
         )
         assert result.exit_code != 0
 
     def test_relation_create_invalid_type(self, runner, ctx):
-        from oh_my_kanban.commands.work_item import work_item
-
         result = runner.invoke(
             work_item,
             [
@@ -240,7 +135,6 @@ class TestGithubStub:
 class TestConfigShow:
     def test_config_show_exits_ok(self, runner):
         with patch("oh_my_kanban.commands.config_cmd.load_config") as mock_load:
-            from oh_my_kanban.config import Config
             mock_load.return_value = Config()
             result = runner.invoke(cli, ["config", "show"])
             assert result.exit_code == 0
@@ -251,10 +145,10 @@ class TestConfigSet:
         config_file = tmp_path / "config.toml"
         with patch("oh_my_kanban.config.CONFIG_FILE", config_file):
             with patch("oh_my_kanban.commands.config_cmd.load_config") as mock_load:
-                from oh_my_kanban.config import Config
                 mock_load.return_value = Config()
-                result = runner.invoke(cli, ["config", "set", "api_key", "new-api-key"])
-                assert result.exit_code in (0, 1)
+                with patch("oh_my_kanban.commands.config_cmd.save_config"):
+                    result = runner.invoke(cli, ["config", "set", "api_key", "new-api-key"])
+                    assert result.exit_code == 0
 
 
 # ─── linear alias ─────────────────────────────────────────────────────────────

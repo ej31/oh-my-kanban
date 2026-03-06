@@ -31,6 +31,7 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["tests"]
 addopts = "-v"
 
 [tool.ruff]
@@ -44,4 +45,5 @@ select = ["E", "F", "I", "UP", "B"]
 dev = [
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
+    "ruff>=0.15.5",
 ]
