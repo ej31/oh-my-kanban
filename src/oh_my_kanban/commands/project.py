@@ -30,21 +30,40 @@ def project() -> None:
 @handle_api_error
 def project_list(ctx: CliContext, per_page: int, fetch_all: bool) -> None:
     """프로젝트 목록 조회."""
-    if not ctx.workspace:
-        raise click.UsageError(
-            "워크스페이스 슬러그가 필요합니다. --workspace 옵션 또는 PLANE_WORKSPACE_SLUG 환경변수를 설정하세요."
-        )
+    ws = ctx.require_workspace()
 
     if fetch_all:
-        from oh_my_kanban.utils import fetch_all_pages
+        # projects.list()는 params=PaginatedQueryParams 방식만 지원하므로 직접 순회한다.
+        from plane.models.query_params import PaginatedQueryParams
 
-        items = fetch_all_pages(ctx.client.projects.list, ctx.workspace, per_page=per_page)
-        format_output(items, ctx.output, columns=_LIST_COLUMNS)
+        all_results = []
+        cursor: str | None = None
+        page_count = 0
+        max_pages = 500
+        while True:
+            page_count += 1
+            if page_count > max_pages:
+                click.echo(
+                    f"경고: 최대 페이지 수({max_pages})에 도달했습니다. 결과가 잘렸을 수 있습니다.",
+                    err=True,
+                )
+                break
+            kw: dict = {"per_page": per_page}
+            if cursor:
+                kw["cursor"] = cursor
+            response = ctx.client.projects.list(ws, params=PaginatedQueryParams(**kw))
+            all_results.extend(response.results or [])
+            if not getattr(response, "next_page_results", False):
+                break
+            cursor = getattr(response, "next_cursor", None)
+            if not cursor:
+                break
+        format_output(all_results, ctx.output, columns=_LIST_COLUMNS)
     else:
         from plane.models.query_params import PaginatedQueryParams
 
         response = ctx.client.projects.list(
-            ctx.workspace, params=PaginatedQueryParams(per_page=per_page)
+            ws, params=PaginatedQueryParams(per_page=per_page)
         )
         format_output(response.results, ctx.output, columns=_LIST_COLUMNS)
         format_pagination_hint(response, ctx.output)
@@ -56,12 +75,9 @@ def project_list(ctx: CliContext, per_page: int, fetch_all: bool) -> None:
 @handle_api_error
 def project_get(ctx: CliContext, project_id: str) -> None:
     """프로젝트 상세 조회."""
-    if not ctx.workspace:
-        raise click.UsageError(
-            "워크스페이스 슬러그가 필요합니다. --workspace 옵션 또는 PLANE_WORKSPACE_SLUG 환경변수를 설정하세요."
-        )
+    ws = ctx.require_workspace()
 
-    result = ctx.client.projects.retrieve(ctx.workspace, project_id)
+    result = ctx.client.projects.retrieve(ws, project_id)
     format_output(result, ctx.output, columns=_GET_COLUMNS)
 
 
@@ -85,10 +101,7 @@ def project_create(
     참고: plane.so 클라우드의 경우 프로젝트 이름에 하이픈(-) 등
     특수문자가 포함되면 서버가 거부할 수 있습니다.
     """
-    if not ctx.workspace:
-        raise click.UsageError(
-            "워크스페이스 슬러그가 필요합니다. --workspace 옵션 또는 PLANE_WORKSPACE_SLUG 환경변수를 설정하세요."
-        )
+    ws = ctx.require_workspace()
 
     data = CreateProject(
         name=name,
@@ -96,7 +109,7 @@ def project_create(
         description=description,
         timezone=timezone,
     )
-    result = ctx.client.projects.create(ctx.workspace, data=data)
+    result = ctx.client.projects.create(ws, data=data)
     format_output(result, ctx.output, columns=_GET_COLUMNS)
 
 
@@ -113,13 +126,10 @@ def project_update(
     description: str | None,
 ) -> None:
     """프로젝트 수정."""
-    if not ctx.workspace:
-        raise click.UsageError(
-            "워크스페이스 슬러그가 필요합니다. --workspace 옵션 또는 PLANE_WORKSPACE_SLUG 환경변수를 설정하세요."
-        )
+    ws = ctx.require_workspace()
 
     data = UpdateProject(name=name, description=description)
-    result = ctx.client.projects.update(ctx.workspace, project_id, data=data)
+    result = ctx.client.projects.update(ws, project_id, data=data)
     format_output(result, ctx.output, columns=_GET_COLUMNS)
 
 
@@ -129,16 +139,12 @@ def project_update(
 @handle_api_error
 def project_delete(ctx: CliContext, project_id: str) -> None:
     """프로젝트 삭제."""
-    if not ctx.workspace:
-        raise click.UsageError(
-            "워크스페이스 슬러그가 필요합니다. --workspace 옵션 또는 PLANE_WORKSPACE_SLUG 환경변수를 설정하세요."
-        )
+    ws = ctx.require_workspace()
 
     if not click.confirm(f"프로젝트 '{project_id}'를 삭제하시겠습니까?"):
-        click.echo("삭제를 취소했습니다.", err=True)
-        return
+        raise click.Abort()
 
-    ctx.client.projects.delete(ctx.workspace, project_id)
+    ctx.client.projects.delete(ws, project_id)
     click.echo(f"프로젝트 '{project_id}'가 삭제되었습니다.")
 
 
@@ -148,12 +154,9 @@ def project_delete(ctx: CliContext, project_id: str) -> None:
 @handle_api_error
 def project_members(ctx: CliContext, project_id: str) -> None:
     """프로젝트 멤버 목록 조회."""
-    if not ctx.workspace:
-        raise click.UsageError(
-            "워크스페이스 슬러그가 필요합니다. --workspace 옵션 또는 PLANE_WORKSPACE_SLUG 환경변수를 설정하세요."
-        )
+    ws = ctx.require_workspace()
 
-    result = ctx.client.projects.get_members(ctx.workspace, project_id)
+    result = ctx.client.projects.get_members(ws, project_id)
     format_output(result, ctx.output, columns=_MEMBER_COLUMNS)
 
 
@@ -163,12 +166,9 @@ def project_members(ctx: CliContext, project_id: str) -> None:
 @handle_api_error
 def project_features(ctx: CliContext, project_id: str) -> None:
     """프로젝트 기능 설정 조회."""
-    if not ctx.workspace:
-        raise click.UsageError(
-            "워크스페이스 슬러그가 필요합니다. --workspace 옵션 또는 PLANE_WORKSPACE_SLUG 환경변수를 설정하세요."
-        )
+    ws = ctx.require_workspace()
 
-    result = ctx.client.projects.get_features(ctx.workspace, project_id)
+    result = ctx.client.projects.get_features(ws, project_id)
     format_output(result, ctx.output, columns=_FEATURE_COLUMNS)
 
 
@@ -197,10 +197,7 @@ def project_update_features(
     work_item_types: bool | None,
 ) -> None:
     """프로젝트 기능 설정 수정."""
-    if not ctx.workspace:
-        raise click.UsageError(
-            "워크스페이스 슬러그가 필요합니다. --workspace 옵션 또는 PLANE_WORKSPACE_SLUG 환경변수를 설정하세요."
-        )
+    ws = ctx.require_workspace()
 
     data = ProjectFeature(
         epics=epics,
@@ -211,7 +208,7 @@ def project_update_features(
         intakes=intakes,
         work_item_types=work_item_types,
     )
-    result = ctx.client.projects.update_features(ctx.workspace, project_id, data=data)
+    result = ctx.client.projects.update_features(ws, project_id, data=data)
     format_output(result, ctx.output, columns=_FEATURE_COLUMNS)
 
 
@@ -221,10 +218,7 @@ def project_update_features(
 @handle_api_error
 def project_worklog_summary(ctx: CliContext, project_id: str) -> None:
     """프로젝트 워크로그 요약 조회."""
-    if not ctx.workspace:
-        raise click.UsageError(
-            "워크스페이스 슬러그가 필요합니다. --workspace 옵션 또는 PLANE_WORKSPACE_SLUG 환경변수를 설정하세요."
-        )
+    ws = ctx.require_workspace()
 
-    result = ctx.client.projects.get_worklog_summary(ctx.workspace, project_id)
+    result = ctx.client.projects.get_worklog_summary(ws, project_id)
     format_output(result, ctx.output, columns=_WORKLOG_COLUMNS)

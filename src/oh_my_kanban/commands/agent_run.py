@@ -77,15 +77,15 @@ def agent_run_activity() -> None:
 def activity_list(ctx: CliContext, run_id: str, per_page: int, fetch_all: bool) -> None:
     """에이전트 실행의 활동 목록 조회."""
     if fetch_all:
-        from oh_my_kanban.utils import fetch_all_pages
+        from oh_my_kanban.utils import fetch_all_pages_with_params
 
-        results = fetch_all_pages(
+        all_results = fetch_all_pages_with_params(
             ctx.client.agent_runs.activities.list,
             ctx.workspace,
             run_id,
             per_page=per_page,
         )
-        format_output(results, ctx.output, columns=_ACTIVITY_COLUMNS)
+        format_output(all_results, ctx.output, columns=_ACTIVITY_COLUMNS)
     else:
         response = ctx.client.agent_runs.activities.list(
             ctx.workspace, run_id, params={"per_page": per_page}

@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import click
+from datetime import date
 
 from oh_my_kanban.context import CliContext
 from oh_my_kanban.errors import handle_api_error
-from oh_my_kanban.output import format_output, format_pagination_hint
+from oh_my_kanban.output import click_echo_err, format_output, format_pagination_hint
 from oh_my_kanban.utils import confirm_delete, fetch_all_pages, parse_work_item_ref
 
 # ---------------------------------------------------------------------------
@@ -44,6 +45,20 @@ _RELATION_TYPE_CHOICES = click.Choice(
         "finish_after",
     ]
 )
+
+
+def _validate_date(ctx: click.Context, param: click.Parameter, value: str | None) -> str | None:
+    """날짜 형식(YYYY-MM-DD)을 CLI 경계에서 검증한다.
+
+    date.fromisoformat()을 사용해 zero-padding 없는 입력(2026-3-6 등)을 거부한다.
+    """
+    if value is None:
+        return None
+    try:
+        date.fromisoformat(value)
+        return value
+    except ValueError:
+        raise click.BadParameter(f"날짜 형식은 YYYY-MM-DD여야 합니다: {value}")
 
 
 # ---------------------------------------------------------------------------
@@ -142,8 +157,8 @@ def work_item_get(ctx: CliContext, ref: str) -> None:
 @click.option("--assignee", "assignees", multiple=True, help="담당자 UUID (여러 번 지정 가능).")
 @click.option("--label", "labels", multiple=True, help="레이블 UUID (여러 번 지정 가능).")
 @click.option("--parent", default=None, help="부모 작업 항목 UUID.")
-@click.option("--start-date", default=None, help="시작 날짜 (YYYY-MM-DD).")
-@click.option("--target-date", default=None, help="목표 날짜 (YYYY-MM-DD).")
+@click.option("--start-date", default=None, callback=_validate_date, help="시작 날짜 (YYYY-MM-DD).")
+@click.option("--target-date", default=None, callback=_validate_date, help="목표 날짜 (YYYY-MM-DD).")
 @click.option("--description", default=None, help="설명 (평문, <p> 태그로 자동 래핑).")
 @click.option("--point", type=int, default=None, help="스토리 포인트.")
 @click.pass_obj
@@ -194,8 +209,8 @@ def work_item_create(
 @click.option("--assignee", "assignees", multiple=True, help="담당자 UUID (여러 번 지정 가능).")
 @click.option("--label", "labels", multiple=True, help="레이블 UUID (여러 번 지정 가능).")
 @click.option("--parent", default=None, help="부모 작업 항목 UUID.")
-@click.option("--start-date", default=None, help="시작 날짜 (YYYY-MM-DD).")
-@click.option("--target-date", default=None, help="목표 날짜 (YYYY-MM-DD).")
+@click.option("--start-date", default=None, callback=_validate_date, help="시작 날짜 (YYYY-MM-DD).")
+@click.option("--target-date", default=None, callback=_validate_date, help="목표 날짜 (YYYY-MM-DD).")
 @click.option("--description", default=None, help="설명 (평문, <p> 태그로 자동 래핑).")
 @click.option("--point", type=int, default=None, help="스토리 포인트.")
 @click.pass_obj
@@ -492,7 +507,6 @@ def relation_list(ctx: CliContext, work_item_id: str) -> None:
         if rows:
             format_output(rows, ctx.output, columns=["relation_type", "related_work_item_id"])
         else:
-            from oh_my_kanban.output import click_echo_err
             click_echo_err("관계 없음")
 
 

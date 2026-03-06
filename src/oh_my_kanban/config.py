@@ -8,6 +8,9 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
+# 프로필 이름 허용 문자: 영문자, 숫자, 하이픈, 밑줄만 허용 (TOML 섹션 헤더 인젝션 방지)
+_PROFILE_NAME_RE = re.compile(r'^[a-zA-Z0-9_-]+$')
+
 if sys.version_info >= (3, 11):
     import tomllib
 else:
@@ -34,6 +37,8 @@ class Config:
     project_id: str = ""
     output: str = "table"
     profile: str = "default"
+    linear_api_key: str = ""
+    linear_team_id: str = ""
 
 
 def detect_project_id() -> str:
@@ -67,7 +72,7 @@ def load_config(profile: str = "default") -> Config:
             cfg.workspace_slug = section.get("workspace_slug", cfg.workspace_slug)
             cfg.project_id = section.get("project_id", cfg.project_id)
             cfg.output = section.get("output", cfg.output)
-        except Exception as e:
+        except (OSError, tomllib.TOMLDecodeError) as e:
             import sys
             print(f"경고: 설정 파일 파싱 오류 ({CONFIG_FILE}): {e}", file=sys.stderr)
 
@@ -76,12 +81,21 @@ def load_config(profile: str = "default") -> Config:
     cfg.api_key = os.environ.get("PLANE_API_KEY", cfg.api_key)
     cfg.workspace_slug = os.environ.get("PLANE_WORKSPACE_SLUG", cfg.workspace_slug)
     cfg.project_id = os.environ.get("PLANE_PROJECT_ID", cfg.project_id)
+    if env_val := os.environ.get("LINEAR_API_KEY"):
+        cfg.linear_api_key = env_val
+    if env_val := os.environ.get("LINEAR_TEAM_ID"):
+        cfg.linear_team_id = env_val
 
     # 3. CLAUDE.md에서 project_id 자동 감지 (env/config에 없을 때)
     if not cfg.project_id:
         cfg.project_id = detect_project_id()
 
     return cfg
+
+
+def _escape_toml_string(v: str) -> str:
+    """TOML 기본 문자열에 포함될 값의 특수문자를 이스케이프한다."""
+    return v.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n").replace("\r", "\\r")
 
 
 def save_config(data: dict, profile: str = "default") -> None:
@@ -94,20 +108,26 @@ def save_config(data: dict, profile: str = "default") -> None:
         try:
             with open(CONFIG_FILE, "rb") as f:
                 existing = tomllib.load(f)
-        except Exception as e:
-            import sys
-            print(f"경고: 기존 설정 로드 실패, 덮어씁니다: {e}", file=sys.stderr)
-            existing = {}
+        except (OSError, tomllib.TOMLDecodeError) as e:
+            raise OSError(
+                f"Cannot read config file ({CONFIG_FILE}): {e}. "
+                "Refusing to overwrite to prevent data loss."
+            ) from e
 
     # 프로필 업데이트
     existing.setdefault(profile, {}).update(data)
 
     # TOML 직렬화 (tomllib은 읽기 전용이므로 직접 작성)
+    # 값에 따옴표/백슬래시/개행이 포함될 수 있으므로 이스케이프 처리
     lines = []
     for prof, values in existing.items():
+        if not _PROFILE_NAME_RE.match(prof):
+            raise ValueError(
+                f"Invalid profile name '{prof}': only letters, digits, hyphens, and underscores are allowed."
+            )
         lines.append(f"[{prof}]")
         for k, v in values.items():
-            lines.append(f'{k} = "{v}"')
+            lines.append(f'{k} = "{_escape_toml_string(str(v))}"')
         lines.append("")
 
     CONFIG_FILE.write_text("\n".join(lines), encoding="utf-8")
@@ -121,5 +141,7 @@ def list_profiles() -> list[str]:
         with open(CONFIG_FILE, "rb") as f:
             data = tomllib.load(f)
         return list(data.keys())
-    except Exception:
+    except (OSError, tomllib.TOMLDecodeError) as e:
+        import sys
+        print(f"경고: 프로필 목록 읽기 실패 ({CONFIG_FILE}): {e}", file=sys.stderr)
         return []

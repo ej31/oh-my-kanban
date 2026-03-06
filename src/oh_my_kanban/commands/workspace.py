@@ -23,12 +23,8 @@ def workspace() -> None:
 @handle_api_error
 def workspace_members(ctx: CliContext) -> None:
     """워크스페이스 멤버 목록을 조회한다."""
-    if not ctx.workspace:
-        raise click.UsageError(
-            "워크스페이스 슬러그가 필요합니다. --workspace 옵션 또는 PLANE_WORKSPACE_SLUG 환경변수를 설정하세요."
-        )
-
-    result = ctx.client.workspaces.get_members(workspace_slug=ctx.workspace)
+    ws = ctx.require_workspace()
+    result = ctx.client.workspaces.get_members(workspace_slug=ws)
     format_output(result, ctx.output, columns=_MEMBER_COLUMNS)
 
 
@@ -37,12 +33,8 @@ def workspace_members(ctx: CliContext) -> None:
 @handle_api_error
 def workspace_features(ctx: CliContext) -> None:
     """워크스페이스 기능(feature) 설정을 조회한다."""
-    if not ctx.workspace:
-        raise click.UsageError(
-            "워크스페이스 슬러그가 필요합니다. --workspace 옵션 또는 PLANE_WORKSPACE_SLUG 환경변수를 설정하세요."
-        )
-
-    result = ctx.client.workspaces.get_features(workspace_slug=ctx.workspace)
+    ws = ctx.require_workspace()
+    result = ctx.client.workspaces.get_features(workspace_slug=ws)
     format_output(result, ctx.output)
 
 
@@ -65,10 +57,7 @@ def workspace_update_features(
     pi: bool | None,
 ) -> None:
     """워크스페이스 기능(feature) 설정을 변경한다."""
-    if not ctx.workspace:
-        raise click.UsageError(
-            "워크스페이스 슬러그가 필요합니다. --workspace 옵션 또는 PLANE_WORKSPACE_SLUG 환경변수를 설정하세요."
-        )
+    ws = ctx.require_workspace()
 
     # 변경할 값이 하나도 없으면 에러
     provided = {
@@ -88,10 +77,10 @@ def workspace_update_features(
     # 현재 설정을 기반으로 변경 사항 병합
     from plane.models.workspaces import WorkspaceFeature
 
-    current = ctx.client.workspaces.get_features(workspace_slug=ctx.workspace)
+    current = ctx.client.workspaces.get_features(workspace_slug=ws)
     current_data = current.model_dump()
     current_data.update(updates)
 
     data = WorkspaceFeature(**current_data)
-    result = ctx.client.workspaces.update_features(workspace_slug=ctx.workspace, data=data)
+    result = ctx.client.workspaces.update_features(workspace_slug=ws, data=data)
     format_output(result, ctx.output)

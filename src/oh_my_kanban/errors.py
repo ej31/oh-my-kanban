@@ -12,16 +12,16 @@ F = TypeVar("F", bound=Callable)
 
 # HTTP 상태 코드 → 사용자 메시지
 _STATUS_MESSAGES: dict[int, str] = {
-    400: "잘못된 요청입니다",
-    401: "인증에 실패했습니다. API 키를 확인하세요 (PLANE_API_KEY)",
-    403: "접근 권한이 없습니다",
-    404: "요청한 리소스를 찾을 수 없습니다",
-    409: "충돌이 발생했습니다 (이미 존재하거나 상태 불일치)",
-    422: "입력 데이터가 유효하지 않습니다",
-    429: "요청 제한을 초과했습니다. 잠시 후 다시 시도하세요",
-    500: "서버 내부 오류가 발생했습니다",
-    502: "게이트웨이 오류가 발생했습니다",
-    503: "서비스를 일시적으로 사용할 수 없습니다",
+    400: "Bad request",
+    401: "Authentication failed. Check your API key (PLANE_API_KEY)",
+    403: "Access denied",
+    404: "Resource not found",
+    409: "Conflict (already exists or state mismatch)",
+    422: "Invalid input data",
+    429: "Rate limit exceeded. Please try again later",
+    500: "Internal server error",
+    502: "Bad gateway",
+    503: "Service temporarily unavailable",
 }
 
 # HTTP 상태 코드 → exit code (POSIX 규약)
@@ -53,7 +53,7 @@ def _format_http_error(e: Exception) -> str:
                 detail = "; ".join(str(d) for d in detail)
             # 404 + "Page not found"는 엔터프라이즈 전용 기능일 가능성이 높음
             if status_code == 404 and "Page not found" in str(detail):
-                return f"{base}. 이 기능은 현재 서버에서 지원하지 않습니다 (Plane Enterprise 전용일 수 있습니다)"
+                return "This feature is not currently supported on this server (may require Plane Enterprise)"
             return f"{base}: {detail}"
 
     return base
@@ -91,8 +91,9 @@ def handle_api_error(func: F) -> F:
                 if isinstance(e, ConfigurationError):
                     click.echo(f"설정 오류: {e}", err=True)
                     sys.exit(78)  # EX_CONFIG
-            except ImportError:
-                pass
+            except ImportError as ie:
+                # plane.errors 모듈 경로가 변경된 경우 경고 출력 (순환 임포트 방지 목적의 런타임 import)
+                click.echo(f"경고: 내부 모듈 임포트 실패 - {ie}", err=True)
 
             click.echo(f"오류: {e}", err=True)
             sys.exit(1)

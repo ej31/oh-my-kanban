@@ -379,9 +379,9 @@ All commands exit with:
 
 Common errors:
 - `"Given API token is not valid"` — Invalid or expired API key
-- `"이 기능은 현재 서버에서 지원하지 않습니다"` — Enterprise-only feature on Community Edition
-- `"워크스페이스 슬러그가 필요합니다"` — Missing workspace (set `--workspace` or `PLANE_WORKSPACE_SLUG`)
-- `"프로젝트가 필요합니다"` — Missing project (set `--project` or `PLANE_PROJECT_ID`)
+- `"This feature is not currently supported on this server"` — Enterprise-only feature on Community Edition
+- `"Workspace slug is required"` — Missing workspace (set `--workspace` or `PLANE_WORKSPACE_SLUG`)
+- `"Project is required"` — Missing project (set `--project` or `PLANE_PROJECT_ID`)
 
 ## Known Quirks and Limitations
 
