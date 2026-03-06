@@ -74,8 +74,8 @@ export const messages = {
     pipNotFound: 'pip not found. Please check that Python and pip are installed correctly.',
     configSaveFailed: 'Failed to save config file: ',
     unexpectedError: 'Unexpected error: ',
-    outroPlane: 'Setup complete!\n  List issues:   omk work-item list\n  Create issue:  omk work-item create\n  List projects: omk project list',
-    outroLinear: 'Setup complete!\n  List issues:   omk work-item list\n  Create issue:  omk work-item create',
+    outroPlane: 'Setup complete!\n  List issues:   omk pl work-item list\n  Create issue:  omk pl work-item create\n  List projects: omk pl project list',
+    outroLinear: 'Setup complete!\n  List issues:   omk ln issue list\n  Create issue:  omk ln issue create',
     outro: 'Setup complete! Run `omk` to get started.',
 
     // claude code scope
@@ -164,8 +164,8 @@ export const messages = {
     pipNotFound: 'pip을 찾을 수 없습니다. Python과 pip이 올바르게 설치되어 있는지 확인하세요.',
     configSaveFailed: '설정 파일 저장 실패: ',
     unexpectedError: '예상치 못한 오류가 발생했습니다: ',
-    outroPlane: '설정이 완료되었습니다!\n  이슈 목록:    omk work-item list\n  이슈 생성:    omk work-item create\n  프로젝트 목록: omk project list',
-    outroLinear: '설정이 완료되었습니다!\n  이슈 목록: omk work-item list\n  이슈 생성: omk work-item create',
+    outroPlane: '설정이 완료되었습니다!\n  이슈 목록:    omk pl work-item list\n  이슈 생성:    omk pl work-item create\n  프로젝트 목록: omk pl project list',
+    outroLinear: '설정이 완료되었습니다!\n  이슈 목록: omk ln issue list\n  이슈 생성: omk ln issue create',
     outro: '설정이 완료되었습니다! `omk` 명령어로 시작하세요.',
 
     // claude code scope
