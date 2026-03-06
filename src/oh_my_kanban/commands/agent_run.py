@@ -77,29 +77,14 @@ def agent_run_activity() -> None:
 def activity_list(ctx: CliContext, run_id: str, per_page: int, fetch_all: bool) -> None:
     """에이전트 실행의 활동 목록 조회."""
     if fetch_all:
-        # SDK activities.list()는 params dict를 받으므로 fetch_all_pages 대신 직접 순회한다.
-        all_results = []
-        cursor = None
-        page_count = 0
-        max_pages = 500
-        while True:
-            page_count += 1
-            if page_count > max_pages:
-                click.echo(
-                    f"경고: 최대 페이지 수({max_pages})에 도달했습니다. 결과가 잘렸을 수 있습니다.",
-                    err=True,
-                )
-                break
-            params: dict = {"per_page": per_page}
-            if cursor:
-                params["cursor"] = cursor
-            response = ctx.client.agent_runs.activities.list(ctx.workspace, run_id, params=params)
-            all_results.extend(getattr(response, "results", []))
-            if not getattr(response, "next_page_results", False):
-                break
-            cursor = getattr(response, "next_cursor", None)
-            if not cursor:
-                break
+        from oh_my_kanban.utils import fetch_all_pages_with_params
+
+        all_results = fetch_all_pages_with_params(
+            ctx.client.agent_runs.activities.list,
+            ctx.workspace,
+            run_id,
+            per_page=per_page,
+        )
         format_output(all_results, ctx.output, columns=_ACTIVITY_COLUMNS)
     else:
         response = ctx.client.agent_runs.activities.list(

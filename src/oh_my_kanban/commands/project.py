@@ -33,10 +33,32 @@ def project_list(ctx: CliContext, per_page: int, fetch_all: bool) -> None:
     ws = ctx.require_workspace()
 
     if fetch_all:
-        from oh_my_kanban.utils import fetch_all_pages
+        # projects.list()는 params=PaginatedQueryParams 방식만 지원하므로 직접 순회한다.
+        from plane.models.query_params import PaginatedQueryParams
 
-        items = fetch_all_pages(ctx.client.projects.list, ws, per_page=per_page)
-        format_output(items, ctx.output, columns=_LIST_COLUMNS)
+        all_results = []
+        cursor: str | None = None
+        page_count = 0
+        max_pages = 500
+        while True:
+            page_count += 1
+            if page_count > max_pages:
+                click.echo(
+                    f"경고: 최대 페이지 수({max_pages})에 도달했습니다. 결과가 잘렸을 수 있습니다.",
+                    err=True,
+                )
+                break
+            kw: dict = {"per_page": per_page}
+            if cursor:
+                kw["cursor"] = cursor
+            response = ctx.client.projects.list(ws, params=PaginatedQueryParams(**kw))
+            all_results.extend(response.results or [])
+            if not getattr(response, "next_page_results", False):
+                break
+            cursor = getattr(response, "next_cursor", None)
+            if not cursor:
+                break
+        format_output(all_results, ctx.output, columns=_LIST_COLUMNS)
     else:
         from plane.models.query_params import PaginatedQueryParams
 
