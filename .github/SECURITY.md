@@ -2,10 +2,13 @@
 
 ## Supported Versions
 
-| Version | Supported |
-|---------|-----------|
-| Latest  | ✅        |
-| Older   | ❌        |
+Security fixes are applied to the **current major version** on PyPI only.
+Older major versions are not backported.
+
+| Version       | Supported |
+|---------------|-----------|
+| 0.x (current) | ✅        |
+| Pre-release   | ❌        |
 
 ## Reporting a Vulnerability
 
