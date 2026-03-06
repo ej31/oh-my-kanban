@@ -6,6 +6,8 @@ import json
 import sys
 from typing import Any
 
+import click
+
 
 def _to_dict(item: Any) -> dict:
     """Pydantic 모델 또는 dict를 dict로 변환한다."""
@@ -23,6 +25,14 @@ def format_output(
     title: str | None = None,
 ) -> None:
     """데이터를 지정된 포맷으로 stdout에 출력한다."""
+    # None 입력은 빈 결과로 처리
+    if data is None:
+        if fmt != "json":
+            click_echo_err("결과 없음")
+        else:
+            sys.stdout.write("[]\n")
+        return
+
     # 리스트가 아닌 경우 단일 항목으로 처리
     is_single = not isinstance(data, list)
     items = [data] if is_single else data
@@ -83,16 +93,14 @@ def _format_plain(items: list, columns: list[str] | None) -> None:
     first = _to_dict(items[0])
     cols = columns or list(first.keys())
 
-    print("\t".join(cols))
+    click.echo("\t".join(cols))
     for item in items:
         d = _to_dict(item)
-        print("\t".join(str(d.get(c, "")) for c in cols))
+        click.echo("\t".join(str(d.get(c, "")) for c in cols))
 
 
 def click_echo_err(msg: str) -> None:
     """stderr에 메시지 출력."""
-    import click
-
     click.echo(msg, err=True)
 
 
