@@ -1,6 +1,6 @@
-[한국어](README_kr.md) | [ENGLISH](README_en.md)
-
 # oh-my-kanban | 오마이칸반
+
+[한국어](README_kr.md) | [ENGLISH](README_en.md)
 
 > AI 에이전트 중심의 멀티 플랫폼 프로젝트 관리 CLI — 에이전트를 먼저, 사람은 나중에.
 
@@ -89,7 +89,7 @@ omk --profile production work-item list -o table
 
 ### 설정 파일 위치
 
-```
+```text
 ~/.config/oh-my-kanban/config.toml
 ```
 
@@ -273,7 +273,7 @@ omk work-item-property list --type TYPE_ID # 사용자 정의 속성
 omk work-item list
 ```
 
-```
+```text
 ID                                    NAME           PRIORITY  STATE      ASSIGNEES
 12345678-90ab-cdef-1234-567890abcdef  로그인 버그 수정  high      In Progress  alice
 87654321-abcd-ef12-3456-7890abcdef12  다크 모드 추가   medium    To Do      bob, charlie
@@ -315,7 +315,7 @@ omk work-item list -o json
 omk work-item list -o plain
 ```
 
-```
+```text
 12345678-90ab-cdef-1234-567890abcdef|로그인 버그 수정|high|In Progress|alice
 87654321-abcd-ef12-3456-7890abcdef12|다크 모드 추가|medium|To Do|bob,charlie
 ```

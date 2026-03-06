@@ -1,6 +1,6 @@
-[한국어](README_kr.md) | [ENGLISH](README_en.md)
-
 # oh-my-kanban
+
+[한국어](README_kr.md) | [ENGLISH](README_en.md)
 
 > Multi-platform project management CLI — built for AI agents first, humans second.
 
@@ -79,7 +79,7 @@ omk --profile production work-item list -o table
 
 ### Configuration File Location
 
-```
+```text
 ~/.config/oh-my-kanban/config.toml
 ```
 
@@ -173,10 +173,10 @@ omk work-item list [--all] [--per-page N] [--cursor CURSOR] [--priority PRIORITY
 omk work-item get ITEM_ID_OR_IDENTIFIER
 
 # Create work item
-omk work-item create --name NAME [--state-id STATE] [--priority PRIORITY] [--description DESC] [--assignees USER1,USER2]
+omk work-item create --name NAME [--state STATE_ID] [--priority PRIORITY] [--description DESC] [--assignee USER_ID]
 
 # Update work item
-omk work-item update ITEM_ID [--name NAME] [--state-id STATE] [--priority PRIORITY]
+omk work-item update ITEM_ID [--name NAME] [--state STATE_ID] [--priority PRIORITY]
 
 # Delete work item
 omk work-item delete ITEM_ID [--force]
@@ -185,9 +185,9 @@ omk work-item delete ITEM_ID [--force]
 omk work-item search QUERY
 
 # Manage work item relations
-omk work-item relation create ITEM_ID --type TYPE --target TARGET_ITEM_ID
+omk work-item relation create ITEM_ID --related-work-item ITEM_ID2 --relation-type blocking
 omk work-item relation list ITEM_ID
-omk work-item relation delete ITEM_ID --target TARGET_ITEM_ID
+omk work-item relation delete ITEM_ID --related-work-item ITEM_ID2
 ```
 
 #### cycle — Iteration Management
@@ -198,9 +198,9 @@ omk cycle create --name NAME --owned-by USER_ID [--start-date DATE] [--end-date 
 omk cycle get CYCLE_ID
 omk cycle update CYCLE_ID [--name NAME] [--start-date DATE] [--end-date DATE]
 omk cycle delete CYCLE_ID
-omk cycle list-work-items CYCLE_ID
-omk cycle add-work-items CYCLE_ID ITEM1 ITEM2 ...
-omk cycle remove-work-item CYCLE_ID ITEM_ID
+omk cycle items CYCLE_ID
+omk cycle add-items CYCLE_ID --items ITEM1 --items ITEM2
+omk cycle remove-item CYCLE_ID ITEM_ID
 ```
 
 #### module — Module Management
@@ -211,14 +211,14 @@ omk module create --name NAME [--status STATUS] [--start-date DATE] [--target-da
 omk module get MODULE_ID
 omk module update MODULE_ID [--name NAME] [--status STATUS]
 omk module delete MODULE_ID
-omk module list-work-items MODULE_ID
-omk module add-work-items MODULE_ID ITEM1 ITEM2 ...
+omk module items MODULE_ID
+omk module add-items MODULE_ID --items ITEM1 --items ITEM2
 ```
 
 #### Other Commands
 
 ```bash
-omk user list                              # List workspace users
+omk user me                              # List workspace users
 omk project list [--all]                   # List projects
 omk state list                             # List work item states
 omk label list [--all]                     # List labels
@@ -247,7 +247,7 @@ omk work-item list
 
 Output:
 
-```
+```text
 ID                                    NAME           PRIORITY  STATE      ASSIGNEES
 12345678-90ab-cdef-1234-567890abcdef  Fix login bug  high      In Progress  alice
 87654321-abcd-ef12-3456-7890abcdef12  Add dark mode  medium    To Do      bob, charlie
@@ -289,7 +289,7 @@ omk work-item list -o plain
 
 Output:
 
-```
+```text
 12345678-90ab-cdef-1234-567890abcdef|Fix login bug|high|In Progress|alice
 87654321-abcd-ef12-3456-7890abcdef12|Add dark mode|medium|To Do|bob,charlie
 ```

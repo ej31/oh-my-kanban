@@ -1,7 +1,7 @@
+# oh-my-kanban
+
 | [한국어](docs/README_kr.md) | [ENGLISH](docs/README_en.md) |
 |---|---|
-
-# oh-my-kanban
 
 > Multi-platform project management CLI — built for AI agents first, humans second.
 
@@ -80,7 +80,7 @@ omk --profile production plane work-item list -o table
 
 ### Configuration File Location
 
-```
+```text
 ~/.config/oh-my-kanban/config.toml
 ```
 
@@ -265,7 +265,7 @@ omk github project list --owner OWNER
 omk plane work-item list
 ```
 
-```
+```text
 ID                                    NAME           PRIORITY  STATE      ASSIGNEES
 12345678-90ab-cdef-1234-567890abcdef  Fix login bug  high      In Progress  alice
 87654321-abcd-ef12-3456-7890abcdef12  Add dark mode  medium    To Do      bob, charlie
@@ -303,7 +303,7 @@ omk plane work-item list -o json
 omk plane work-item list -o plain
 ```
 
-```
+```text
 12345678-90ab-cdef-1234-567890abcdef|Fix login bug|high|In Progress|alice
 87654321-abcd-ef12-3456-7890abcdef12|Add dark mode|medium|To Do|bob,charlie
 ```
