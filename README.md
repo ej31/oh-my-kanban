@@ -16,7 +16,7 @@ oh-my-kanban is a lightweight CLI designed for **AI agent automation workflows**
 
 - **Zero-interaction mode** — Full automation via environment variables
 - **Machine-readable output** — JSON format for agent pipeline integration
-- **Full Plane CRUD** — Complete support for work items, cycles, modules, intake, pages, users, states, labels, and more
+- **Broad Plane coverage** — Work items, cycles, modules, milestones, intake, pages, initiatives, teamspaces, stickies, and more (Community Edition free tier priority)
 - **Multi-workspace support** — Profile-based management of multiple environments
 - **Self-hosted friendly** — Built and tested on Plane Community Edition (free, self-hosted)
 
@@ -194,7 +194,7 @@ omk plane work-item update ITEM_ID [--name NAME] [--state STATE_ID] [--priority 
 omk plane work-item delete ITEM_ID [--force]
 
 # Search work items
-omk plane work-item search QUERY
+omk plane work-item search --query QUERY
 
 # Manage relationships
 omk plane work-item relation create ITEM_ID --related-work-item ITEM_ID2 --relation-type blocking
@@ -237,14 +237,16 @@ omk plane label list [--all]                     # List labels
 omk plane label create --name NAME [--color HEX] # Create label
 
 omk plane milestone list                         # List milestones
-omk plane epic list                              # List epics
-omk plane page list                              # List pages
+omk plane epic list                              # List epics (list/get only)
+omk plane page get PAGE_ID                       # Get page (get/create only)
 omk plane intake list                            # List intake requests
 
 omk plane workspace members                      # List workspace members
 omk plane workspace features                     # List workspace features
 omk plane teamspace list                         # List teamspaces
 omk plane initiative list                        # List initiatives
+omk plane sticky list                            # List stickies
+omk plane customer list                          # List customers (Enterprise)
 
 omk plane work-item-type list                    # List work item types
 omk plane work-item-property list --type TYPE_ID # List custom properties
@@ -343,20 +345,69 @@ omk plane work-item list -o plain
 
 ## Server Compatibility
 
-| Feature | plane.so | Self-hosted CE | Note |
-|---------|----------|----------------|------|
-| Work Items | ✅ | ✅ | - |
-| Cycles | ✅ | ✅ | - |
-| Modules | ✅ | ✅ | - |
-| Milestones | ✅ | ✅ | - |
-| Pages | ✅ | ✅ | - |
-| Intake | ✅ | ✅ | - |
-| Custom Properties | ✅ | ⚠️ | Limited on CE |
-| Epics | ✅ | ⚠️ | Limited on CE |
-| Initiatives | ✅ | ✅ | - |
+> 개발 기준: **Plane Community Edition (무료 자가호스팅)**
+> 무료 플랜에서 제공하는 기능을 우선 구현합니다. 유료/Enterprise 전용 기능은 구현 범위에 포함되지 않습니다.
 
-**Note**: Development is based on Plane Community Edition (self-hosted, free tier).
-Enterprise-only features are not implemented.
+### Plane
+
+| 기능 | 구현 | plane.so | Self-hosted CE | 비고 |
+|------|:----:|:--------:|:--------------:|------|
+| Work Items (CRUD) | ✅ | ✅ | ✅ | 댓글·링크·관계·활동·첨부파일·작업로그 포함 |
+| Cycles (CRUD) | ✅ | ✅ | ✅ | 아이템 추가·제거 포함 |
+| Modules (CRUD) | ✅ | ✅ | ✅ | 아이템 추가 포함 |
+| Milestones (CRUD) | ✅ | ✅ | ✅ | 아이템 추가·제거 포함 |
+| Intake (CRUD) | ✅ | ✅ | ✅ | 상태 승인·거부 포함 |
+| Initiatives (CRUD) | ✅ | ✅ | ✅ | 에픽·레이블·프로젝트 연결 포함 |
+| Teamspaces (CRUD) | ✅ | ✅ | ✅ | 멤버·프로젝트 관리 포함 |
+| Stickies (CRUD) | ✅ | ✅ | ✅ | - |
+| Work Item Types (CRUD) | ✅ | ✅ | ✅ | - |
+| Custom Properties (CRUD) | ✅ | ✅ | ✅ | 옵션·값 관리 포함 |
+| Users / Members | ✅ | ✅ | ✅ | me, workspace members |
+| Pages | ⚠️ | ✅ | ✅ | get·create만 구현 |
+| Epics | ⚠️ | ✅ | ✅ | list·get만 구현 |
+| States | ⚠️ | ✅ | ✅ | list만 구현 |
+| Labels | ⚠️ | ✅ | ✅ | list·create만 구현 |
+| Projects | ⚠️ | ✅ | ✅ | list만 구현 |
+| Workspace Features | ⚠️ | ✅ | ✅ | list만 구현 (read-only) |
+| Customers (CRUD) | ✅ | ✅ | ❌ | Enterprise 전용 (CE 미지원) |
+
+#### 부분 구현 사유
+
+| 기능 | 미구현 범위 | 사유 |
+|------|------------|------|
+| Pages | list·update·delete | Plane Python SDK가 해당 엔드포인트를 미지원 |
+| Epics | create·update·delete | Epic은 Work Item Type의 특수 케이스. Plane API의 Epic CRUD가 CE에서 제한적으로 제공되어 조회만 지원 |
+| States | create·update·delete | 프로젝트 설정 리소스로, 자동화 파이프라인에서 직접 생성·삭제 수요가 낮아 list 우선 구현 |
+| Labels | get·update·delete | 자동화 파이프라인에서 레이블 수정·삭제 수요가 낮아 후순위 |
+| Projects | create·update·delete | 관리자 작업으로 CLI 자동화 범위 밖으로 판단 |
+
+### Linear
+
+| 기능 | 구현 | 비고 |
+|------|:----:|------|
+| Issues (CRUD) | ✅ | 댓글 포함 |
+| Teams | ✅ | list·get |
+| States | ✅ | list |
+| Labels | ✅ | list·get |
+| Projects | ✅ | list·get |
+| Cycles | ✅ | list·get |
+| Users | ✅ | me |
+
+### GitHub
+
+| 기능 | 구현 | 비고 |
+|------|:----:|------|
+| Issues | ❌ | 향후 구현 예정 |
+| Projects | ❌ | 향후 구현 예정 |
+
+> GitHub 통합은 현재 스텁(stub) 상태입니다. GitHub REST API 클라이언트 연동이 필요합니다.
+
+### Notion / Jira
+
+| 기능 | 구현 | 비고 |
+|------|:----:|------|
+| Notion | ❌ | 미착수 |
+| Jira | ❌ | 미착수 |
 
 ## Examples
 

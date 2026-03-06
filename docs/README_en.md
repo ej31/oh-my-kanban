@@ -15,7 +15,7 @@ A project management CLI designed with AI agents as the primary user.
 
 - **Zero-interaction mode** — Complete automation through environment variables alone
 - **Machine-readable output** — JSON format for seamless agent pipeline integration
-- **Full Plane CRUD** — Complete support for work items, cycles, modules, intake, pages, users, states, labels, and more
+- **Broad Plane coverage** — Work items, cycles, modules, milestones, intake, pages, initiatives, teamspaces, stickies, and more (Community Edition free tier priority)
 - **Linear support** — Issues, teams, cycles, projects, states, and labels via GraphQL
 - **Multi-workspace support** — Profile-based management of multiple workspaces
 - **Self-hosted friendly** — Developed against Plane Community Edition (free tier)
@@ -272,14 +272,16 @@ omk plane label list [--all]                       # List labels
 omk plane label create --name NAME [--color HEX]   # Create label
 
 omk plane milestone list                           # List milestones
-omk plane epic list                                # List epics
-omk plane page list                                # List pages
+omk plane epic list                                # List epics (list/get only)
+omk plane page get PAGE_ID                         # Get page (get/create only)
 omk plane intake list                              # List intake requests
 
 omk plane workspace members                        # List workspace members
 omk plane workspace features                       # List workspace features
 omk plane teamspace list                           # List teamspaces
 omk plane initiative list                          # List initiatives
+omk plane sticky list                              # List stickies
+omk plane customer list                            # List customers (Enterprise)
 
 omk plane work-item-type list                      # List work item types
 omk plane work-item-property list --type TYPE_ID   # List custom properties
@@ -413,21 +415,69 @@ Output:
 
 ## Server Compatibility
 
-| Feature | plane.so | Self-hosted CE | Notes |
-|---------|----------|----------------|-------|
-| Work Items | ✅ | ✅ | - |
-| Cycles | ✅ | ✅ | - |
-| Modules | ✅ | ✅ | - |
-| Milestones | ✅ | ✅ | - |
-| Pages | ✅ | ✅ | - |
-| Intake | ✅ | ✅ | - |
-| Custom Properties | ✅ | ⚠️ | Limited in CE |
-| Epics | ✅ | ⚠️ | Limited in CE |
-| Initiatives | ✅ | ✅ | - |
-| Worklog | ✅ | ❌ | Enterprise only |
-| Relations | ✅ | ❌ | Enterprise only |
+> Development target: **Plane Community Edition (free, self-hosted)**
+> Free-tier features are implemented first. Enterprise-only features are out of scope.
 
-**Note**: Currently developed against Plane Community Edition (self-hosted, free tier). Enterprise-only features are not yet implemented.
+### Plane
+
+| Feature | Implemented | plane.so | Self-hosted CE | Notes |
+|---------|:-----------:|:--------:|:--------------:|-------|
+| Work Items (CRUD) | ✅ | ✅ | ✅ | Includes comments, links, relations, activities, attachments, worklogs |
+| Cycles (CRUD) | ✅ | ✅ | ✅ | Includes item add/remove |
+| Modules (CRUD) | ✅ | ✅ | ✅ | Includes item add |
+| Milestones (CRUD) | ✅ | ✅ | ✅ | Includes item add/remove |
+| Intake (CRUD) | ✅ | ✅ | ✅ | Includes approve/reject |
+| Initiatives (CRUD) | ✅ | ✅ | ✅ | Includes epics, labels, projects |
+| Teamspaces (CRUD) | ✅ | ✅ | ✅ | Includes members, projects |
+| Stickies (CRUD) | ✅ | ✅ | ✅ | - |
+| Work Item Types (CRUD) | ✅ | ✅ | ✅ | - |
+| Custom Properties (CRUD) | ✅ | ✅ | ✅ | Includes options and values |
+| Users / Members | ✅ | ✅ | ✅ | me, workspace members |
+| Pages | ⚠️ | ✅ | ✅ | get and create only |
+| Epics | ⚠️ | ✅ | ✅ | list and get only |
+| States | ⚠️ | ✅ | ✅ | list only |
+| Labels | ⚠️ | ✅ | ✅ | list and create only |
+| Projects | ⚠️ | ✅ | ✅ | list only |
+| Workspace Features | ⚠️ | ✅ | ✅ | list only (read-only) |
+| Customers (CRUD) | ✅ | ✅ | ❌ | Enterprise only (not available on CE) |
+
+#### Partial Implementation Reasons
+
+| Feature | Missing | Reason |
+|---------|---------|--------|
+| Pages | list, update, delete | Not supported by the Plane Python SDK |
+| Epics | create, update, delete | Epic is a special case of Work Item Type; Epic CRUD API is limited in CE |
+| States | create, update, delete | System resource managed in project settings; low automation demand for mutations |
+| Labels | get, update, delete | Low automation demand for label mutations |
+| Projects | create, update, delete | Admin-level operation; considered out of scope for CLI automation |
+
+### Linear
+
+| Feature | Implemented | Notes |
+|---------|:-----------:|-------|
+| Issues (CRUD) | ✅ | Includes comments |
+| Teams | ✅ | list, get |
+| States | ✅ | list |
+| Labels | ✅ | list, get |
+| Projects | ✅ | list, get |
+| Cycles | ✅ | list, get |
+| Users | ✅ | me |
+
+### GitHub
+
+| Feature | Implemented | Notes |
+|---------|:-----------:|-------|
+| Issues | ❌ | Coming soon |
+| Projects | ❌ | Coming soon |
+
+> GitHub integration is currently a stub. Requires GitHub REST API client integration.
+
+### Notion / Jira
+
+| Feature | Implemented | Notes |
+|---------|:-----------:|-------|
+| Notion | ❌ | Not started |
+| Jira | ❌ | Not started |
 
 ## Examples
 
