@@ -93,7 +93,7 @@ def cycle_create(
 
     # 현재 사용자 ID를 owned_by로 사용
     me = ctx.client.users.get_me()
-    if not me.id:
+    if me is None or not me.id:
         raise click.UsageError("현재 사용자 ID를 가져올 수 없습니다.")
     owned_by = me.id
 

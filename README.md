@@ -336,7 +336,7 @@ export PLANE_API_KEY="pl_xxxxxx"
 export PLANE_WORKSPACE_SLUG="my-workspace"
 export PLANE_PROJECT_ID="proj_uuid"
 
-# 1. 반복 생성
+# 1. Create cycle
 CYCLE_ID=$(omk plane cycle create \
   --name "Sprint 1" \
   --owned-by "$USER_ID" \
@@ -346,7 +346,7 @@ CYCLE_ID=$(omk plane cycle create \
 
 echo "Created cycle: $CYCLE_ID"
 
-# 2. 작업 생성
+# 2. Create work item
 ITEM_ID=$(omk plane work-item create \
   --name "Fix critical bug" \
   --priority high \
@@ -355,10 +355,10 @@ ITEM_ID=$(omk plane work-item create \
 
 echo "Created work item: $ITEM_ID"
 
-# 3. 반복에 작업 추가
+# 3. Add work item to cycle
 omk plane cycle add-work-items "$CYCLE_ID" "$ITEM_ID"
 
-# 4. 사용자에게 할당
+# 4. Assign to user
 omk plane work-item update "$ITEM_ID" --assignees "$ASSIGNEE_USER_ID"
 
 echo "Done!"
@@ -367,13 +367,13 @@ echo "Done!"
 ### Example 2: Multi-Workspace Management
 
 ```bash
-# Production 환경에서 작업 조회
+# Fetch work items from production
 omk --profile production plane work-item list
 
-# Development 환경에서 작업 생성
+# Create work item in development
 omk --profile development plane work-item create --name "New feature" --priority medium
 
-# 환경별 필터링
+# Filter by environment
 omk --profile staging plane work-item search "bug" -o json | jq '.data[] | select(.priority=="urgent")'
 ```
 
@@ -384,7 +384,7 @@ omk --profile staging plane work-item search "bug" -o json | jq '.data[] | selec
 
 export PLANE_WORKSPACE_SLUG="my-workspace"
 
-# JSON 출력으로 리포트 생성
+# Generate report in JSON format
 omk plane work-item list --all -o json > report.json
 
 # Group by status and count
