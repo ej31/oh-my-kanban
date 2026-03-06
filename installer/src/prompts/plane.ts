@@ -40,25 +40,29 @@ export async function promptPlaneConfig(): Promise<PlaneConfig> {
     process.exit(0);
   }
 
-  const baseUrlRaw = await text({
-    message: m.planeServerUrl,
-    defaultValue: 'https://api.plane.so',
-    placeholder: 'https://api.plane.so',
-    validate(value) {
-      if (!value.trim()) return m.planeUrlRequired;
-      try {
-        new URL(value);
-      } catch {
-        return m.planeUrlInvalid;
-      }
-    },
-  });
+  // self-hosted가 아니면 기본 URL 사용, 아니면 사용자 입력
+  let baseUrl: string;
+  if (!isSelfHosted) {
+    baseUrl = 'https://api.plane.so';
+  } else {
+    const baseUrlRaw = await text({
+      message: m.planeServerUrl,
+      placeholder: 'https://your-plane-instance.example.com',
+      validate(value) {
+        if (!value.trim()) return m.planeUrlRequired;
+        try {
+          new URL(value);
+        } catch {
+          return m.planeUrlInvalid;
+        }
+      },
+    });
 
-  if (isCancel(baseUrlRaw)) {
-    process.exit(0);
+    if (isCancel(baseUrlRaw)) {
+      process.exit(0);
+    }
+    baseUrl = (baseUrlRaw as string).replace(/\/$/, '');
   }
-
-  let baseUrl = (baseUrlRaw as string).replace(/\/$/, '');
 
   // API 키 입력 + 실제 API 검증 루프
   // 연결 실패(서버 URL 문제) 시 URL 재입력, 인증 실패(API Key 문제) 시 API Key 재입력
