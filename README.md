@@ -398,10 +398,10 @@ jq '.data | sort_by(.priority) | reverse | .[0:5]' report.json
 
 - [x] **Plane** (plane.so, self-hosted)
   - Note: Developed against **Community Edition (self-hosted, free tier)**. Enterprise-only features are not implemented.
-  - Provider subgroup: `omk plane` (또는 `omk pl`)
+  - Provider subgroup: `omk plane` (or `omk pl`)
   - Examples: `omk plane work-item list`, `omk plane cycle create --name "Sprint 1"`, `omk pl work-item search "bug"`
 - [ ] **GitHub**
-  - Provider subgroup: `omk github` (또는 `omk gh`)
+  - Provider subgroup: `omk github` (or `omk gh`)
   - Examples: `omk github issue list --owner ej31 --repo my-repo`, `omk github project list --owner ej31`
 - [ ] **Linear**
 - [ ] **Notion**
