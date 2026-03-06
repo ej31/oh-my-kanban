@@ -49,3 +49,11 @@ class CliContext:
                 "  CLAUDE.md에 plane_context.project_id 설정"
             )
         return self.project
+
+    def require_workspace(self) -> str:
+        """workspace 슬러그가 필요한 커맨드에서 호출. 없으면 명확한 에러."""
+        if not self.workspace:
+            raise click.UsageError(
+                "워크스페이스 슬러그가 필요합니다. --workspace 옵션 또는 PLANE_WORKSPACE_SLUG 환경변수를 설정하세요."
+            )
+        return self.workspace
