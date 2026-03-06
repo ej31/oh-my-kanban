@@ -16,6 +16,14 @@ _CLOUD_API_URL = "https://api.plane.so"
 _ALLOWED_KEYS = {f for f in Config.__dataclass_fields__ if f != "profile"}
 
 
+def _save_config_safe(data: dict, profile: str = "default") -> None:
+    """save_config 호출 실패를 Click 친화적 UsageError로 변환한다."""
+    try:
+        _save_config_safe(data, profile=profile)
+    except (OSError, ValueError) as e:
+        raise click.UsageError(str(e))
+
+
 def _extract_slug_from_url(url: str) -> str:
     """URL에서 워크스페이스 슬러그를 추출한다.
 
@@ -63,7 +71,7 @@ def config_init() -> None:
         click.echo(f"  PLANE_BASE_URL        = {base_url}")
         click.echo(f"  PLANE_API_KEY         = {'*' * 8}")
         click.echo(f"  PLANE_WORKSPACE_SLUG  = {env_workspace_slug}")
-        save_config(
+        _save_config_safe(
             {
                 "base_url": base_url,
                 "api_key": env_api_key,
@@ -155,7 +163,7 @@ def config_init() -> None:
     if not workspace_slug:
         raise click.UsageError("워크스페이스 슬러그는 필수입니다.")
 
-    save_config(
+    _save_config_safe(
         {
             "base_url": base_url,
             "api_key": api_key,
@@ -216,7 +224,7 @@ def config_set(key: str, value: str, profile: str) -> None:
     if key == "output" and value not in ("json", "table", "plain"):
         raise click.UsageError("output 값은 json, table, plain 중 하나여야 합니다.")
 
-    save_config({key: value}, profile=profile)
+    _save_config_safe({key: value}, profile=profile)
     click.echo(f"[{profile}] {key} = {value if key != 'api_key' else '****'} 저장 완료")
 
 
@@ -254,6 +262,6 @@ def profile_use(name: str) -> None:
         )
 
     # 기본 프로필 정보를 'active_profile' 키로 저장
-    save_config({"active_profile": name}, profile="_meta")
+    _save_config_safe({"active_profile": name}, profile="_meta")
     click.echo(f"기본 프로필이 '{name}'으로 변경되었습니다.")
     click.echo("다음 실행 시 '--profile' 옵션 또는 PLANE_PROFILE 환경변수로 적용하세요.")
