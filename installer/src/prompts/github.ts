@@ -51,7 +51,8 @@ function getInstallInstructions(m: ReturnType<typeof t>): string {
   const platform = process.platform;
   if (platform === 'darwin') return m.ghInstallMacOS;
   if (platform === 'win32') return m.ghInstallWindows;
-  return m.ghInstallLinux;
+  if (platform === 'linux') return m.ghInstallLinux;
+  return m.ghInstallUnsupported;
 }
 
 // @clack/prompts의 note()는 문자 수로 박스 너비를 계산하여 한글(2열) 포함 시 박스가 깨짐.
@@ -89,7 +90,7 @@ export async function promptGithubConfig(): Promise<void> {
       padForNote(`${installGuide}\n\n${m.ghAuthInstruction}\n\n${m.ghRerun}`),
       m.ghNotInstalled,
     );
-    process.exit(0);
+    process.exit(1);
   }
 
   // 2. gh 설치됨 but 미인증
@@ -98,7 +99,7 @@ export async function promptGithubConfig(): Promise<void> {
       padForNote(`${m.ghAuthInstruction}\n\n${m.ghRerun}`),
       m.ghNotAuthenticated,
     );
-    process.exit(0);
+    process.exit(1);
   }
 
   // 3. 필수 권한(scope) 부족 — 없으면 GitHub 기능을 사용할 수 없음
@@ -111,7 +112,7 @@ export async function promptGithubConfig(): Promise<void> {
       ),
       m.ghScopesRequired,
     );
-    process.exit(0);
+    process.exit(1);
   }
 
   // 4. 실제 API 호출로 최종 검증 — 토큰이 만료/폐기됐을 경우를 잡아낸다
@@ -127,5 +128,4 @@ export async function promptGithubConfig(): Promise<void> {
 
   // 5. 설치 + 인증 + 권한 + API 호출 모두 확인 완료
   note(padForNote(m.ghReadyNote), m.ghReadyTitle);
-  process.exit(0);
 }

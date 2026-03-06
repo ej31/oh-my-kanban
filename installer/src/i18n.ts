@@ -58,6 +58,7 @@ export const messages = {
     ghInstallMacOS: 'Install via Homebrew:\n  brew install gh',
     ghInstallWindows: 'Install via winget:\n  winget install --id GitHub.cli\n\nOr via Scoop:\n  scoop install gh',
     ghInstallLinux: 'Install via apt (Debian/Ubuntu):\n  sudo apt install gh\n\nOr via dnf (Fedora/RHEL):\n  sudo dnf install gh',
+    ghInstallUnsupported: 'Please install GitHub CLI manually:\n  https://cli.github.com',
     ghAuthInstruction: 'Authenticate with GitHub:\n  gh auth login',
     ghRerun: 'Then re-run the setup wizard:\n  npx oh-my-kanban',
     ghReadyNote: 'gh CLI is installed and authenticated — you are all set!\n\noh-my-kanban uses the official GitHub CLI (gh) to manage\nyour GitHub issues and projects. No extra setup needed.\n\nTry it now:\n  gh issue list\n  gh issue create',
@@ -130,6 +131,7 @@ export const messages = {
     ghInstallMacOS: 'Homebrew로 설치하세요:\n  brew install gh',
     ghInstallWindows: 'winget으로 설치하세요:\n  winget install --id GitHub.cli\n\nScoop으로 설치하세요:\n  scoop install gh',
     ghInstallLinux: 'apt로 설치하세요 (Debian/Ubuntu):\n  sudo apt install gh\n\ndnf로 설치하세요 (Fedora/RHEL):\n  sudo dnf install gh',
+    ghInstallUnsupported: 'GitHub CLI를 수동으로 설치하세요:\n  https://cli.github.com',
     ghAuthInstruction: 'GitHub 인증을 진행하세요:\n  gh auth login',
     ghRerun: '완료 후 다시 실행하세요:\n  npx oh-my-kanban',
     ghReadyNote: 'gh CLI가 설치되어 있고 인증도 완료되었습니다!\n\noh-my-kanban은 GitHub 공식 CLI(gh)를 활용하여\nGitHub 이슈와 프로젝트를 관리합니다.\n추가 설정 없이 바로 사용할 수 있습니다.\n\n바로 시작하기:\n  gh issue list\n  gh issue create',
@@ -146,7 +148,7 @@ export const messages = {
     outroLinear: '설정이 완료되었습니다!\n  이슈 목록: omk work-item list\n  이슈 생성: omk work-item create',
     outro: '설정이 완료되었습니다! `omk` 명령어로 시작하세요.',
   },
-} as const;
+};
 
 export type Messages = typeof messages['en'];
 
