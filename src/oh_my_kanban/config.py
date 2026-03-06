@@ -67,7 +67,7 @@ def load_config(profile: str = "default") -> Config:
             cfg.workspace_slug = section.get("workspace_slug", cfg.workspace_slug)
             cfg.project_id = section.get("project_id", cfg.project_id)
             cfg.output = section.get("output", cfg.output)
-        except Exception as e:
+        except (OSError, tomllib.TOMLDecodeError) as e:
             import sys
             print(f"경고: 설정 파일 파싱 오류 ({CONFIG_FILE}): {e}", file=sys.stderr)
 
@@ -84,6 +84,11 @@ def load_config(profile: str = "default") -> Config:
     return cfg
 
 
+def _escape_toml_string(v: str) -> str:
+    """TOML 기본 문자열에 포함될 값의 특수문자를 이스케이프한다."""
+    return v.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n").replace("\r", "\\r")
+
+
 def save_config(data: dict, profile: str = "default") -> None:
     """설정을 TOML 파일에 저장한다."""
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
@@ -94,7 +99,7 @@ def save_config(data: dict, profile: str = "default") -> None:
         try:
             with open(CONFIG_FILE, "rb") as f:
                 existing = tomllib.load(f)
-        except Exception as e:
+        except (OSError, tomllib.TOMLDecodeError) as e:
             import sys
             print(f"경고: 기존 설정 로드 실패, 덮어씁니다: {e}", file=sys.stderr)
             existing = {}
@@ -103,11 +108,12 @@ def save_config(data: dict, profile: str = "default") -> None:
     existing.setdefault(profile, {}).update(data)
 
     # TOML 직렬화 (tomllib은 읽기 전용이므로 직접 작성)
+    # 값에 따옴표/백슬래시/개행이 포함될 수 있으므로 이스케이프 처리
     lines = []
     for prof, values in existing.items():
         lines.append(f"[{prof}]")
         for k, v in values.items():
-            lines.append(f'{k} = "{v}"')
+            lines.append(f'{k} = "{_escape_toml_string(str(v))}"')
         lines.append("")
 
     CONFIG_FILE.write_text("\n".join(lines), encoding="utf-8")
@@ -121,5 +127,7 @@ def list_profiles() -> list[str]:
         with open(CONFIG_FILE, "rb") as f:
             data = tomllib.load(f)
         return list(data.keys())
-    except Exception:
+    except (OSError, tomllib.TOMLDecodeError) as e:
+        import sys
+        print(f"경고: 프로필 목록 읽기 실패 ({CONFIG_FILE}): {e}", file=sys.stderr)
         return []

@@ -91,8 +91,9 @@ def handle_api_error(func: F) -> F:
                 if isinstance(e, ConfigurationError):
                     click.echo(f"설정 오류: {e}", err=True)
                     sys.exit(78)  # EX_CONFIG
-            except ImportError:
-                pass
+            except ImportError as ie:
+                # plane.errors 모듈 경로가 변경된 경우 경고 출력 (순환 임포트 방지 목적의 런타임 import)
+                click.echo(f"경고: 내부 모듈 임포트 실패 - {ie}", err=True)
 
             click.echo(f"오류: {e}", err=True)
             sys.exit(1)
