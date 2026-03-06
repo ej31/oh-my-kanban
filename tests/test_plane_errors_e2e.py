@@ -213,7 +213,7 @@ class TestInvalidChoices:
                 "relation",
                 "create",
                 "wi-001",
-                "--related-item", "wi-002",
+                "--related-work-item", "wi-002",
                 "--relation-type", "INVALID_TYPE",
             ],
             obj=ctx,

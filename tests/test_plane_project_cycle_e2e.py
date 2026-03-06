@@ -129,18 +129,20 @@ class TestProjectMembers:
         from oh_my_kanban.commands.project import project
 
         member = MagicMock()
-        ctx.client.project_members.list.return_value = _paginated([member])
+        ctx.client.projects.get_members.return_value = [member]
         result = runner.invoke(project, ["members", "proj-001"], obj=ctx)
         assert result.exit_code == 0, result.output
+        ctx.client.projects.get_members.assert_called_once()
 
 
 class TestProjectFeatures:
     def test_features_returns_detail(self, runner, ctx):
         from oh_my_kanban.commands.project import project
 
-        ctx.client.project_features.retrieve.return_value = MagicMock()
+        ctx.client.projects.get_features.return_value = MagicMock()
         result = runner.invoke(project, ["features", "proj-001"], obj=ctx)
         assert result.exit_code == 0, result.output
+        ctx.client.projects.get_features.assert_called_once()
 
 
 # ─── cycle ────────────────────────────────────────────────────────────────────
@@ -250,7 +252,7 @@ class TestCycleWorkItems:
         from oh_my_kanban.commands.cycle import cycle
 
         item = MagicMock()
-        ctx.client.cycle_work_items.list.return_value = _paginated([item])
+        ctx.client.cycles.list_work_items.return_value = _paginated([item])
         result = runner.invoke(cycle, ["items", "cyc-001"], obj=ctx)
         assert result.exit_code == 0, result.output
 
@@ -266,7 +268,7 @@ class TestCycleWorkItems:
     def test_remove_item(self, runner, ctx):
         from oh_my_kanban.commands.cycle import cycle
 
-        ctx.client.cycle_work_items.remove.return_value = None
+        ctx.client.cycles.remove_work_item.return_value = None
         result = runner.invoke(cycle, ["remove-item", "cyc-001", "wi-001"], obj=ctx)
         assert result.exit_code == 0, result.output
 

@@ -273,14 +273,14 @@ class TestWorkItemComment:
 
         comment = MagicMock()
         comment.id = "cmt-001"
-        ctx.client.work_item_comments.list.return_value = _paginated([comment])
+        ctx.client.work_items.comments.list.return_value = _paginated([comment])
         result = runner.invoke(work_item, ["comment", "list", "wi-001"], obj=ctx)
         assert result.exit_code == 0, result.output
 
     def test_comment_create(self, runner, ctx):
         from oh_my_kanban.commands.work_item import work_item
 
-        ctx.client.work_item_comments.create.return_value = MagicMock()
+        ctx.client.work_items.comments.create.return_value = MagicMock()
         result = runner.invoke(
             work_item, ["comment", "create", "wi-001", "--body", "Test comment"], obj=ctx
         )
@@ -289,7 +289,7 @@ class TestWorkItemComment:
     def test_comment_update(self, runner, ctx):
         from oh_my_kanban.commands.work_item import work_item
 
-        ctx.client.work_item_comments.update.return_value = MagicMock()
+        ctx.client.work_items.comments.update.return_value = MagicMock()
         result = runner.invoke(
             work_item,
             ["comment", "update", "wi-001", "cmt-001", "--body", "Updated comment"],
@@ -300,7 +300,7 @@ class TestWorkItemComment:
     def test_comment_delete_confirmed(self, runner, ctx):
         from oh_my_kanban.commands.work_item import work_item
 
-        ctx.client.work_item_comments.delete.return_value = None
+        ctx.client.work_items.comments.delete.return_value = None
         result = runner.invoke(
             work_item, ["comment", "delete", "wi-001", "cmt-001"], obj=ctx, input="y\n"
         )
@@ -316,14 +316,14 @@ class TestWorkItemLink:
 
         lnk = MagicMock()
         lnk.id = "lnk-001"
-        ctx.client.work_item_links.list.return_value = _paginated([lnk])
+        ctx.client.work_items.links.list.return_value = _paginated([lnk])
         result = runner.invoke(work_item, ["link", "list", "wi-001"], obj=ctx)
         assert result.exit_code == 0, result.output
 
     def test_link_create(self, runner, ctx):
         from oh_my_kanban.commands.work_item import work_item
 
-        ctx.client.work_item_links.create.return_value = MagicMock()
+        ctx.client.work_items.links.create.return_value = MagicMock()
         result = runner.invoke(
             work_item,
             ["link", "create", "wi-001", "--url", "https://example.com"],
@@ -334,7 +334,7 @@ class TestWorkItemLink:
     def test_link_delete_confirmed(self, runner, ctx):
         from oh_my_kanban.commands.work_item import work_item
 
-        ctx.client.work_item_links.delete.return_value = None
+        ctx.client.work_items.links.delete.return_value = None
         result = runner.invoke(
             work_item, ["link", "delete", "wi-001", "lnk-001"], obj=ctx, input="y\n"
         )
@@ -393,7 +393,7 @@ class TestWorkItemActivity:
 
         act = MagicMock()
         act.id = "act-001"
-        ctx.client.work_item_activities.list.return_value = _paginated([act])
+        ctx.client.work_items.activities.list.return_value = _paginated([act])
         result = runner.invoke(work_item, ["activity", "list", "wi-001"], obj=ctx)
         assert result.exit_code == 0, result.output
 
@@ -407,14 +407,14 @@ class TestWorkItemWorklog:
 
         wl = MagicMock()
         wl.id = "wl-001"
-        ctx.client.work_item_worklogs.list.return_value = _paginated([wl])
+        ctx.client.work_items.work_logs.list.return_value = _paginated([wl])
         result = runner.invoke(work_item, ["worklog", "list", "wi-001"], obj=ctx)
         assert result.exit_code == 0, result.output
 
     def test_worklog_create(self, runner, ctx):
         from oh_my_kanban.commands.work_item import work_item
 
-        ctx.client.work_item_worklogs.create.return_value = MagicMock()
+        ctx.client.work_items.work_logs.create.return_value = MagicMock()
         result = runner.invoke(
             work_item,
             ["worklog", "create", "wi-001", "--duration", "60"],
@@ -425,7 +425,7 @@ class TestWorkItemWorklog:
     def test_worklog_delete_confirmed(self, runner, ctx):
         from oh_my_kanban.commands.work_item import work_item
 
-        ctx.client.work_item_worklogs.delete.return_value = None
+        ctx.client.work_items.work_logs.delete.return_value = None
         result = runner.invoke(
             work_item, ["worklog", "delete", "wi-001", "wl-001"], obj=ctx, input="y\n"
         )

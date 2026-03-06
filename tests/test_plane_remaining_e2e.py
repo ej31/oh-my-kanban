@@ -132,7 +132,7 @@ class TestModuleItems:
         from oh_my_kanban.commands.module import module
 
         item = MagicMock()
-        ctx.client.module_work_items.list.return_value = _paginated([item])
+        ctx.client.modules.list_work_items.return_value = _paginated([item])
         result = runner.invoke(module, ["items", "mod-001"], obj=ctx)
         assert result.exit_code == 0, result.output
 
@@ -148,7 +148,7 @@ class TestModuleItems:
     def test_remove_item(self, runner, ctx):
         from oh_my_kanban.commands.module import module
 
-        ctx.client.module_work_items.remove.return_value = None
+        ctx.client.modules.remove_work_item.return_value = None
         result = runner.invoke(module, ["remove-item", "mod-001", "wi-001"], obj=ctx)
         assert result.exit_code == 0, result.output
 
