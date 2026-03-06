@@ -114,7 +114,18 @@ export async function promptGithubConfig(): Promise<void> {
     process.exit(0);
   }
 
-  // 4. 설치 + 인증 + 권한 모두 확인 완료
+  // 4. 실제 API 호출로 최종 검증 — 토큰이 만료/폐기됐을 경우를 잡아낸다
+  const apiTestResult = spawnSync('gh', ['api', '/user'], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  if (apiTestResult.status !== 0 || apiTestResult.error) {
+    note(padForNote(m.ghApiTestFailed), m.ghReadyTitle);
+    process.exit(1);
+  }
+
+  // 5. 설치 + 인증 + 권한 + API 호출 모두 확인 완료
   note(padForNote(m.ghReadyNote), m.ghReadyTitle);
   process.exit(0);
 }
