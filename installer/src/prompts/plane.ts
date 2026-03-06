@@ -41,23 +41,28 @@ export async function promptPlaneConfig(): Promise<PlaneConfig> {
     process.exit(0);
   }
 
-  // 서버 URL — URL 형식 검증
-  const baseUrl = await text({
-    message: 'Plane 서버 URL을 입력하세요',
-    defaultValue: 'https://api.plane.so',
-    placeholder: 'https://api.plane.so',
-    validate(value) {
-      if (!value.trim()) return 'URL을 입력해주세요';
-      try {
-        new URL(value);
-      } catch {
-        return '올바른 URL 형식이 아닙니다 (예: https://api.plane.so)';
-      }
-    },
-  });
+  // self-hosted가 아니면 기본 URL 사용, 아니면 사용자 입력
+  let baseUrl: string;
+  if (!isSelfHosted) {
+    baseUrl = 'https://api.plane.so';
+  } else {
+    const baseUrlInput = await text({
+      message: 'Plane 서버 URL을 입력하세요',
+      placeholder: 'https://your-plane-instance.example.com',
+      validate(value) {
+        if (!value.trim()) return 'URL을 입력해주세요';
+        try {
+          new URL(value);
+        } catch {
+          return '올바른 URL 형식이 아닙니다 (예: https://your-plane-instance.example.com)';
+        }
+      },
+    });
 
-  if (isCancel(baseUrl)) {
-    process.exit(0);
+    if (isCancel(baseUrlInput)) {
+      process.exit(0);
+    }
+    baseUrl = baseUrlInput as string;
   }
 
   // API 키 (마스킹) — 형식 검증 포함
@@ -96,7 +101,7 @@ export async function promptPlaneConfig(): Promise<PlaneConfig> {
   s.start('Plane API 연결을 확인하는 중...');
 
   const result = await testPlaneConnection(
-    baseUrl as string,
+    baseUrl,
     normalizedApiKey,
     workspaceSlug
   );
@@ -110,7 +115,7 @@ export async function promptPlaneConfig(): Promise<PlaneConfig> {
   s.stop(pc.green('Plane API 연결 성공'));
 
   return {
-    baseUrl: baseUrl as string,
+    baseUrl,
     apiKey: normalizedApiKey,
     workspaceSlug,
   };
