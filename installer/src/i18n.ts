@@ -91,6 +91,18 @@ export const messages = {
     claudeHooksFailed: 'Hook installation failed — run manually: omk hooks install',
     claudeMcpTitle: 'MCP Server Setup',
     claudeMcpNote: 'Register oh-my-kanban as an MCP server in Claude Code.\nAdd to {path}:\n\n  {\n    "mcpServers": {\n      "oh-my-kanban": {\n        "command": "omk",\n        "args": ["mcp", "serve"]\n      }\n    }\n  }',
+
+    // plane project
+    planeFetchingProjects: 'Fetching projects...',
+    planeSelectProject: 'Select a project',
+    planeCreateProject: '+ Create a new project',
+    planeSkipProject: 'Skip (set later with: omk config set project_id <id>)',
+    planeProjectName: 'New project name',
+    planeProjectNameRequired: 'Please enter a project name',
+    planeProjectCreating: 'Creating project...',
+    planeProjectCreated: 'Project created',
+    planeProjectCreateFailed: 'Failed to create project — check your permissions',
+    planeNoProjectsFound: 'No projects found — create one or skip',
   },
   ko: {
     intro: 'oh-my-kanban 설정 위저드',
@@ -181,6 +193,18 @@ export const messages = {
     claudeHooksFailed: '훅 설치 실패 — 수동 실행: omk hooks install',
     claudeMcpTitle: 'MCP 서버 설정',
     claudeMcpNote: 'oh-my-kanban을 Claude Code MCP 서버로 등록하세요.\n{path} 에 아래 내용을 추가하세요:\n\n  {\n    "mcpServers": {\n      "oh-my-kanban": {\n        "command": "omk",\n        "args": ["mcp", "serve"]\n      }\n    }\n  }',
+
+    // plane project
+    planeFetchingProjects: '프로젝트 목록 조회 중...',
+    planeSelectProject: '사용할 프로젝트를 선택하세요',
+    planeCreateProject: '+ 새 프로젝트 만들기',
+    planeSkipProject: '건너뛰기 (나중에: omk config set project_id <id>)',
+    planeProjectName: '새 프로젝트 이름을 입력하세요',
+    planeProjectNameRequired: '프로젝트 이름을 입력해주세요',
+    planeProjectCreating: '프로젝트 생성 중...',
+    planeProjectCreated: '프로젝트 생성 완료',
+    planeProjectCreateFailed: '프로젝트 생성 실패 — 권한을 확인해주세요',
+    planeNoProjectsFound: '프로젝트가 없습니다 — 새로 만들거나 건너뛰기',
   },
 };
 

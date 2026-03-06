@@ -14,6 +14,7 @@ export interface PlaneConfig {
   base_url: string;
   api_key: string;
   workspace_slug: string;
+  project_id?: string;
 }
 
 export interface LinearConfig {
@@ -97,6 +98,9 @@ function buildProfileSection(
     lines.push(`base_url = "${escapeTomlString(plane.base_url)}"`);
     lines.push(`api_key = "${escapeTomlString(plane.api_key)}"`);
     lines.push(`workspace_slug = "${escapeTomlString(plane.workspace_slug)}"`);
+    if (plane.project_id) {
+      lines.push(`project_id = "${escapeTomlString(plane.project_id)}"`);
+    }
   }
 
   if (linear) {

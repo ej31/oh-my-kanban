@@ -35,6 +35,7 @@ async function runSetup(): Promise<void> {
       base_url: result.baseUrl,
       api_key: result.apiKey,
       workspace_slug: result.workspaceSlug,
+      project_id: result.projectId || undefined,
     };
   } else if (service === 'linear') {
     const result = await promptLinearConfig();
