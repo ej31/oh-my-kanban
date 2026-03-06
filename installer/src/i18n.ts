@@ -41,9 +41,8 @@ export const messages = {
     ghAuthInstruction: 'Authenticate with GitHub:\n  gh auth login',
     ghRerun: 'Then re-run the setup wizard:\n  npx oh-my-kanban',
     ghReadyNote: 'gh CLI is installed and authenticated — you are all set!\n\noh-my-kanban uses the official GitHub CLI (gh) to manage\nyour GitHub issues and projects. No extra setup needed.',
-    ghScopeMissing: 'Missing required permissions (scopes)',
-    ghAddScopes: 'Add the required scopes with:',
-    ghRecommendedScopes: 'Optionally add recommended scopes',
+    ghScopeMissing: 'Required permissions are missing — GitHub features will NOT work without them',
+    ghAddScopes: 'Add all required permissions with this command:',
 
     // index
     pythonNotFound: 'Python not found. Please install Python 3.10+ from https://www.python.org/downloads/',
@@ -91,9 +90,8 @@ export const messages = {
     ghAuthInstruction: 'GitHub 인증을 진행하세요:\n  gh auth login',
     ghRerun: '완료 후 다시 실행하세요:\n  npx oh-my-kanban',
     ghReadyNote: 'gh CLI가 설치되어 있고 인증도 완료되었습니다!\n\noh-my-kanban은 GitHub 공식 CLI(gh)를 활용하여\nGitHub 이슈와 프로젝트를 관리합니다.\n추가 설정 없이 바로 사용할 수 있습니다.',
-    ghScopeMissing: '필요한 권한(scope)이 부족합니다',
-    ghAddScopes: '아래 명령어로 권한을 추가하세요:',
-    ghRecommendedScopes: '추가하면 좋은 선택적 권한',
+    ghScopeMissing: '필수 권한이 없으면 GitHub 기능을 전혀 사용할 수 없습니다',
+    ghAddScopes: '아래 명령어로 필수 권한을 모두 추가하세요:',
 
     // index
     pythonNotFound: 'Python을 찾을 수 없습니다. https://www.python.org/downloads/ 에서 Python 3.10 이상을 설치하세요.',
