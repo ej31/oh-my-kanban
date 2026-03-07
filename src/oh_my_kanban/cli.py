@@ -121,6 +121,10 @@ def _register_commands() -> None:
     cli.add_command(linear, name="linear")
     cli.add_command(linear, name="ln")  # alias
 
+    # ── Project 커맨드 그룹 ───────────────────────────────────────────
+    from oh_my_kanban.commands.project_cmd import project_cmd
+    cli.add_command(project_cmd, name="project")
+
     # ── Hooks 커맨드 그룹 ─────────────────────────────────────────────
     from oh_my_kanban.commands.hooks import hooks
     cli.add_command(hooks)

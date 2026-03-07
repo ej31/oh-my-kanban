@@ -48,3 +48,4 @@ env/
 # installer (Node.js)
 installer/node_modules/
 installer/dist/
+.omk/

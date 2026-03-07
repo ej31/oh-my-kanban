@@ -7,13 +7,21 @@ import re
 
 import click
 
-from oh_my_kanban.config import CONFIG_FILE, Config, list_profiles, load_config, save_config
+from oh_my_kanban.config import (
+    _ALLOWED_CONFIG_KEYS,
+    SOURCE_LABELS,
+    CONFIG_FILE,
+    Config,
+    list_profiles,
+    load_config,
+    save_config,
+)
 
 # plane.so 클라우드 API URL
 _CLOUD_API_URL = "https://api.plane.so"
 
-# Config 클래스에서 허용 키를 동적으로 파생 — 필드 추가 시 자동 반영
-_ALLOWED_KEYS = {f for f in Config.__dataclass_fields__ if f != "profile"}
+# save_config()의 허용 키와 동일한 화이트리스트 사용 (동기화 보장)
+_ALLOWED_KEYS = _ALLOWED_CONFIG_KEYS
 
 
 def _mask_email(email: str) -> str:
@@ -277,7 +285,12 @@ def config_show(profile: str) -> None:
     click.echo(f"base_url    : {cfg.base_url}")
     click.echo(f"api_key     : {masked_key}")
     click.echo(f"workspace   : {cfg.workspace_slug or '(미설정)'}")
-    click.echo(f"project_id  : {cfg.project_id or '(미설정)'}")
+    # project_id 소스 표시 (config.py의 SOURCE_LABELS 사용)
+    pid_display = cfg.project_id or "(미설정)"
+    if cfg.project_id and cfg.project_id_source:
+        source_label = SOURCE_LABELS.get(cfg.project_id_source, cfg.project_id_source)
+        pid_display = f"{cfg.project_id} ({source_label})"
+    click.echo(f"project_id  : {pid_display}")
     click.echo(f"output      : {cfg.output}")
     click.echo(f"설정 파일   : {CONFIG_FILE if CONFIG_FILE.exists() else str(CONFIG_FILE) + ' (없음)'}")
     click.echo()
@@ -320,6 +333,12 @@ def config_set(key: str, value: str, profile: str) -> None:
     _save_config_safe({key: value}, profile=profile)
     masked = value if key not in ("api_key", "linear_api_key") else "****"
     click.echo(f"[{profile}] {key} = {masked} 저장 완료")
+
+    # project_id를 전역 config에 저장할 때 로컬 바인딩 안내
+    if key == "project_id":
+        click.echo()
+        click.echo("팁: 프로젝트별 설정은 'omk project bind'를 권장합니다.")
+        click.echo("  전역 config.toml의 project_id는 다중 프로젝트 개발 시 충돌할 수 있습니다.")
 
     # 헬스체크 (실패해도 설정은 이미 저장됨)
     if key in ("api_key", "base_url"):
