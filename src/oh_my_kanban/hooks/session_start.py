@@ -112,10 +112,15 @@ def _handle_startup_or_resume(session_id: str, source: str) -> None:
             )
         )
 
-    # Plane 설정 있으면 project_id 연결
+    # Plane 설정 있으면 project_id 연결, 신규 세션이면 drift 설정도 복사
     cfg = load_config()
     if cfg.project_id and not state.plane_context.project_id:
         state.plane_context.project_id = cfg.project_id
+    # 신규 세션 생성 직후(create_session은 기본값으로 초기화)에만 config 값 복사
+    # 기존 세션 재개 시에는 세션 파일에 저장된 값 유지
+    if state.stats.total_prompts == 0:
+        state.config.sensitivity = cfg.drift_sensitivity
+        state.config.cooldown = cfg.drift_cooldown
 
     save_session(state)
 

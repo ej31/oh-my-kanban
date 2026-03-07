@@ -16,6 +16,7 @@ _PROFILE_NAME_RE = re.compile(r'^[a-zA-Z0-9_-]+$')
 _ALLOWED_CONFIG_KEYS = frozenset({
     "base_url", "api_key", "workspace_slug", "project_id",
     "output", "linear_api_key", "linear_team_id",
+    "drift_sensitivity", "drift_cooldown",
 })
 
 if sys.version_info >= (3, 11):
@@ -46,6 +47,8 @@ class Config:
     profile: str = "default"
     linear_api_key: str = ""
     linear_team_id: str = ""
+    drift_sensitivity: float = 0.5
+    drift_cooldown: int = 3
 
 
 def detect_project_id() -> str:
@@ -81,6 +84,8 @@ def load_config(profile: str = "default") -> Config:
             cfg.output = section.get("output", cfg.output)
             cfg.linear_api_key = section.get("linear_api_key", cfg.linear_api_key)
             cfg.linear_team_id = section.get("linear_team_id", cfg.linear_team_id)
+            cfg.drift_sensitivity = section.get("drift_sensitivity", cfg.drift_sensitivity)
+            cfg.drift_cooldown = section.get("drift_cooldown", cfg.drift_cooldown)
         except (OSError, tomllib.TOMLDecodeError) as e:
             print(f"경고: 설정 파일 파싱 오류 ({CONFIG_FILE}): {e}", file=sys.stderr)
 
@@ -93,6 +98,26 @@ def load_config(profile: str = "default") -> Config:
         cfg.linear_api_key = env_val
     if env_val := os.environ.get("LINEAR_TEAM_ID"):
         cfg.linear_team_id = env_val
+    if env_val := os.environ.get("OMK_DRIFT_SENSITIVITY"):
+        try:
+            # 유효 범위 0.0 ~ 1.0으로 제한 (경계값 방어)
+            cfg.drift_sensitivity = max(0.0, min(1.0, float(env_val)))
+        except ValueError:
+            print(
+                f"경고: OMK_DRIFT_SENSITIVITY='{env_val}' 은 유효한 float 값이 아닙니다. "
+                f"기본값 {cfg.drift_sensitivity} 사용.",
+                file=sys.stderr,
+            )
+    if env_val := os.environ.get("OMK_DRIFT_COOLDOWN"):
+        try:
+            # 음수 방지 (0 이상 정수)
+            cfg.drift_cooldown = max(0, int(env_val))
+        except ValueError:
+            print(
+                f"경고: OMK_DRIFT_COOLDOWN='{env_val}' 은 유효한 정수 값이 아닙니다. "
+                f"기본값 {cfg.drift_cooldown} 사용.",
+                file=sys.stderr,
+            )
 
     # 3. CLAUDE.md에서 project_id 자동 감지 (env/config에 없을 때)
     if not cfg.project_id:
