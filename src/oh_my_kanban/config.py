@@ -49,6 +49,7 @@ class Config:
     linear_team_id: str = ""
     drift_sensitivity: float = 0.5
     drift_cooldown: int = 3
+    project_id_source: str = ""  # 활성 project_id의 출처: "env", "omk_project_toml", "claude_md", "config_toml", ""
 
 
 def detect_project_id() -> str:
@@ -67,11 +68,35 @@ def detect_project_id() -> str:
     return ""
 
 
+def detect_project_toml() -> tuple[str, str]:
+    """cwd에서 상위로 올라가며 .omk/project.toml의 project_id를 찾는다.
+
+    Returns:
+        (project_id, provider) 튜플. 찾지 못하면 ("", "").
+    """
+    current = Path.cwd()
+    for parent in [current, *current.parents]:
+        project_toml = parent / ".omk" / "project.toml"
+        if project_toml.exists():
+            try:
+                with open(project_toml, "rb") as f:
+                    data = tomllib.load(f)
+                section = data.get("project", {})
+                pid = section.get("project_id", "")
+                provider = section.get("provider", "plane")
+                if pid:
+                    return pid, provider
+            except (OSError, tomllib.TOMLDecodeError):
+                continue
+    return "", ""
+
+
 def load_config(profile: str = "default") -> Config:
     """설정을 로드한다. 우선순위: env vars > TOML 파일."""
     cfg = Config(profile=profile)
 
-    # 1. TOML 파일에서 기본값 로드
+    # 1. TOML 파일에서 기본값 로드 (project_id는 별도 변수에 보관)
+    _toml_project_id: str = ""
     if CONFIG_FILE.exists():
         try:
             with open(CONFIG_FILE, "rb") as f:
@@ -80,7 +105,8 @@ def load_config(profile: str = "default") -> Config:
             cfg.base_url = section.get("base_url", cfg.base_url)
             cfg.api_key = section.get("api_key", cfg.api_key)
             cfg.workspace_slug = section.get("workspace_slug", cfg.workspace_slug)
-            cfg.project_id = section.get("project_id", cfg.project_id)
+            # project_id는 최종 결정 로직에서 처리하므로 별도 변수에 저장
+            _toml_project_id = section.get("project_id", "")
             cfg.output = section.get("output", cfg.output)
             cfg.linear_api_key = section.get("linear_api_key", cfg.linear_api_key)
             cfg.linear_team_id = section.get("linear_team_id", cfg.linear_team_id)
@@ -91,15 +117,13 @@ def load_config(profile: str = "default") -> Config:
         except (OSError, tomllib.TOMLDecodeError) as e:
             print(f"경고: 설정 파일 파싱 오류 ({CONFIG_FILE}): {e}", file=sys.stderr)
 
-    # 2. 환경변수 오버라이드 (빈 문자열은 무시하여 config 값 보호)
+    # 2. 환경변수 오버라이드 (빈 문자열은 무시하여 config 값 보호, project_id 제외)
     if env_val := os.environ.get("PLANE_BASE_URL"):
         cfg.base_url = env_val
     if env_val := os.environ.get("PLANE_API_KEY"):
         cfg.api_key = env_val
     if env_val := os.environ.get("PLANE_WORKSPACE_SLUG"):
         cfg.workspace_slug = env_val
-    if env_val := os.environ.get("PLANE_PROJECT_ID"):
-        cfg.project_id = env_val
     if env_val := os.environ.get("LINEAR_API_KEY"):
         cfg.linear_api_key = env_val
     if env_val := os.environ.get("LINEAR_TEAM_ID"):
@@ -125,9 +149,28 @@ def load_config(profile: str = "default") -> Config:
                 file=sys.stderr,
             )
 
-    # 3. CLAUDE.md에서 project_id 자동 감지 (env/config에 없을 때)
-    if not cfg.project_id:
-        cfg.project_id = detect_project_id()
+    # 3. project_id 최종 결정: env > .omk/project.toml > CLAUDE.md > config.toml
+    if env_project_id := os.environ.get("PLANE_PROJECT_ID"):
+        cfg.project_id = env_project_id
+        cfg.project_id_source = "env"
+    else:
+        omk_pid, _omk_provider = detect_project_toml()
+        if omk_pid:
+            cfg.project_id = omk_pid
+            cfg.project_id_source = "omk_project_toml"
+        else:
+            claude_pid = detect_project_id()
+            if claude_pid:
+                cfg.project_id = claude_pid
+                cfg.project_id_source = "claude_md"
+            elif _toml_project_id:
+                cfg.project_id = _toml_project_id
+                cfg.project_id_source = "config_toml"
+                print(
+                    "경고: config.toml의 project_id는 향후 제거 예정입니다. "
+                    "'omk project bind'로 프로젝트별 설정을 권장합니다.",
+                    file=sys.stderr,
+                )
 
     return cfg
 

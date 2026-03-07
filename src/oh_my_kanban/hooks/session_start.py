@@ -9,6 +9,7 @@ exit code 0: 항상 (fail-open)
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 
 from oh_my_kanban.config import load_config
 from oh_my_kanban.hooks.common import (
@@ -29,6 +30,12 @@ from oh_my_kanban.session.state import (
     TimelineEvent,
     now_iso,
 )
+
+# .omk 디렉토리 내 마커 파일 상수
+_OMK_DIR = ".omk"
+_DISABLED_FILE = "disabled"
+_PROMPTED_FILE = ".prompted"
+_PROJECT_TOML_FILE = "project.toml"
 
 
 def _handle_compact(session_id: str) -> None:
@@ -102,8 +109,54 @@ def _handle_compact(session_id: str) -> None:
     save_session(state)
 
 
+def _is_project_disabled() -> bool:
+    """cwd에서 .omk/disabled 마커가 존재하는지 확인한다 (프로젝트 단위 opt-out)."""
+    disabled = Path.cwd() / _OMK_DIR / _DISABLED_FILE
+    return disabled.exists()
+
+
+def _inject_project_guidance() -> None:
+    """프로젝트에 .omk/project.toml이 없으면 1회성 안내를 주입한다.
+
+    .omk/.prompted 마커가 이미 있으면 안내를 건너뛴다.
+    안내 주입 후 .omk/.prompted 마커를 생성한다.
+    """
+    cwd = Path.cwd()
+    omk_dir = cwd / _OMK_DIR
+    project_toml = omk_dir / _PROJECT_TOML_FILE
+    prompted = omk_dir / _PROMPTED_FILE
+
+    # .omk/project.toml이 있으면 안내 불필요
+    if project_toml.exists():
+        return
+
+    # 이미 안내를 받았으면 건너뜀
+    if prompted.exists():
+        return
+
+    # 1회성 안내 주입
+    guidance = (
+        "[omk] 이 프로젝트에 Plane/Linear가 연결되지 않았습니다.\n"
+        "  omk project bind <project_id> 로 연결하거나,\n"
+        "  이 안내를 무시하면 다시 표시되지 않습니다.\n"
+        "  세션 추적은 활성화되지만 WI 연동은 비활성 상태입니다."
+    )
+    output_context("SessionStart", guidance)
+
+    # .omk/.prompted 마커 생성 (다음 세션에서 안내하지 않도록)
+    try:
+        omk_dir.mkdir(parents=True, exist_ok=True)
+        prompted.write_text(now_iso(), encoding="utf-8")
+    except OSError:
+        pass  # 마커 생성 실패해도 훅을 차단하지 않는다
+
+
 def _handle_startup_or_resume(session_id: str, source: str) -> None:
     """세션 시작 또는 재개 처리: 파일 초기화/복원 후 Plane 설정 연결."""
+    # 프로젝트 단위 opt-out 확인
+    if _is_project_disabled():
+        return
+
     state = load_session(session_id)
 
     if state is None:
@@ -137,6 +190,10 @@ def _handle_startup_or_resume(session_id: str, source: str) -> None:
         state.config.cooldown = cfg.drift_cooldown
 
     save_session(state)
+
+    # 신규 세션이고 project_id가 없으면 1회성 안내 주입
+    if source == "startup" and not cfg.project_id:
+        _inject_project_guidance()
 
     # 재개 세션이고 scope가 있으면 컨텍스트 재주입
     # (알려진 버그 #10373: 새 세션 SessionStart에서는 stdout 주입이 실패할 수 있음)
