@@ -4,36 +4,13 @@ import { join } from 'node:path';
 import pc from 'picocolors';
 import { t } from '../i18n.js';
 import { RestartWizard, RESTART_SENTINEL } from '../restart.js';
-
-// @clack/prompts의 note()는 문자 수로 박스 너비를 계산하여 한글(2열) 포함 시 박스가 깨짐.
-// 각 줄의 와이드 문자 수만큼 공백을 추가해 표시 너비를 보정한다.
-function padForNote(text: string): string {
-  return text
-    .split('\n')
-    .map((line) => {
-      let wideCount = 0;
-      for (const char of line) {
-        const code = char.codePointAt(0) ?? 0;
-        if (
-          (code >= 0xac00 && code <= 0xd7af) || // 한글 음절
-          (code >= 0x1100 && code <= 0x11ff) || // 한글 자모
-          (code >= 0x3130 && code <= 0x318f) || // 한글 호환 자모
-          (code >= 0x4e00 && code <= 0x9fff) || // CJK 통합 한자
-          (code >= 0xff01 && code <= 0xff60)    // 전각 ASCII
-        ) {
-          wideCount++;
-        }
-      }
-      return wideCount > 0 ? line + ' '.repeat(wideCount) : line;
-    })
-    .join('\n');
-}
+import { padForNote, padTitle } from '../ui/pad-for-note.js';
 
 export async function promptClaudeScope(python: string): Promise<void> {
   const m = t();
 
   // 범위 선택 전 추천 이유 안내
-  note(padForNote(m.claudeScopeNote), m.claudeScopeTitle);
+  note(padForNote(m.claudeScopeNote), padTitle(m.claudeScopeTitle));
 
   const projectScopePath = join(process.cwd(), '.claude', 'settings.json');
   const userScopePath = join(process.env['HOME'] ?? '~', '.claude', 'settings.json');
@@ -82,6 +59,6 @@ export async function promptClaudeScope(python: string): Promise<void> {
   // MCP 서버 등록 안내
   note(
     padForNote(m.claudeMcpNote.replace('{path}', settingsPath)),
-    m.claudeMcpTitle,
+    padTitle(m.claudeMcpTitle),
   );
 }
