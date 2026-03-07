@@ -232,6 +232,47 @@ def _install_plugin_files() -> None:
         )
 
 
+def _ensure_gitignore_entry() -> None:
+    """프로젝트 .gitignore에 .claude/settings.json 항목을 추가한다.
+
+    git 저장소 루트를 탐색해 .gitignore에 항목이 없으면 자동으로 추가한다.
+    git 저장소가 아니거나 실패하면 경고만 출력하고 계속 진행한다.
+    """
+    import subprocess
+
+    ENTRY = ".claude/settings.json"
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            cwd=Path.cwd(),
+            timeout=5,
+        )
+        if result.returncode != 0:
+            return
+        git_root = Path(result.stdout.strip())
+    except (OSError, subprocess.TimeoutExpired):
+        return
+
+    gitignore_path = git_root / ".gitignore"
+    try:
+        if gitignore_path.exists():
+            content = gitignore_path.read_text(encoding="utf-8")
+            lines = content.splitlines()
+            if ENTRY in lines:
+                return  # 이미 등록되어 있음
+            if not content.endswith("\n"):
+                content += "\n"
+            content += f"{ENTRY}\n"
+            gitignore_path.write_text(content, encoding="utf-8")
+        else:
+            gitignore_path.write_text(f"{ENTRY}\n", encoding="utf-8")
+        click.echo(f"  .gitignore에 {ENTRY} 자동 추가: {gitignore_path}")
+    except OSError as e:
+        click.echo(f"  경고: .gitignore 업데이트 실패: {e}", err=True)
+
+
 def _install_hooks(local: bool, local_only: bool = False) -> None:
     """Claude Code settings 파일에 omk 훅을 등록한다."""
     python_path = sys.executable
@@ -247,6 +288,17 @@ def _install_hooks(local: bool, local_only: bool = False) -> None:
             f"Python 경로 또는 훅 디렉토리 경로에 큰따옴표가 포함되어 있어 설치할 수 없습니다.\n"
             f"  Python: {python_path}\n"
             f"  훅 디렉토리: {hooks_dir}"
+        )
+
+    # 훅 스크립트 존재 검증 — 파일 없으면 settings.json 등록 전 차단
+    # Bootstrap lock 방지: 스크립트가 없는 상태로 등록되면 세션 전체가 차단됨
+    REQUIRED_SCRIPTS = ["session_start.py", "user_prompt.py", "post_tool.py", "session_end.py"]
+    missing = [s for s in REQUIRED_SCRIPTS if not (hooks_dir / s).exists()]
+    if missing:
+        raise click.ClickException(
+            "훅 스크립트가 누락되어 있어 설치를 중단합니다 (Bootstrap lock 방지):\n"
+            + "\n".join(f"  누락: {hooks_dir / s}" for s in missing)
+            + "\n패키지를 재설치(`pip install -e .`)하거나 소스에서 빌드 후 재시도하세요."
         )
 
     settings_path = _settings_path(local, local_only)
@@ -274,6 +326,9 @@ def _install_hooks(local: bool, local_only: bool = False) -> None:
     settings = {**existing, "hooks": merged}
 
     _write_settings_atomic(settings_path, settings)
+
+    # .gitignore에 .claude/settings.json 자동 추가 (Bootstrap lock 재발 방지)
+    _ensure_gitignore_entry()
 
     # 플러그인 파일을 캐시 디렉토리에 복사
     _install_plugin_files()

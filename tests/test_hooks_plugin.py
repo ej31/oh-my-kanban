@@ -255,12 +255,23 @@ class TestInstallPluginFiles:
             # 예외가 발생하지 않아야 함 (fail-open)
             _install_plugin_files()
 
-    def test_install_hooks_calls_install_plugin_files(self) -> None:
+    def test_install_hooks_calls_install_plugin_files(self, tmp_path: Path) -> None:
         """_install_hooks() 실행 시 _install_plugin_files() 호출됨."""
+        # 스크립트 존재 검증을 통과하기 위해 실제 stub 파일 생성
+        hooks_dir = tmp_path / "hooks"
+        hooks_dir.mkdir()
+        for script in ["session_start.py", "user_prompt.py", "post_tool.py", "session_end.py"]:
+            (hooks_dir / script).write_text("import sys; sys.exit(0)")
+        fake_hooks_init = hooks_dir / "__init__.py"
+        fake_hooks_init.write_text("")
+
         with (
             patch(
                 "oh_my_kanban.commands.hooks._install_plugin_files",
             ) as mock_plugin,
+            patch(
+                "oh_my_kanban.commands.hooks._ensure_gitignore_entry",
+            ),
             patch(
                 "oh_my_kanban.commands.hooks._write_settings_atomic",
             ),
@@ -281,7 +292,7 @@ class TestInstallPluginFiles:
             patch("oh_my_kanban.hooks", create=True) as mock_hooks_pkg,
         ):
             mock_sys.executable = "/usr/bin/python"
-            mock_hooks_pkg.__file__ = "/fake/hooks/__init__.py"
+            mock_hooks_pkg.__file__ = str(fake_hooks_init)
 
             from oh_my_kanban.commands.hooks import _install_hooks
 
