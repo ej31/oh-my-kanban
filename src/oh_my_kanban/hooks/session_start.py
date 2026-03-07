@@ -9,13 +9,21 @@ exit code 0: 항상 (fail-open)
 from __future__ import annotations
 
 import sys
+from typing import Any
 
 from oh_my_kanban.config import load_config
 from oh_my_kanban.hooks.common import (
+    PLANE_API_TIMEOUT,
+    SuccessNudge,
+    build_wi_identifier,
+    build_wi_url,
     exit_fail_open,
     get_session_id,
+    notify_success,
     output_context,
     read_hook_input,
+    sanitize_comment,
+    update_hud,
 )
 from oh_my_kanban.session.manager import create_session, load_session, save_session
 from oh_my_kanban.session.plane_context_builder import build_plane_context
@@ -25,9 +33,103 @@ from oh_my_kanban.session.state import (
     SUMMARY_RESUME_MAX,
     WORK_ITEMS_DISPLAY_MAX,
     WORK_ITEMS_RESUME_MAX,
+    SessionState,
     TimelineEvent,
     now_iso,
 )
+
+
+def _post_session_start_comment(state: SessionState, cfg: Any) -> None:
+    """Plane Work Item에 세션 시작 댓글을 추가한다. 실패 시 무시 (fail-open)."""
+    try:
+        import httpx
+    except ImportError:
+        return
+
+    wi_ids = state.plane_context.work_item_ids
+    focused_id = state.plane_context.focused_work_item_id
+    target_ids = [focused_id] if focused_id else wi_ids[:1]
+    project_id = state.plane_context.project_id or cfg.project_id
+
+    if not target_ids or not project_id or not cfg.api_key or not cfg.workspace_slug:
+        return
+
+    session_id_short = state.session_id[:8]
+    start_time = state.created_at[:19].replace("T", " ")  # YYYY-MM-DD HH:MM:SS
+
+    comment_body = "\n".join([
+        "## omk 세션 시작",
+        "",
+        f"**세션 ID**: `{session_id_short}...`",
+        f"**시작 시각**: {start_time} UTC",
+        f"**목표**: {state.scope.summary[:200] if state.scope.summary else '미설정'}",
+    ])
+    comment_html = sanitize_comment(comment_body)
+
+    base_url = cfg.base_url.rstrip("/")
+    headers = {"X-API-Key": cfg.api_key, "Content-Type": "application/json"}
+
+    for wi_id in target_ids:
+        url = (
+            f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
+            f"/projects/{project_id}/issues/{wi_id}/comments/"
+        )
+        try:
+            with httpx.Client(timeout=PLANE_API_TIMEOUT, follow_redirects=False) as client:
+                client.post(url, headers=headers, json={"comment_html": comment_html})
+        except Exception as e:
+            print(
+                f"[omk] 세션 시작 댓글 추가 실패 (wi_id={wi_id!r}): {type(e).__name__}: {e}",
+                file=sys.stderr,
+            )
+            continue
+
+
+def _notify_wi_connected(state: SessionState, cfg: Any) -> None:
+    """WI 연결 성공을 사용자에게 알린다 (systemMessage)."""
+    wi_ids = state.plane_context.work_item_ids
+    focused_id = state.plane_context.focused_work_item_id or (wi_ids[0] if wi_ids else None)
+    if not focused_id:
+        return
+
+    # WI 정보 조회 시도 (실패 시 기본값 사용)
+    wi_name = "Work Item"
+    wi_sequence = 0
+    try:
+        import httpx
+        project_id = state.plane_context.project_id or cfg.project_id
+        if project_id and cfg.api_key and cfg.workspace_slug:
+            base_url = cfg.base_url.rstrip("/")
+            headers = {"X-API-Key": cfg.api_key}
+            url = (
+                f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
+                f"/projects/{project_id}/issues/{focused_id}/"
+            )
+            with httpx.Client(timeout=5.0, follow_redirects=False) as client:
+                resp = client.get(url, headers=headers)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    wi_name = data.get("name", "Work Item")
+                    wi_sequence = data.get("sequence_id", 0)
+    except Exception:
+        pass
+
+    project_id = state.plane_context.project_id or cfg.project_id
+    wi_url = (
+        build_wi_url(cfg.base_url, cfg.workspace_slug, project_id, wi_sequence)
+        if wi_sequence
+        else ""
+    )
+    wi_identifier = build_wi_identifier(wi_sequence) if wi_sequence else "WI"
+
+    update_hud(wi_identifier, wi_name, "연결됨")
+
+    nudge = SuccessNudge(
+        wi_identifier=wi_identifier,
+        wi_name=wi_name,
+        wi_url=wi_url,
+    )
+    notify_success(nudge, hook_name="SessionStart")
 
 
 def _handle_compact(session_id: str) -> None:
@@ -122,7 +224,19 @@ def _handle_startup_or_resume(session_id: str, source: str) -> None:
         state.config.sensitivity = cfg.drift_sensitivity
         state.config.cooldown = cfg.drift_cooldown
 
+    # Plane 미설정 시 첫 세션에서만 stderr 안내 (ErrorThrottle 적용)
+    if not cfg.api_key and state.stats.total_prompts == 0:
+        print(
+            "[omk/SessionStart] Plane API 키 미설정. omk setup으로 설정하세요.",
+            file=sys.stderr,
+        )
+
     save_session(state)
+
+    # WI가 연결된 경우 세션 시작 댓글 추가 및 성공 알림
+    if state.plane_context.work_item_ids:
+        _post_session_start_comment(state, cfg)
+        _notify_wi_connected(state, cfg)
 
     # 재개 세션이고 scope가 있으면 컨텍스트 재주입
     # (알려진 버그 #10373: 새 세션 SessionStart에서는 stdout 주입이 실패할 수 있음)
@@ -156,6 +270,7 @@ def main() -> None:
     except Exception as e:
         print(f"[omk] SessionStart 훅 예외 (fail-open): {type(e).__name__}: {e}", file=sys.stderr)
         exit_fail_open()
+        return
 
 
 if __name__ == "__main__":

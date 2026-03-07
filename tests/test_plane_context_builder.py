@@ -178,15 +178,42 @@ class TestFetchWorkItem:
         assert result == {"name": "작업"}
 
     def test_http_non200_returns_none(self, capsys):
+        # 404/410은 __deleted__ 마커를 반환하므로 일반 non-200(예: 500)으로 테스트한다
+        client = MagicMock()
+        resp = MagicMock()
+        resp.status_code = 500
+        client.get.return_value = resp
+
+        result = _fetch_work_item(*self._args(client))
+        assert result is None
+        captured = capsys.readouterr()
+        assert "HTTP 500" in captured.err
+
+
+
+    def test_http_404_returns_deleted_marker(self, capsys):
+        """404 응답 시 __deleted__ 마커 dict를 반환한다."""
         client = MagicMock()
         resp = MagicMock()
         resp.status_code = 404
         client.get.return_value = resp
 
         result = _fetch_work_item(*self._args(client))
-        assert result is None
-        captured = capsys.readouterr()
-        assert "HTTP 404" in captured.err
+        assert result is not None
+        assert result.get("__deleted__") is True
+        assert result.get("__status__") == 404
+
+    def test_http_410_returns_deleted_marker(self, capsys):
+        """410 응답 시 __deleted__ 마커 dict를 반환한다."""
+        client = MagicMock()
+        resp = MagicMock()
+        resp.status_code = 410
+        client.get.return_value = resp
+
+        result = _fetch_work_item(*self._args(client))
+        assert result is not None
+        assert result.get("__deleted__") is True
+        assert result.get("__status__") == 410
 
     def test_exception_returns_none(self, capsys):
         client = MagicMock()

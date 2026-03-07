@@ -66,6 +66,9 @@ def _fetch_work_item(
         resp = client.get(url, headers=headers)
         if resp.status_code == 200:
             return resp.json()
+        if resp.status_code in (404, 410):
+            # 외부에서 삭제된 WI — 호출자가 handle_orphan_wi를 호출할 수 있도록 특별 표시
+            return {"__deleted__": True, "__wi_id__": wi_id, "__status__": resp.status_code}
         print(
             f"[omk] Plane WI 조회 실패 (wi_id={wi_id!r}): HTTP {resp.status_code}",
             file=sys.stderr,
@@ -213,11 +216,20 @@ def build_plane_context(
 
     try:
         with httpx.Client(timeout=PLANE_API_TIMEOUT, follow_redirects=False) as client:
+            deleted_wi_ids: list[str] = []
             for wi_id in work_item_ids[:3]:  # 최대 3개 WI만 조회 (토큰 절약)
                 wi_data = _fetch_work_item(
                     client, base_url, workspace_slug, project_id, wi_id, headers
                 )
                 if wi_data is None:
+                    continue
+                # 삭제된 WI 마커 처리
+                if wi_data.get("__deleted__"):
+                    deleted_wi_ids.append(wi_id)
+                    print(
+                        f"[omk] Plane WI 삭제 감지 (wi_id={wi_id!r}): HTTP {wi_data.get('__status__')}",
+                        file=sys.stderr,
+                    )
                     continue
 
                 comments = _fetch_comments(
@@ -237,4 +249,11 @@ def build_plane_context(
         return ""
 
     full_context = "\n\n".join(parts)
+
+    # 삭제된 WI가 있으면 컨텍스트에 경고 추가
+    if deleted_wi_ids:
+        deleted_note = f"\n[omk 경고] 다음 WI가 외부에서 삭제됐습니다: {', '.join(d[:8] + '...' for d in deleted_wi_ids)}"
+        parts.append(deleted_note)
+        full_context = "\n\n".join(parts)
+
     return _truncate(full_context, _CONTEXT_MAX_CHARS)

@@ -12,9 +12,13 @@ import sys
 from oh_my_kanban.config import load_config
 from oh_my_kanban.hooks.common import (
     PLANE_API_TIMEOUT,
+    SuccessNudge,
     exit_fail_open,
     get_session_id,
+    notify_success,
     read_hook_input,
+    reset_hud,
+    sanitize_comment,
 )
 from oh_my_kanban.session.manager import load_session, save_session
 from oh_my_kanban.session.state import (
@@ -31,8 +35,22 @@ from oh_my_kanban.session.state import (
 
 def _build_summary_comment(state: SessionState) -> str:
     """세션 종료 시 Plane Work Item에 달 댓글 내용을 생성한다."""
+    from datetime import datetime, timezone
+
     scope = state.scope
     stats = state.stats
+
+    # 세션 기간 계산 (시작~종료)
+    try:
+        start_dt = datetime.fromisoformat(state.created_at)
+        end_dt = datetime.now(timezone.utc)
+        duration_seconds = int((end_dt - start_dt).total_seconds())
+        if duration_seconds >= 3600:
+            duration_str = f"{duration_seconds // 3600}시간 {(duration_seconds % 3600) // 60}분"
+        else:
+            duration_str = f"{duration_seconds // 60}분"
+    except Exception:
+        duration_str = "알 수 없음"
 
     lines = [
         "## omk 세션 종료",
@@ -44,6 +62,7 @@ def _build_summary_comment(state: SessionState) -> str:
         f"- 수정 파일: {len(stats.files_touched)}개",
         f"- 범위 이탈 경고: {stats.drift_warnings}회",
         f"- 범위 자동 확장: {stats.scope_expansions}회",
+        f"- **세션 기간**: {duration_str}",
     ]
 
     if stats.files_touched:
@@ -58,9 +77,15 @@ def _build_summary_comment(state: SessionState) -> str:
         lines.append("")
         lines.append(f"**주요 토픽**: {', '.join(scope.topics)}")
 
+    # 핸드오프 메모 섹션 (다음 세션을 위한 메모)
+    lines.append("")
+    lines.append("**다음 세션을 위한 메모**")
+    handoff_note = getattr(state, 'handoff_note', '') or ''
+    lines.append(handoff_note if handoff_note.strip() else "미기록")
+
     lines.append("")
     lines.append(f"*세션 ID: {state.session_id[:SESSION_ID_DISPLAY_LEN]}...*")
-    return "\n".join(lines)
+    return sanitize_comment("\n".join(lines))
 
 
 def _post_plane_comment(state: SessionState, comment: str) -> bool:
@@ -100,10 +125,16 @@ def _post_plane_comment(state: SessionState, comment: str) -> bool:
                 if resp.status_code in (200, 201):
                     success_count += 1
         except (httpx.TimeoutException, httpx.NetworkError, httpx.HTTPStatusError) as e:
-            print(f"[omk] Plane 댓글 추가 실패 (wi_id={wi_id!r}): {type(e).__name__}: {e}", file=sys.stderr)
+            print(
+                f"[omk] Plane 댓글 추가 실패 (wi_id={wi_id!r}): {type(e).__name__}: {e}",
+                file=sys.stderr,
+            )
             continue
         except Exception as e:
-            print(f"[omk] Plane 댓글 추가 중 예외 (wi_id={wi_id!r}): {type(e).__name__}: {e}", file=sys.stderr)
+            print(
+                f"[omk] Plane 댓글 추가 중 예외 (wi_id={wi_id!r}): {type(e).__name__}: {e}",
+                file=sys.stderr,
+            )
             continue
 
     return success_count > 0
@@ -150,7 +181,21 @@ def main() -> None:
         # Plane Work Item 댓글 추가 (설정이 있는 경우)
         if state.plane_context.work_item_ids:
             comment = _build_summary_comment(state)
-            _post_plane_comment(state, comment)
+            posted = _post_plane_comment(state, comment)
+
+            # 댓글 성공 여부와 무관하게 HUD 항상 초기화 (US-03)
+            reset_hud()
+
+            if posted:
+                # 세션 종료 성공 알림 (US-07 일부)
+                focused = state.plane_context.focused_work_item_id
+                wi_ids = state.plane_context.work_item_ids
+                target = focused or (wi_ids[0] if wi_ids else None)
+                if target:
+                    notify_success(
+                        SuccessNudge(wi_identifier="WI", wi_name="세션 종료 기록됨", wi_url=""),
+                        hook_name="SessionEnd",
+                    )
 
         save_session(state)
 
