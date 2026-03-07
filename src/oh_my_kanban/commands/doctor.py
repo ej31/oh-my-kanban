@@ -16,24 +16,34 @@ _SKIP = "SKIP"
 
 
 def _check_config_file(cfg: Config) -> tuple[str, str]:
-    """config.toml 파일 존재 및 유효성 검증."""
+    """config.toml 파일 존재 및 파싱 가능 여부만 검증한다.
+
+    인증 정보(api_key, workspace_slug)는 각 프로바이더 검증에서 처리한다.
+    """
     if not CONFIG_FILE.exists():
         return _FAIL, f"설정 파일 없음: {CONFIG_FILE}"
-    if not cfg.api_key:
-        return _FAIL, "api_key 미설정"
-    if not cfg.workspace_slug:
-        return _FAIL, "workspace_slug 미설정"
     return _PASS, f"설정 로드 완료 (프로필: {cfg.profile})"
 
 
 def _check_plane_sdk_version() -> tuple[str, str]:
-    """plane-sdk 버전 호환성 검증."""
+    """plane-sdk 버전 호환성 검증 (>=0.2.6,<1.0)."""
     try:
         import plane
-        version = getattr(plane, "__version__", "알 수 없음")
+        version = getattr(plane, "__version__", None)
+        if version is None:
+            return _PASS, "plane-sdk (버전 정보 없음)"
+        # 버전 범위 검증
+        try:
+            from packaging.specifiers import SpecifierSet
+            from packaging.version import Version
+            spec = SpecifierSet(">=0.2.6,<1.0")
+            if Version(version) not in spec:
+                return _FAIL, f"plane-sdk {version} (호환 범위: >=0.2.6,<1.0)"
+        except ImportError:
+            pass  # packaging 미설치 시 버전 검증 생략
         return _PASS, f"plane-sdk {version}"
-    except ImportError:
-        return _FAIL, "plane-sdk 미설치"
+    except Exception as e:
+        return _FAIL, f"plane-sdk 로드 실패: {type(e).__name__}: {e}"
 
 
 def _check_plane_api(cfg: Config) -> tuple[str, str]:

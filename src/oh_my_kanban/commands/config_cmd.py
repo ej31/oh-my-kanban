@@ -6,7 +6,6 @@ import os
 import re
 
 import click
-import httpx
 
 from oh_my_kanban.config import CONFIG_FILE, Config, list_profiles, load_config, save_config
 
@@ -15,6 +14,14 @@ _CLOUD_API_URL = "https://api.plane.so"
 
 # Config 클래스에서 허용 키를 동적으로 파생 — 필드 추가 시 자동 반영
 _ALLOWED_KEYS = {f for f in Config.__dataclass_fields__ if f != "profile"}
+
+
+def _mask_email(email: str) -> str:
+    """이메일을 마스킹한다. 짧은 주소는 '확인됨'으로 대체한다."""
+    if "@" in email and len(email) > 5:
+        local, domain = email.split("@", 1)
+        return f"{local[:2]}***@{domain}"
+    return "확인됨"
 
 
 def _save_config_safe(data: dict, profile: str = "default") -> None:
@@ -49,6 +56,11 @@ def config() -> None:
 def _run_plane_healthcheck(base_url: str, api_key: str) -> None:
     """Plane API 연결 헬스체크. 실패 시 경고만 출력한다."""
     try:
+        import httpx
+    except ImportError:
+        click.echo("  경고: httpx 미설치로 헬스체크를 건너뜁니다.", err=True)
+        return
+    try:
         from oh_my_kanban.hooks.http_client import build_plane_headers
     except ImportError:
         click.echo("  경고: http_client 모듈을 로드할 수 없어 헬스체크를 건너뜁니다.", err=True)
@@ -64,8 +76,7 @@ def _run_plane_healthcheck(base_url: str, api_key: str) -> None:
             if resp.status_code == 200:
                 data = resp.json()
                 email = data.get("email", "")
-                masked_email = email[:2] + "***" + email[email.index("@"):] if "@" in email and len(email) > 3 else "확인됨"
-                click.echo(f"  Plane API 연결 확인: {masked_email}")
+                click.echo(f"  Plane API 연결 확인: {_mask_email(email)}")
             elif resp.status_code == 401:
                 click.echo("  경고: API 키가 유효하지 않습니다 (401). 설정은 저장되었습니다.", err=True)
             elif resp.status_code == 403:
@@ -80,6 +91,11 @@ def _run_plane_healthcheck(base_url: str, api_key: str) -> None:
 
 def _run_linear_healthcheck(api_key: str) -> None:
     """Linear API 연결 헬스체크 (viewer { id }). 실패 시 경고만 출력한다."""
+    try:
+        import httpx
+    except ImportError:
+        click.echo("  경고: httpx 미설치로 헬스체크를 건너뜁니다.", err=True)
+        return
     url = "https://api.linear.app/graphql"
     try:
         with httpx.Client(timeout=httpx.Timeout(5.0, connect=3.0)) as client:
@@ -95,8 +111,7 @@ def _run_linear_healthcheck(api_key: str) -> None:
                 else:
                     viewer = data.get("data", {}).get("viewer", {})
                     email = viewer.get("email", "")
-                    masked_email = email[:2] + "***" + email[email.index("@"):] if "@" in email and len(email) > 3 else "확인됨"
-                    click.echo(f"  Linear API 연결 확인: {masked_email}")
+                    click.echo(f"  Linear API 연결 확인: {_mask_email(email)}")
             elif resp.status_code == 401:
                 click.echo("  경고: Linear API 키가 유효하지 않습니다 (401). 설정은 저장되었습니다.", err=True)
             else:

@@ -1,13 +1,14 @@
 """Linear GraphQL API 클라이언트."""
 from __future__ import annotations
 
+import json
 import random
 import time
 
 import click
 import httpx
 
-from oh_my_kanban.linear_errors import LinearGraphQLError, LinearHttpError
+from oh_my_kanban.linear_errors import LinearGraphQLError, LinearHttpError, LinearResponseParseError
 
 
 class LinearClient:
@@ -70,7 +71,14 @@ class LinearClient:
                     continue
                 raise
 
-            body = response.json()
+            try:
+                body = response.json()
+            except json.JSONDecodeError as e:
+                raise LinearResponseParseError("Linear 응답 JSON 파싱 실패") from e
+            if not isinstance(body, dict):
+                raise LinearResponseParseError(
+                    f"예상한 JSON 객체가 아닙니다: {type(body).__name__}"
+                )
             if errors := body.get("errors"):
                 raise LinearGraphQLError(errors)
             return body.get("data", {})

@@ -369,9 +369,6 @@ class TestPlaneErrorHandlerExtensions:
 
     def test_connection_error_exit_69(self) -> None:
         """requests.ConnectionError가 exit code 69를 반환한다."""
-        import socket
-        import ssl
-
         from oh_my_kanban.errors import handle_api_error
 
         @handle_api_error
@@ -522,7 +519,7 @@ class TestDoctorCommand:
         assert result.exit_code == 0
         assert "진단" in result.output
 
-    def test_check_config_file_pass(self, tmp_path, monkeypatch) -> None:
+    def test_check_config_file_pass(self, tmp_path) -> None:
         """config.toml이 유효하면 PASS를 반환한다."""
         config_file = tmp_path / "config.toml"
         config_file.write_text('[default]\napi_key = "key"\nworkspace_slug = "ws"\n')
@@ -671,7 +668,7 @@ class TestConfigHealthcheck:
         assert "경고" in captured.err or "경고" in captured.out
 
     def test_run_linear_healthcheck_success(self, capsys) -> None:
-        """Linear 헬스체크가 성공하면 email을 출력한다."""
+        """Linear 헬스체크가 성공하면 마스킹된 email을 출력한다."""
         from unittest.mock import MagicMock, patch
 
         mock_response = MagicMock()
@@ -685,12 +682,7 @@ class TestConfigHealthcheck:
         mock_client.__enter__ = MagicMock(return_value=mock_client)
         mock_client.__exit__ = MagicMock(return_value=False)
 
-        with patch("oh_my_kanban.commands.config_cmd.httpx") as mock_httpx:
-            mock_httpx.Client.return_value = mock_client
-            mock_httpx.Timeout = httpx.Timeout
-            mock_httpx.TimeoutException = httpx.TimeoutException
-            mock_httpx.NetworkError = httpx.NetworkError
-
+        with patch("httpx.Client", return_value=mock_client):
             from oh_my_kanban.commands.config_cmd import _run_linear_healthcheck
             _run_linear_healthcheck("lin_test_key")
 
@@ -709,12 +701,7 @@ class TestConfigHealthcheck:
         mock_client.__enter__ = MagicMock(return_value=mock_client)
         mock_client.__exit__ = MagicMock(return_value=False)
 
-        with patch("oh_my_kanban.commands.config_cmd.httpx") as mock_httpx:
-            mock_httpx.Client.return_value = mock_client
-            mock_httpx.Timeout = httpx.Timeout
-            mock_httpx.TimeoutException = httpx.TimeoutException
-            mock_httpx.NetworkError = httpx.NetworkError
-
+        with patch("httpx.Client", return_value=mock_client):
             from oh_my_kanban.commands.config_cmd import _run_linear_healthcheck
             _run_linear_healthcheck("bad-key")
 
@@ -763,7 +750,7 @@ class TestStaleReferenceAndLinearRetry:
 
         with patch("oh_my_kanban.session.plane_context_builder.plane_http_client") as mock_phc:
             mock_phc.return_value = mock_client
-            context, failed = build_plane_context(
+            _, failed = build_plane_context(
                 ["wi-1", "wi-2"], "proj-id", "https://api.plane.so", "key", "ws"
             )
         assert "wi-2" in failed
@@ -982,6 +969,8 @@ class TestUnifiedHttpWrapper:
     def test_no_direct_httpx_client_in_mcp_server(self) -> None:
         """mcp/server.py 소스 파일에서 직접 httpx.Client 생성이 없다."""
         source = Path(__file__).parent.parent / "src" / "oh_my_kanban" / "mcp" / "server.py"
+        if not source.exists():
+            pytest.skip("mcp/server.py 파일이 없습니다")
         content = source.read_text(encoding="utf-8")
         # plane_http_client 래퍼를 사용하므로 직접 httpx.Client( 호출이 없어야 한다
         lines_with_httpx_client = [
@@ -989,6 +978,7 @@ class TestUnifiedHttpWrapper:
             if "httpx.Client(" in line and not line.strip().startswith("#")
         ]
         assert len(lines_with_httpx_client) == 0, f"직접 httpx.Client 사용 발견: {lines_with_httpx_client}"
+        assert "plane_http_client" in content
 
     def test_no_direct_httpx_client_in_context_builder(self) -> None:
         """plane_context_builder.py에서 직접 httpx.Client 생성이 없다."""
