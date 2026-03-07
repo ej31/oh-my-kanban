@@ -1,5 +1,4 @@
 {
-  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "oh-my-kanban",
   "displayName": "oh-my-kanban",
   "description": "Plane/Linear 프로젝트 관리 CLI + Claude Code 세션 자동 추적 훅",

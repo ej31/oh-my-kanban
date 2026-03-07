@@ -10,7 +10,7 @@ description: oh-my-kanban 훅 설치 상태와 활성 세션 목록을 확인합
 ## 상태 확인
 
 다음 명령을 실행합니다:
-```
+```bash
 omk hooks status
 ```
 
@@ -22,7 +22,7 @@ omk hooks status
 ## 추가 정보
 
 드리프트 통계를 보려면:
-```
+```bash
 omk hooks drift-report
 ```
 

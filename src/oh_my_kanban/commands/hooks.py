@@ -185,7 +185,7 @@ def _install_plugin_files() -> None:
         ver = "unknown"
 
     # 버전 문자열 검증 — 경로 순회 공격 방지 (PEP 440 안전 문자만 허용)
-    if not re.match(r"^[a-zA-Z0-9._+\-]+$", ver):
+    if not re.match(r"^[a-zA-Z0-9._+\-]+$", ver) or ".." in ver:
         click.echo(
             f"  경고: 버전 문자열 '{ver}'에 허용되지 않는 문자가 포함되어 있습니다. 'unknown'으로 대체합니다.",
             err=True,
@@ -211,16 +211,20 @@ def _install_plugin_files() -> None:
 
     try:
         # 기존 버전 디렉토리 제거 후 재복사 (idempotent)
-        if cache_dir.exists():
-            # 심볼릭 링크 기반 임의 디렉토리 삭제 방지: resolve()로 실제 경로 확인
+        if cache_dir.exists() or cache_dir.is_symlink():
+            # 심볼릭 링크 기반 임의 경로 공격 방지
             resolved = cache_dir.resolve()
-            if not str(resolved).startswith(str(expected_base.resolve())):
+            if not resolved.is_relative_to(expected_base.resolve()):
                 click.echo(
                     f"  경고: 캐시 경로가 허용 범위를 벗어났습니다: {resolved}",
                     err=True,
                 )
                 return
-            shutil.rmtree(resolved)
+            # 심볼릭 링크이면 링크 자체를 제거 (타겟 디렉토리 보호)
+            if cache_dir.is_symlink():
+                cache_dir.unlink()
+            else:
+                shutil.rmtree(cache_dir)
         # symlinks=True: 소스 심볼릭 링크를 따라가지 않고 링크 자체를 보존
         shutil.copytree(plugin_data_dir, cache_dir, symlinks=True)
         click.echo(f"  플러그인 등록: {cache_dir}")
@@ -328,7 +332,9 @@ def _install_hooks(local: bool, local_only: bool = False) -> None:
     _write_settings_atomic(settings_path, settings)
 
     # .gitignore에 .claude/settings.json 자동 추가 (Bootstrap lock 재발 방지)
-    _ensure_gitignore_entry()
+    # local 설치 시에만 — global 설치는 cwd의 .gitignore를 수정하지 않음
+    if local:
+        _ensure_gitignore_entry()
 
     # 플러그인 파일을 캐시 디렉토리에 복사
     _install_plugin_files()

@@ -54,11 +54,17 @@ def main() -> None:
         # 3. 쿨다운 처리
         if state.stats.cooldown_remaining > 0:
             state.stats.cooldown_remaining -= 1
+            state.timeline.append(
+                TimelineEvent(timestamp=now_iso(), type="prompt", summary=prompt_text[:100] if prompt_text else "(빈 프롬프트)")
+            )
             save_session(state)
             sys.exit(0)
 
         # 4. 스코프가 충분히 초기화되지 않으면 바로 저장 후 종료
         if not state.scope.tokens:
+            state.timeline.append(
+                TimelineEvent(timestamp=now_iso(), type="prompt", summary=prompt_text[:100] if prompt_text else "(빈 프롬프트)")
+            )
             save_session(state)
             sys.exit(0)
 
