@@ -54,6 +54,16 @@ omk = "oh_my_kanban.cli:cli"
 where = ["src"]
 include = ["oh_my_kanban*"]
 
+[tool.setuptools.package-data]
+oh_my_kanban = [
+    "plugin_data/**/*",
+    "plugin_data/.claude-plugin/plugin.json",
+    "plugin_data/.claude-plugin/marketplace.json",
+    "plugin_data/skills/omk-setup/SKILL.md",
+    "plugin_data/skills/omk-status/SKILL.md",
+    "plugin_data/skills/omk-off/SKILL.md",
+]
+
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0",

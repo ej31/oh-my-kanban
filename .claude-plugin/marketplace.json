@@ -1,0 +1,16 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "oh-my-kanban",
+  "displayName": "oh-my-kanban",
+  "description": "Plane/Linear 프로젝트 관리 CLI + Claude Code 세션 자동 추적 훅",
+  "author": "ej31",
+  "homepage": "https://github.com/ej31/oh-my-kanban",
+  "plugins": [
+    {
+      "name": "oh-my-kanban",
+      "description": "세션 드리프트 감지, 파일 수정 추적, Plane/Linear WI 자동 연동",
+      "path": ".",
+      "install": "pip install oh-my-kanban && omk hooks install"
+    }
+  ]
+}
