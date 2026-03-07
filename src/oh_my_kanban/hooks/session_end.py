@@ -16,6 +16,7 @@ from oh_my_kanban.hooks.common import (
     exit_fail_open,
     get_session_id,
     notify_success,
+    output_context,
     read_hook_input,
     reset_hud,
     sanitize_comment,
@@ -193,8 +194,13 @@ def main() -> None:
 
         # Plane Work Item 댓글 추가 (설정이 있는 경우)
         if state.plane_context.work_item_ids:
-            comment = _build_summary_comment(state)
-            posted = _post_plane_comment(state, comment)
+            # ST-25: format_preset에 따라 댓글 생략 가능
+            format_preset = getattr(cfg, "format_preset", "normal")
+            if format_preset != "eco":
+                comment = _build_summary_comment(state)
+                posted = _post_plane_comment(state, comment)
+            else:
+                posted = False
 
             # 댓글 성공 여부와 무관하게 HUD 항상 초기화 (US-03)
             reset_hud()
@@ -209,6 +215,19 @@ def main() -> None:
                         SuccessNudge(wi_identifier="WI", wi_name="세션 종료 기록됨", wi_url=""),
                         hook_name="SessionEnd",
                     )
+
+            # ST-22: 핸드오프 메모 유도 (Claude에게 additionalContext 주입)
+            if cfg.api_key:
+                handoff_ctx = (
+                    "[omk 세션 종료 예정] 세션이 곧 종료됩니다.\n"
+                    "다음 세션을 위해 핸드오프 메모를 Work Item 댓글에 남겨주세요.\n"
+                    "현재 작업 상태, 미완성 부분, 다음에 할 일을 요약하세요.\n"
+                    "/oh-my-kanban:handoff 스킬을 사용하여 "
+                    "'## 핸드오프\\n- ...' 형식으로 기록하세요."
+                )
+                output_context("SessionEnd", handoff_ctx)
+        else:
+            reset_hud()
 
         save_session(state)
 

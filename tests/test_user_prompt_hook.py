@@ -329,16 +329,19 @@ class TestDriftSignificantNotSuppressed:
                 return_value=_make_drift(score=0.3, level="significant"),
             ),
             patch(f"{_MOD}.should_suppress_warning", return_value=False),
-            patch(f"{_MOD}.output_context") as mock_output,
+            patch(f"{_MOD}.output_system_message") as mock_output,
+            patch(f"{_MOD}.load_config") as mock_cfg,
         ):
+            mock_cfg.return_value.api_key = ""  # 댓글 폴링 비활성화
             _run_main(hook_input)
 
         assert state.stats.drift_warnings == 1
         assert state.stats.cooldown_remaining == 3
         mock_output.assert_called_once()
         call_args = mock_output.call_args
-        assert call_args[0][0] == "UserPromptSubmit"
-        assert "[omk drift 경고]" in call_args[0][1]
+        # output_system_message(user_msg, hook_event_name, additional_context)
+        assert call_args[0][1] == "UserPromptSubmit"
+        assert "[omk drift 경고]" in call_args[0][2]
 
 
 # ── 12. drift level='major' + NOT suppressed -> 경고 주입 ────────────────────
@@ -360,14 +363,17 @@ class TestDriftMajorNotSuppressed:
                 return_value=_make_drift(score=0.1, level="major"),
             ),
             patch(f"{_MOD}.should_suppress_warning", return_value=False),
-            patch(f"{_MOD}.output_context") as mock_output,
+            patch(f"{_MOD}.output_system_message") as mock_output,
+            patch(f"{_MOD}.load_config") as mock_cfg,
         ):
+            mock_cfg.return_value.api_key = ""  # 댓글 폴링 비활성화
             _run_main(hook_input)
 
         assert state.stats.drift_warnings == 1
         assert state.stats.cooldown_remaining == 5
         mock_output.assert_called_once()
-        assert "level=major" in mock_output.call_args[0][1]
+        # additional_context (3rd arg) contains level=major
+        assert "level=major" in mock_output.call_args[0][2]
 
 
 # ── 13. drift level='significant' + suppressed=True -> scope 확장 ────────────

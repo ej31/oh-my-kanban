@@ -56,6 +56,7 @@ class PlaneContext:
     last_comment_check: Optional[str] = None    # 마지막 댓글 폴링 ISO 타임스탬프
     known_comment_ids: list[str] = field(default_factory=list)   # 이미 본 댓글 ID 목록
     stale_work_item_ids: list[str] = field(default_factory=list) # 외부 삭제된 WI ID 목록
+    comment_poll_failures: int = 0                               # 연속 폴링 실패 횟수 (circuit breaker)
 
 
 @dataclass
@@ -127,6 +128,7 @@ class SessionState:
     stats: SessionStats = field(default_factory=SessionStats)
     config: SessionConfig = field(default_factory=SessionConfig)
     error_throttle: Optional[ErrorThrottle] = None
+    handoff_note: str = ""  # 다음 세션을 위한 핸드오프 메모
 
     def touch(self) -> None:
         """updated_at 갱신. 저장 직전에 명시적으로 호출한다."""
@@ -181,6 +183,7 @@ class SessionState:
                 last_comment_check=plane_data.get("last_comment_check"),
                 known_comment_ids=plane_data.get("known_comment_ids", []),
                 stale_work_item_ids=plane_data.get("stale_work_item_ids", []),
+                comment_poll_failures=plane_data.get("comment_poll_failures", 0),
             ),
             timeline=[
                 TimelineEvent(
@@ -207,4 +210,5 @@ class SessionState:
                 auto_expand=config_data.get("auto_expand", True),
             ),
             error_throttle=error_throttle,
+            handoff_note=data.get("handoff_note", ""),
         )

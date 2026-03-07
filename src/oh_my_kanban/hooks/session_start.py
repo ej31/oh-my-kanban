@@ -21,6 +21,7 @@ from oh_my_kanban.hooks.common import (
     get_session_id,
     notify_success,
     output_context,
+    output_system_message,
     read_hook_input,
     sanitize_comment,
     update_hud,
@@ -37,6 +38,74 @@ from oh_my_kanban.session.state import (
     TimelineEvent,
     now_iso,
 )
+
+
+def _fetch_active_work_items(cfg: Any) -> list[dict]:
+    """Plane에서 진행 중인 Work Item 목록을 조회한다. 실패 시 빈 리스트 반환 (fail-open)."""
+    try:
+        import httpx
+    except ImportError:
+        return []
+
+    if not cfg.api_key or not cfg.workspace_slug or not cfg.project_id:
+        return []
+
+    base_url = cfg.base_url.rstrip("/")
+    headers = {"X-API-Key": cfg.api_key}
+    url = (
+        f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
+        f"/projects/{cfg.project_id}/issues/"
+    )
+    try:
+        with httpx.Client(timeout=PLANE_API_TIMEOUT, follow_redirects=False) as client:
+            resp = client.get(url, headers=headers, params={"per_page": 10})
+            if resp.status_code == 200:
+                data = resp.json()
+                results = data.get("results", [])
+                # In Progress 상태 WI만 반환 (state_detail.group == "started")
+                return [
+                    r for r in results
+                    if isinstance(r, dict)
+                    and r.get("state_detail", {}).get("group") in ("started", "in_progress")
+                ]
+    except Exception:
+        pass
+    return []
+
+
+def _inject_new_session_wi_guidance(cfg: Any) -> None:
+    """신규 세션 시작 시 진행 중인 WI 목록을 사용자와 Claude에게 안내한다 (ST-18)."""
+    active_wis = _fetch_active_work_items(cfg)
+
+    if not active_wis:
+        # WI가 없거나 조회 실패: 안내 없이 진행
+        return
+
+    # 사용자에게 보이는 systemMessage
+    lines = ["[omk] 세션이 시작되었습니다.", "  현재 진행 중인 Task:"]
+    for wi in active_wis[:5]:
+        seq = wi.get("sequence_id", "")
+        name = wi.get("name", "Work Item")[:60]
+        state_name = wi.get("state_detail", {}).get("name", "In Progress")
+        identifier = f"OMK-{seq}" if seq else "OMK-?"
+        lines.append(f"    {identifier}: {name} ({state_name})")
+    lines.append(
+        "  작업할 Task의 번호를 알려주시거나, 새로운 작업을 시작하시면 자동으로 Task가 생성됩니다."
+    )
+    user_msg = "\n".join(lines)
+
+    # Claude에게 주입할 additionalContext
+    wi_summaries = " | ".join(
+        f"OMK-{wi.get('sequence_id', '?')}: {wi.get('name', '')[:40]}"
+        for wi in active_wis[:5]
+    )
+    claude_ctx = (
+        f"[omk] 프로젝트에 진행 중인 Work Item이 있습니다.\n"
+        f"{wi_summaries}.\n"
+        "사용자가 특정 Task를 언급하면 해당 WI에 세션을 연결하세요 (/oh-my-kanban:focus).\n"
+        "새로운 주제로 작업을 시작하면 자동으로 새 Task를 생성합니다 (/oh-my-kanban:create-task)."
+    )
+    output_system_message(user_msg, "SessionStart", claude_ctx)
 
 
 def _get_task_mode(cfg: Any) -> str:
@@ -97,6 +166,11 @@ def _apply_task_labels(wi_id: str, cfg: Any, is_main: bool = True) -> None:
 
 def _post_session_start_comment(state: SessionState, cfg: Any) -> None:
     """Plane Work Item에 세션 시작 댓글을 추가한다. 실패 시 무시 (fail-open)."""
+    # ST-25: format_preset=eco이면 세션 시작 댓글 생략
+    format_preset = getattr(cfg, "format_preset", "normal")
+    if format_preset == "eco":
+        return
+
     try:
         import httpx
     except ImportError:
@@ -113,13 +187,27 @@ def _post_session_start_comment(state: SessionState, cfg: Any) -> None:
     session_id_short = state.session_id[:8]
     start_time = state.created_at[:19].replace("T", " ")  # YYYY-MM-DD HH:MM:SS
 
-    comment_body = "\n".join([
-        "## omk 세션 시작",
-        "",
-        f"**세션 ID**: `{session_id_short}...`",
-        f"**시작 시각**: {start_time} UTC",
-        f"**목표**: {state.scope.summary[:200] if state.scope.summary else '미설정'}",
-    ])
+    if format_preset == "detailed":
+        # detailed: 더 많은 정보 포함
+        files_str = ", ".join(f"`{f}`" for f in state.stats.files_touched[:5]) or "없음"
+        comment_body = "\n".join([
+            "## omk 세션 시작",
+            "",
+            f"**세션 ID**: `{session_id_short}...`",
+            f"**시작 시각**: {start_time} UTC",
+            f"**목표**: {state.scope.summary[:200] if state.scope.summary else '미설정'}",
+            f"**이전 수정 파일**: {files_str}",
+            f"**누적 요청 수**: {state.stats.total_prompts}회",
+        ])
+    else:
+        # normal: 기본 정보
+        comment_body = "\n".join([
+            "## omk 세션 시작",
+            "",
+            f"**세션 ID**: `{session_id_short}...`",
+            f"**시작 시각**: {start_time} UTC",
+            f"**목표**: {state.scope.summary[:200] if state.scope.summary else '미설정'}",
+        ])
     comment_html = sanitize_comment(comment_body)
 
     base_url = cfg.base_url.rstrip("/")
@@ -299,6 +387,21 @@ def _handle_startup_or_resume(session_id: str, source: str) -> None:
         task_mode = _get_task_mode(cfg)
         is_main = task_mode == "main-sub"
         _apply_task_labels(target_wi, cfg, is_main=is_main)
+    elif source == "startup":
+        # ST-18: 신규 세션이고 WI가 연결되지 않은 경우: 활성 WI 목록 안내
+        _inject_new_session_wi_guidance(cfg)
+
+    # ST-19: 세션 재개이고 핸드오프 메모가 있으면 사용자에게 표시
+    if source == "resume" and state.handoff_note:
+        handoff_user_msg = (
+            f"[omk] 이전 세션 메모:\n"
+            f"  {state.handoff_note[:300]}"
+        )
+        handoff_claude_ctx = (
+            f"[omk] 이전 세션 핸드오프 메모: {state.handoff_note[:300]}\n"
+            "이 메모를 참고하여 작업을 이어가세요."
+        )
+        output_system_message(handoff_user_msg, "SessionStart", handoff_claude_ctx)
 
     # 재개 세션이고 scope가 있으면 컨텍스트 재주입
     # (알려진 버그 #10373: 새 세션 SessionStart에서는 stdout 주입이 실패할 수 있음)

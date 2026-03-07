@@ -18,7 +18,7 @@ _ALLOWED_CONFIG_KEYS = frozenset({
     "output", "linear_api_key", "linear_team_id",
     "drift_sensitivity", "drift_cooldown",
     "task_mode", "upload_level", "auto_archive_days",
-    "auto_complete_subtasks", "session_retention_days",
+    "auto_complete_subtasks", "session_retention_days", "format_preset",
 })
 
 if sys.version_info >= (3, 11):
@@ -57,6 +57,7 @@ class Config:
     auto_archive_days: int = 7           # 0이면 비활성화
     auto_complete_subtasks: bool = True
     session_retention_days: int = 30
+    format_preset: str = "normal"        # "detailed" | "normal" | "eco"
 
 
 def detect_project_id() -> str:
@@ -107,6 +108,8 @@ def load_config(profile: str = "default") -> Config:
                 cfg.auto_complete_subtasks = val if isinstance(val, bool) else str(val).lower() == "true"
             if "session_retention_days" in section:
                 cfg.session_retention_days = max(1, int(section["session_retention_days"]))
+            if "format_preset" in section:
+                cfg.format_preset = section["format_preset"]
         except (OSError, tomllib.TOMLDecodeError) as e:
             print(f"경고: 설정 파일 파싱 오류 ({CONFIG_FILE}): {e}", file=sys.stderr)
 
@@ -143,6 +146,8 @@ def load_config(profile: str = "default") -> Config:
         cfg.task_mode = env_val
     if env_val := os.environ.get("OMK_UPLOAD_LEVEL"):
         cfg.upload_level = env_val
+    if env_val := os.environ.get("OMK_FORMAT_PRESET"):
+        cfg.format_preset = env_val
 
     # 3. CLAUDE.md에서 project_id 자동 감지 (env/config에 없을 때)
     if not cfg.project_id:
