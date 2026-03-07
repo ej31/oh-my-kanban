@@ -6,11 +6,20 @@ import os
 import re
 import stat
 import sys
-from dataclasses import dataclass, field
+import urllib.parse
+from dataclasses import dataclass
 from pathlib import Path
 
 # 프로필 이름 허용 문자: 영문자, 숫자, 하이픈, 밑줄만 허용 (TOML 섹션 헤더 인젝션 방지)
 _PROFILE_NAME_RE = re.compile(r'^[a-zA-Z0-9_-]+$')
+
+# workspace_slug 허용 형식: 영문자, 숫자, 하이픈 (Plane slug 형식)
+_SLUG_RE = re.compile(r'^[a-zA-Z0-9_-]+$')
+
+# 허용 태스크 모드 / 업로드 레벨 / 형식 프리셋
+_VALID_TASK_MODES = frozenset({"main-sub", "module-task-sub"})
+_VALID_UPLOAD_LEVELS = frozenset({"metadata", "full"})
+_VALID_FORMAT_PRESETS = frozenset({"detailed", "normal", "eco"})
 
 # 저장 허용 설정 키 화이트리스트 (임의 키 TOML 인젝션 방지)
 _ALLOWED_CONFIG_KEYS = frozenset({
@@ -98,25 +107,68 @@ def load_config(profile: str = "default") -> Config:
             if "drift_cooldown" in section:
                 cfg.drift_cooldown = max(0, int(section["drift_cooldown"]))
             if "task_mode" in section:
-                cfg.task_mode = section["task_mode"]
+                val = section["task_mode"]
+                if val in _VALID_TASK_MODES:
+                    cfg.task_mode = val
+                else:
+                    print(
+                        f"경고: task_mode='{val}'은 유효하지 않습니다. "
+                        f"허용 값: {', '.join(sorted(_VALID_TASK_MODES))}. 기본값 유지.",
+                        file=sys.stderr,
+                    )
             if "upload_level" in section:
-                cfg.upload_level = section["upload_level"]
+                val = section["upload_level"]
+                if val in _VALID_UPLOAD_LEVELS:
+                    cfg.upload_level = val
+                else:
+                    print(
+                        f"경고: upload_level='{val}'은 유효하지 않습니다. "
+                        f"허용 값: {', '.join(sorted(_VALID_UPLOAD_LEVELS))}. 기본값 유지.",
+                        file=sys.stderr,
+                    )
             if "auto_archive_days" in section:
                 cfg.auto_archive_days = max(0, int(section["auto_archive_days"]))
             if "auto_complete_subtasks" in section:
                 val = section["auto_complete_subtasks"]
-                cfg.auto_complete_subtasks = val if isinstance(val, bool) else str(val).lower() == "true"
+                cfg.auto_complete_subtasks = (
+                    val if isinstance(val, bool) else str(val).lower() == "true"
+                )
             if "session_retention_days" in section:
                 cfg.session_retention_days = max(1, int(section["session_retention_days"]))
             if "format_preset" in section:
-                cfg.format_preset = section["format_preset"]
+                val = section["format_preset"]
+                if val in _VALID_FORMAT_PRESETS:
+                    cfg.format_preset = val
+                else:
+                    print(
+                        f"경고: format_preset='{val}'은 유효하지 않습니다. "
+                        f"허용 값: {', '.join(sorted(_VALID_FORMAT_PRESETS))}. 기본값 유지.",
+                        file=sys.stderr,
+                    )
         except (OSError, tomllib.TOMLDecodeError) as e:
             print(f"경고: 설정 파일 파싱 오류 ({CONFIG_FILE}): {e}", file=sys.stderr)
 
     # 2. 환경변수 오버라이드
-    cfg.base_url = os.environ.get("PLANE_BASE_URL", cfg.base_url)
+    if env_val := os.environ.get("PLANE_BASE_URL"):
+        parsed = urllib.parse.urlparse(env_val)
+        if parsed.scheme in ("https", "http") and parsed.hostname:
+            cfg.base_url = env_val
+        else:
+            print(
+                f"경고: PLANE_BASE_URL='{env_val}'이 유효하지 않습니다. "
+                "https:// 또는 http:// 스킴과 호스트가 필요합니다. 기본값 유지.",
+                file=sys.stderr,
+            )
     cfg.api_key = os.environ.get("PLANE_API_KEY", cfg.api_key)
-    cfg.workspace_slug = os.environ.get("PLANE_WORKSPACE_SLUG", cfg.workspace_slug)
+    if env_val := os.environ.get("PLANE_WORKSPACE_SLUG"):
+        if _SLUG_RE.match(env_val):
+            cfg.workspace_slug = env_val
+        else:
+            print(
+                f"경고: PLANE_WORKSPACE_SLUG='{env_val}'은 유효하지 않습니다. "
+                "영문자, 숫자, 하이픈, 밑줄만 허용됩니다. 기본값 유지.",
+                file=sys.stderr,
+            )
     cfg.project_id = os.environ.get("PLANE_PROJECT_ID", cfg.project_id)
     if env_val := os.environ.get("LINEAR_API_KEY"):
         cfg.linear_api_key = env_val
@@ -143,11 +195,32 @@ def load_config(profile: str = "default") -> Config:
                 file=sys.stderr,
             )
     if env_val := os.environ.get("OMK_TASK_MODE"):
-        cfg.task_mode = env_val
+        if env_val in _VALID_TASK_MODES:
+            cfg.task_mode = env_val
+        else:
+            print(
+                f"경고: OMK_TASK_MODE='{env_val}'은 유효하지 않습니다. "
+                f"허용 값: {', '.join(sorted(_VALID_TASK_MODES))}. 기본값 유지.",
+                file=sys.stderr,
+            )
     if env_val := os.environ.get("OMK_UPLOAD_LEVEL"):
-        cfg.upload_level = env_val
+        if env_val in _VALID_UPLOAD_LEVELS:
+            cfg.upload_level = env_val
+        else:
+            print(
+                f"경고: OMK_UPLOAD_LEVEL='{env_val}'은 유효하지 않습니다. "
+                f"허용 값: {', '.join(sorted(_VALID_UPLOAD_LEVELS))}. 기본값 유지.",
+                file=sys.stderr,
+            )
     if env_val := os.environ.get("OMK_FORMAT_PRESET"):
-        cfg.format_preset = env_val
+        if env_val in _VALID_FORMAT_PRESETS:
+            cfg.format_preset = env_val
+        else:
+            print(
+                f"경고: OMK_FORMAT_PRESET='{env_val}'은 유효하지 않습니다. "
+                f"허용 값: {', '.join(sorted(_VALID_FORMAT_PRESETS))}. 기본값 유지.",
+                file=sys.stderr,
+            )
 
     # 3. CLAUDE.md에서 project_id 자동 감지 (env/config에 없을 때)
     if not cfg.project_id:
@@ -188,11 +261,22 @@ def save_config(data: dict, profile: str = "default") -> None:
     for prof, values in existing.items():
         if not _PROFILE_NAME_RE.match(prof):
             raise ValueError(
-                f"Invalid profile name '{prof}': only letters, digits, hyphens, and underscores are allowed."
+                f"Invalid profile name '{prof}':"
+                " only letters, digits, hyphens, and underscores are allowed."
             )
         lines.append(f"[{prof}]")
         for k, v in values.items():
-            lines.append(f'{k} = "{_escape_toml_string(str(v))}"')
+            if not re.match(r'^[a-zA-Z0-9_-]+$', str(k)):
+                raise ValueError(f"Invalid config key: {k!r}")
+            # TOML 네이티브 타입 사용 (bool/int/float)
+            if isinstance(v, bool):
+                lines.append(f'{k} = {"true" if v else "false"}')
+            elif isinstance(v, int):
+                lines.append(f'{k} = {v}')
+            elif isinstance(v, float):
+                lines.append(f'{k} = {v}')
+            else:
+                lines.append(f'{k} = "{_escape_toml_string(str(v))}"')
         lines.append("")
 
     CONFIG_FILE.write_text("\n".join(lines), encoding="utf-8")

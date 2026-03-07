@@ -68,8 +68,11 @@ def _fetch_active_work_items(cfg: Any) -> list[dict]:
                     if isinstance(r, dict)
                     and r.get("state_detail", {}).get("group") in ("started", "in_progress")
                 ]
-    except Exception:
-        pass
+    except Exception as e:
+        print(
+            f"[omk] 활성 WI 목록 조회 실패 (fail-open): {type(e).__name__}: {e}",
+            file=sys.stderr,
+        )
     return []
 
 
@@ -115,7 +118,7 @@ def _check_blocked_and_cycle_deadline(state: SessionState, cfg: Any) -> None:
     - 현재 프로젝트에 활성 Cycle이 있고 마감이 3일 이내이면 마감 알림
     - 모두 fail-open
     """
-    from datetime import datetime, timezone, timedelta
+    from datetime import datetime, timezone
 
     try:
         import httpx
@@ -137,12 +140,13 @@ def _check_blocked_and_cycle_deadline(state: SessionState, cfg: Any) -> None:
                 f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
                 f"/projects/{project_id}/issues/{focused_id}/issue-relations/"
             )
+            relations = []
             with httpx.Client(timeout=PLANE_API_TIMEOUT, follow_redirects=False) as client:
                 resp = client.get(rel_url, headers=headers)
-            if resp.status_code == 200:
-                relations = resp.json()
-                if isinstance(relations, dict):
-                    relations = relations.get("results", [])
+                if resp.status_code == 200:
+                    relations = resp.json()
+                    if isinstance(relations, dict):
+                        relations = relations.get("results", [])
                 blocked_by = [
                     r for r in relations
                     if isinstance(r, dict) and r.get("relation_type") == "blocked_by"
@@ -152,7 +156,11 @@ def _check_blocked_and_cycle_deadline(state: SessionState, cfg: Any) -> None:
                     for r in blocked_by[:3]:
                         related = r.get("related_issue", r.get("issue_detail", {}))
                         seq = related.get("sequence_id", "?") if isinstance(related, dict) else "?"
-                        name = related.get("name", "Work Item") if isinstance(related, dict) else "Work Item"
+                        name = (
+                            related.get("name", "Work Item")
+                            if isinstance(related, dict)
+                            else "Work Item"
+                        )
                         blocker_names.append(f"OMK-{seq} ({name[:40]})")
                     blockers_str = "\n".join(f"  - {b}" for b in blocker_names)
                     output_system_message(
@@ -171,13 +179,14 @@ def _check_blocked_and_cycle_deadline(state: SessionState, cfg: Any) -> None:
             f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
             f"/projects/{project_id}/cycles/"
         )
+        data = {}
         with httpx.Client(timeout=PLANE_API_TIMEOUT, follow_redirects=False) as client:
             resp = client.get(cycle_url, headers=headers)
-        if resp.status_code == 200:
-            data = resp.json()
-            cycles = data.get("results", []) if isinstance(data, dict) else data
+            if resp.status_code == 200:
+                data = resp.json()
+        cycles = data.get("results", []) if isinstance(data, dict) else (data if data else [])
+        if cycles:
             now = datetime.now(timezone.utc)
-            deadline_threshold = now + timedelta(days=3)
 
             for cycle in cycles:
                 if not isinstance(cycle, dict):
@@ -228,6 +237,7 @@ def _apply_task_labels(wi_id: str, cfg: Any, is_main: bool = True) -> None:
     """
     try:
         import httpx
+
         from oh_my_kanban.hooks.label_conventions import get_label_id_by_name
     except ImportError:
         return
@@ -259,12 +269,47 @@ def _apply_task_labels(wi_id: str, cfg: Any, is_main: bool = True) -> None:
     )
     try:
         with httpx.Client(timeout=PLANE_API_TIMEOUT, follow_redirects=False) as client:
-            client.patch(url, headers=headers, json={"label_ids": label_ids})
+            resp = client.patch(url, headers=headers, json={"label_ids": label_ids})
+        if resp.status_code not in (200, 201):
+            print(
+                f"[omk] WI 라벨 PATCH HTTP {resp.status_code} (wi_id={wi_id!r})",
+                file=sys.stderr,
+            )
     except Exception as e:
         print(
             f"[omk] WI 라벨 적용 실패 (wi_id={wi_id!r}): {type(e).__name__}: {e}",
             file=sys.stderr,
         )
+
+
+def _get_git_info() -> tuple[str, str]:
+    """현재 git 브랜치명과 저장소 이름을 반환한다. 실패 시 빈 문자열 반환."""
+    import subprocess
+    branch = ""
+    repo = ""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            capture_output=True, text=True, check=False, timeout=3,
+        )
+        if result.returncode == 0:
+            branch = result.stdout.strip()
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    try:
+        result = subprocess.run(
+            ["git", "remote", "get-url", "origin"],
+            capture_output=True, text=True, check=False, timeout=3,
+        )
+        if result.returncode == 0:
+            raw = result.stdout.strip()
+            # "git@github.com:org/repo.git" 또는 "https://github.com/org/repo.git" 형식 파싱
+            import re as _re
+            m = _re.search(r'[:/]([^/]+/[^/]+?)(?:\.git)?$', raw)
+            repo = m.group(1) if m else raw.split("/")[-1]
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    return branch, repo
 
 
 def _post_session_start_comment(state: SessionState, cfg: Any) -> None:
@@ -290,10 +335,13 @@ def _post_session_start_comment(state: SessionState, cfg: Any) -> None:
     session_id_short = state.session_id[:8]
     start_time = state.created_at[:19].replace("T", " ")  # YYYY-MM-DD HH:MM:SS
 
+    # OMK-7: git 브랜치/저장소 정보 조회
+    branch, repo = _get_git_info()
+
     if format_preset == "detailed":
         # detailed: 더 많은 정보 포함
         files_str = ", ".join(f"`{f}`" for f in state.stats.files_touched[:5]) or "없음"
-        comment_body = "\n".join([
+        lines = [
             "## omk 세션 시작",
             "",
             f"**세션 ID**: `{session_id_short}...`",
@@ -301,16 +349,26 @@ def _post_session_start_comment(state: SessionState, cfg: Any) -> None:
             f"**목표**: {state.scope.summary[:200] if state.scope.summary else '미설정'}",
             f"**이전 수정 파일**: {files_str}",
             f"**누적 요청 수**: {state.stats.total_prompts}회",
-        ])
+        ]
+        if branch:
+            lines.append(f"**브랜치**: `{branch}`")
+        if repo:
+            lines.append(f"**저장소**: `{repo}`")
+        comment_body = "\n".join(lines)
     else:
         # normal: 기본 정보
-        comment_body = "\n".join([
+        lines = [
             "## omk 세션 시작",
             "",
             f"**세션 ID**: `{session_id_short}...`",
             f"**시작 시각**: {start_time} UTC",
             f"**목표**: {state.scope.summary[:200] if state.scope.summary else '미설정'}",
-        ])
+        ]
+        if branch:
+            lines.append(f"**브랜치**: `{branch}`")
+        if repo:
+            lines.append(f"**저장소**: `{repo}`")
+        comment_body = "\n".join(lines)
     comment_html = sanitize_comment(comment_body)
 
     base_url = cfg.base_url.rstrip("/")
@@ -323,7 +381,12 @@ def _post_session_start_comment(state: SessionState, cfg: Any) -> None:
         )
         try:
             with httpx.Client(timeout=PLANE_API_TIMEOUT, follow_redirects=False) as client:
-                client.post(url, headers=headers, json={"comment_html": comment_html})
+                resp = client.post(url, headers=headers, json={"comment_html": comment_html})
+            if resp.status_code not in (200, 201):
+                print(
+                    f"[omk] 세션 시작 댓글 HTTP {resp.status_code} (wi_id={wi_id!r})",
+                    file=sys.stderr,
+                )
         except Exception as e:
             print(
                 f"[omk] 세션 시작 댓글 추가 실패 (wi_id={wi_id!r}): {type(e).__name__}: {e}",
@@ -352,14 +415,17 @@ def _notify_wi_connected(state: SessionState, cfg: Any) -> None:
                 f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
                 f"/projects/{project_id}/issues/{focused_id}/"
             )
-            with httpx.Client(timeout=5.0, follow_redirects=False) as client:
+            with httpx.Client(timeout=PLANE_API_TIMEOUT, follow_redirects=False) as client:
                 resp = client.get(url, headers=headers)
                 if resp.status_code == 200:
                     data = resp.json()
                     wi_name = data.get("name", "Work Item")
                     wi_sequence = data.get("sequence_id", 0)
-    except Exception:
-        pass
+    except Exception as e:
+        print(
+            f"[omk] WI 정보 조회 실패 (fail-open, 기본값 사용): {type(e).__name__}: {e}",
+            file=sys.stderr,
+        )
 
     project_id = state.plane_context.project_id or cfg.project_id
     wi_url = (

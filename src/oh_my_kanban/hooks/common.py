@@ -7,8 +7,8 @@ import os
 import re
 import subprocess
 import sys
-from dataclasses import dataclass, field
-from typing import Any, Optional
+from dataclasses import dataclass
+from typing import Any
 
 from oh_my_kanban.session.manager import load_session
 from oh_my_kanban.session.state import SessionState
@@ -24,7 +24,8 @@ HUD_TASK_NAME_MAX = 15
 class HookDiagnostic:
     """훅 실행 중 발생한 오류 진단 정보."""
 
-    category: str  # config_missing | auth_failure | network_error | rate_limit | server_error | wi_deleted
+    # config_missing | auth_failure | network_error | rate_limit | server_error | wi_deleted
+    category: str
     message: str
     wi_url: str = ""
     recovery_hint: str = ""
@@ -60,7 +61,7 @@ def notify_success(nudge: SuccessNudge, hook_name: str = "") -> None:
 
 
 def classify_api_error(
-    exc: Optional[Exception], status_code: Optional[int]
+    exc: Exception | None, status_code: int | None
 ) -> HookDiagnostic:
     """HTTP 상태 코드 또는 예외로부터 HookDiagnostic을 생성한다."""
     # 404 / 410: WI가 외부에서 삭제된 경우
@@ -109,11 +110,13 @@ def classify_api_error(
             message="Plane API 연결 실패",
             recovery_hint="네트워크 연결을 확인하세요",
         )
-    # 그 외 기본 오류
-    error_detail = str(exc)[:100] if exc else "알 수 없음"
+    # 그 외 기본 오류 — 예외 타입만 노출 (exc 메시지에 URL/헤더 등 민감 정보가 포함될 수 있음)
+    error_type = type(exc).__name__ if exc else "알 수 없음"
+    if exc:
+        print(f"[omk] API 오류 타입 (debug): {type(exc).__name__}", file=sys.stderr)
     return HookDiagnostic(
         category="server_error",
-        message=f"Plane API 오류: {error_detail}",
+        message=f"Plane API 오류: {error_type}",
         recovery_hint="잠시 후 다시 시도하세요",
     )
 
@@ -135,14 +138,30 @@ _HEX_PATTERN = re.compile(r"[0-9a-fA-F]{32,}")
 _SECRET_PATTERN = re.compile(
     r"(?i)(password|passwd|secret|token|api_key|apikey)\s*[=:]\s*\S+",
 )
+# AWS Access Key 패턴 (AKIA... 20자)
+_AWS_KEY_PATTERN = re.compile(r'AKIA[0-9A-Z]{16}')
+# GitHub PAT/OAuth/앱 토큰 패턴
+_GH_TOKEN_PATTERN = re.compile(r'gh[pous]_[A-Za-z0-9_]{36,}')
+# Bearer 토큰 / JWT 패턴
+_BEARER_PATTERN = re.compile(r'Bearer\s+[A-Za-z0-9_.\-/+=]{20,}')
+# 연결 문자열 패턴 (mongodb+srv://user:pass@host 등)
+_CONN_STRING_PATTERN = re.compile(r'[a-zA-Z][a-zA-Z0-9+\-.]*://[^:@\s]+:[^@\s]+@[^\s]+')
 
 
 def sanitize_comment(text: str) -> str:
     """댓글 텍스트에서 민감 정보를 [REDACTED]로 치환한다."""
+    # 민감 키워드 뒤에 오는 값 제거 — 먼저 처리해 이중 치환 방지
+    result = _SECRET_PATTERN.sub(lambda m: f"{m.group(1)}=[REDACTED]", text)
+    # 연결 문자열 (user:pass@host 형태)
+    result = _CONN_STRING_PATTERN.sub("[REDACTED_URL]", result)
+    # AWS Access Key
+    result = _AWS_KEY_PATTERN.sub("[REDACTED_AWS_KEY]", result)
+    # GitHub 토큰
+    result = _GH_TOKEN_PATTERN.sub("[REDACTED_GH_TOKEN]", result)
+    # Bearer 토큰
+    result = _BEARER_PATTERN.sub("Bearer [REDACTED]", result)
     # 32자 이상의 연속 16진수 문자열 제거
-    result = _HEX_PATTERN.sub("[REDACTED]", text)
-    # 민감 키워드 뒤에 오는 값 제거
-    result = _SECRET_PATTERN.sub(lambda m: f"{m.group(1)}=[REDACTED]", result)
+    result = _HEX_PATTERN.sub("[REDACTED]", result)
     return result
 
 
@@ -179,7 +198,7 @@ def reset_hud() -> None:
             pass  # tmux 실행 실패 시 무시
 
 
-def create_plane_http_client(cfg: Any) -> Optional[Any]:  # noqa: ANN401
+def create_plane_http_client(cfg: Any) -> Any | None:  # noqa: ANN401
     """Plane API용 httpx 클라이언트를 생성한다. httpx 미설치 시 None 반환."""
     try:
         import httpx  # noqa: PLC0415
@@ -205,7 +224,7 @@ def get_session_id(hook_input: dict[str, Any]) -> str:
     return str(hook_input.get("session_id", ""))
 
 
-def get_session_or_exit(session_id: str) -> Optional[SessionState]:
+def get_session_or_exit(session_id: str) -> SessionState | None:
     """세션을 로드한다. 없으면 None 반환 (호출자가 exit_fail_open 처리)."""
     if not session_id:
         return None
@@ -251,7 +270,7 @@ def exit_fail_open() -> None:
     sys.exit(0)
 
 
-def _is_throttled(state: "SessionState", category: str) -> bool:
+def _is_throttled(state: SessionState, category: str) -> bool:
     """동일 카테고리 에러가 쿨다운 기간 내 반복되면 True를 반환한다."""
     t = state.error_throttle
     if t is None or t.category != category or t.last_error_at is None:
@@ -261,14 +280,17 @@ def _is_throttled(state: "SessionState", category: str) -> bool:
         last = datetime.fromisoformat(t.last_error_at)
         elapsed = (datetime.now(timezone.utc) - last).total_seconds()
         return elapsed < t.cooldown_seconds
-    except Exception:
+    except (ValueError, TypeError) as e:
+        # ISO 날짜 형식 오류 — 쓰로틀 우회하되 경고는 남김
+        print(f"[omk] 쓰로틀 날짜 파싱 실패 (fail-open): {type(e).__name__}: {e}", file=sys.stderr)
         return False
 
 
-def update_error_throttle(state: "SessionState", category: str) -> None:
+def update_error_throttle(state: SessionState, category: str) -> None:
     """에러 발생 시 ErrorThrottle 상태를 업데이트한다."""
-    from oh_my_kanban.session.state import ErrorThrottle
     from datetime import datetime, timezone
+
+    from oh_my_kanban.session.state import ErrorThrottle
     now = datetime.now(timezone.utc).isoformat()
     if state.error_throttle is None or state.error_throttle.category != category:
         state.error_throttle = ErrorThrottle(
@@ -277,19 +299,26 @@ def update_error_throttle(state: "SessionState", category: str) -> None:
             error_count=1,
         )
     else:
-        state.error_throttle.last_error_at = now
-        state.error_throttle.error_count += 1
+        # 새 객체 생성 — 기존 ErrorThrottle 직접 변경 없음
+        prev = state.error_throttle
+        state.error_throttle = ErrorThrottle(
+            category=prev.category,
+            last_error_at=now,
+            error_count=prev.error_count + 1,
+            cooldown_seconds=prev.cooldown_seconds,
+        )
 
 
 def handle_orphan_wi(
-    state: "SessionState",
+    state: SessionState,
     wi_id: str,
     hook_event_name: str = "SessionStart",
 ) -> None:
-    """외부에서 삭제된 WI를 stale_work_item_ids에 기록하고 사용자에게 알린다.
+    """외부에서 삭제된 WI를 stale_work_item_ids에 기록하고 상태를 정리하며 사용자에게 알린다.
 
     Args:
-        state: 현재 세션 상태. stale_work_item_ids에 wi_id가 추가된다.
+        state: 현재 세션 상태. stale_work_item_ids에 wi_id가 추가되고
+               work_item_ids에서 제거된다.
         wi_id: 삭제된 Work Item UUID.
         hook_event_name: 훅 이벤트 이름 (알림 채널용).
     """
@@ -297,11 +326,26 @@ def handle_orphan_wi(
     if wi_id in state.plane_context.stale_work_item_ids:
         return
 
-    state.plane_context.stale_work_item_ids.append(wi_id)
+    # 새 리스트 생성 — 기존 리스트 직접 변경 없음
+    state.plane_context.stale_work_item_ids = [
+        *state.plane_context.stale_work_item_ids, wi_id
+    ]
+
+    # work_item_ids에서 삭제된 WI 제거
+    state.plane_context.work_item_ids = [
+        w for w in state.plane_context.work_item_ids if w != wi_id
+    ]
+
+    # focused_work_item_id가 삭제된 WI이면 초기화
+    if state.plane_context.focused_work_item_id == wi_id:
+        state.plane_context.focused_work_item_id = None
+
+    # main_task_id가 삭제된 WI이면 초기화
+    if state.plane_context.main_task_id == wi_id:
+        state.plane_context.main_task_id = None
 
     # 전체 WI가 삭제됐는지 일부만 삭제됐는지 구분
-    all_wi_ids = state.plane_context.work_item_ids
-    remaining = [w for w in all_wi_ids if w not in state.plane_context.stale_work_item_ids]
+    remaining = list(state.plane_context.work_item_ids)
 
     if not remaining:
         # 모든 WI가 삭제된 경우
@@ -325,6 +369,7 @@ def handle_orphan_wi(
 
     output_system_message(message, hook_event_name, additional_ctx)
     print(
-        f"[omk] Orphan WI 감지: {wi_id[:8]}... | stale 목록: {len(state.plane_context.stale_work_item_ids)}개",
+        f"[omk] Orphan WI 감지: {wi_id[:8]}..."
+        f" | stale 목록: {len(state.plane_context.stale_work_item_ids)}개",
         file=sys.stderr,
     )

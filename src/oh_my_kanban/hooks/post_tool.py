@@ -15,7 +15,7 @@ import sys
 
 from oh_my_kanban.config import load_config
 from oh_my_kanban.hooks.common import (
-    PLANE_API_TIMEOUT,
+    create_plane_http_client,
     exit_fail_open,
     get_session_id,
     output_context,
@@ -23,7 +23,7 @@ from oh_my_kanban.hooks.common import (
     read_hook_input,
     sanitize_comment,
 )
-from oh_my_kanban.session.manager import _session_path, load_session, save_session
+from oh_my_kanban.session.manager import get_session_lock_path, load_session, save_session
 from oh_my_kanban.session.tracker import extract_file_paths, update_files_touched
 
 # git commit 해시 추출 패턴
@@ -54,12 +54,10 @@ def _extract_commit_hash(tool_response: str) -> str:
 
 
 def _post_commit_comment(state, commit_hash: str, commit_command: str) -> None:
-    """WI에 커밋 정보 댓글을 추가하고 Claude에게 additionalContext를 주입한다 (ST-24)."""
-    try:
-        import httpx
-    except ImportError:
-        return
+    """WI에 커밋 정보 댓글을 추가하고 Claude에게 additionalContext를 주입한다 (ST-24).
 
+    성공 시 stats.commit_hashes에 커밋 해시를 기록한다.
+    """
     cfg = load_config()
     if not cfg.api_key or not cfg.workspace_slug:
         return
@@ -67,6 +65,10 @@ def _post_commit_comment(state, commit_hash: str, commit_command: str) -> None:
     wi_ids = state.plane_context.work_item_ids
     project_id = state.plane_context.project_id or cfg.project_id
     if not wi_ids or not project_id:
+        return
+
+    client = create_plane_http_client(cfg)
+    if client is None:
         return
 
     focused = state.plane_context.focused_work_item_id
@@ -81,20 +83,32 @@ def _post_commit_comment(state, commit_hash: str, commit_command: str) -> None:
     base_url = cfg.base_url.rstrip("/")
     headers = {"X-API-Key": cfg.api_key, "Content-Type": "application/json"}
 
-    for wi_id in target_ids:
-        url = (
-            f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
-            f"/projects/{project_id}/issues/{wi_id}/comments/"
-        )
-        try:
-            with httpx.Client(timeout=PLANE_API_TIMEOUT, follow_redirects=False) as client:
-                client.post(url, headers=headers, json={"comment_html": comment_body})
-        except Exception as e:
-            print(
-                f"[omk] 커밋 댓글 추가 실패 (wi_id={wi_id!r}): {type(e).__name__}: {e}",
-                file=sys.stderr,
+    any_success = False
+    with client as c:
+        for wi_id in target_ids:
+            url = (
+                f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
+                f"/projects/{project_id}/issues/{wi_id}/comments/"
             )
-            continue
+            try:
+                resp = c.post(url, headers=headers, json={"comment_html": comment_body})
+                if resp.status_code in (200, 201):
+                    any_success = True
+                else:
+                    print(
+                        f"[omk] 커밋 댓글 HTTP {resp.status_code} (wi_id={wi_id!r})",
+                        file=sys.stderr,
+                    )
+            except Exception as e:
+                print(
+                    f"[omk] 커밋 댓글 추가 실패 (wi_id={wi_id!r}): {type(e).__name__}: {e}",
+                    file=sys.stderr,
+                )
+                continue
+
+    # 커밋 해시를 세션 통계에 기록 — POST 성공 시에만 (ST-24)
+    if commit_hash and any_success and commit_hash not in state.stats.commit_hashes:
+        state.stats.commit_hashes.append(commit_hash)
 
     # Claude에게 커밋 기록 완료 additionalContext 주입
     wi_id_short = target_ids[0][:8] if target_ids else ""
@@ -176,7 +190,7 @@ def _check_file_hotspot(state, file_paths: list[str]) -> None:
 @contextlib.contextmanager
 def _session_write_lock(session_id: str):
     """세션 파일에 대한 배타적 잠금 — async 훅 동시 실행 시 lost-update 방지."""
-    lock_path = _session_path(session_id).with_suffix(".lock")
+    lock_path = get_session_lock_path(session_id)
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     with open(lock_path, "w") as lf:
         fcntl.flock(lf, fcntl.LOCK_EX)
@@ -232,6 +246,18 @@ def main() -> None:
         if is_git_commit and state.plane_context.work_item_ids:
             try:
                 _post_commit_comment(state, commit_hash, commit_command)
+                # commit_hashes 갱신을 세션 파일에 반영 (잠금 밖에서 원자적 저장)
+                with _session_write_lock(session_id):
+                    saved = load_session(session_id)
+                    if saved is not None:
+                        # 두 리스트를 병합 (중복 제거, 순서 유지) — 덮어쓰기 방지
+                        merged = list(
+                            dict.fromkeys(
+                                saved.stats.commit_hashes + state.stats.commit_hashes
+                            )
+                        )
+                        saved.stats.commit_hashes = merged
+                        save_session(saved)
             except Exception as e:
                 print(
                     f"[omk] 커밋 추적 실패 (fail-open): {type(e).__name__}: {e}",
