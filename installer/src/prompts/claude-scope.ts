@@ -13,13 +13,15 @@ export async function promptClaudeScope(python: string): Promise<void> {
   note(padForNote(m.claudeScopeNote), padTitle(m.claudeScopeTitle));
 
   const projectScopePath = join(process.cwd(), '.claude', 'settings.json');
+  const localScopePath = join(process.cwd(), '.claude', 'settings.local.json');
   const userScopePath = join(process.env['HOME'] ?? '~', '.claude', 'settings.json');
 
   const scope = await select<string>({
     message: m.claudeScopeSelect,
     options: [
-      { value: 'project', label: m.claudeScopeProject, hint: projectScopePath },
       { value: 'user', label: m.claudeScopeUser, hint: userScopePath },
+      { value: 'project', label: m.claudeScopeProject, hint: projectScopePath },
+      { value: 'local', label: m.claudeScopeLocal, hint: localScopePath },
       { value: RESTART_SENTINEL, label: m.returnToFirstStep },
     ],
   });
@@ -32,15 +34,18 @@ export async function promptClaudeScope(python: string): Promise<void> {
     throw new RestartWizard();
   }
 
-  const isLocal = scope === 'project';
-  const settingsPath = isLocal ? projectScopePath : userScopePath;
+  const settingsPath =
+    scope === 'project' ? projectScopePath
+    : scope === 'local' ? localScopePath
+    : userScopePath;
 
-  // omk hooks install [--local] 실행
+  // omk hooks install [--local] [--local-only] 실행
   const s = spinner();
   s.start(m.claudeHooksInstalling);
 
   const args = ['-m', 'oh_my_kanban', 'hooks', 'install'];
-  if (isLocal) args.push('--local');
+  if (scope === 'project') args.push('--local');
+  if (scope === 'local') args.push('--local-only');
 
   const result = spawnSync(python, args, {
     encoding: 'utf8',

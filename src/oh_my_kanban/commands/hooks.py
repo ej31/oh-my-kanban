@@ -27,8 +27,15 @@ HOOK_TIMEOUT_SESSION_END = 30
 
 # ── 내부 헬퍼 ──────────────────────────────────────────────────────────────
 
-def _settings_path(local: bool) -> Path:
-    """대상에 따라 settings.json 경로를 반환한다."""
+def _settings_path(local: bool, local_only: bool = False) -> Path:
+    """대상에 따라 settings 파일 경로를 반환한다.
+
+    local_only=True  → .claude/settings.local.json  (개인용, git 무시)
+    local=True       → .claude/settings.json         (프로젝트 공유)
+    둘 다 False      → ~/.claude/settings.json       (전역)
+    """
+    if local_only:
+        return Path.cwd() / ".claude" / "settings.local.json"
     if local:
         return Path.cwd() / ".claude" / "settings.json"
     return Path.home() / ".claude" / "settings.json"
@@ -163,8 +170,8 @@ def _write_settings_atomic(settings_path: Path, settings: dict) -> None:
         raise click.ClickException(f"settings.json 쓰기 실패: {e}") from e
 
 
-def _install_hooks(local: bool) -> None:
-    """Claude Code settings.json에 omk 훅을 등록한다."""
+def _install_hooks(local: bool, local_only: bool = False) -> None:
+    """Claude Code settings 파일에 omk 훅을 등록한다."""
     python_path = sys.executable
 
     # hooks 패키지 디렉토리 탐색
@@ -180,7 +187,7 @@ def _install_hooks(local: bool) -> None:
             f"  훅 디렉토리: {hooks_dir}"
         )
 
-    settings_path = _settings_path(local)
+    settings_path = _settings_path(local, local_only)
 
     # 기존 설정 로드
     if settings_path.exists():
@@ -227,9 +234,9 @@ def _install_hooks(local: bool) -> None:
     click.echo("")
 
 
-def _uninstall_hooks(local: bool) -> None:
-    """Claude Code settings.json에서 omk 훅을 제거한다."""
-    settings_path = _settings_path(local)
+def _uninstall_hooks(local: bool, local_only: bool = False) -> None:
+    """Claude Code settings 파일에서 omk 훅을 제거한다."""
+    settings_path = _settings_path(local, local_only)
     if not settings_path.exists():
         click.echo(f"settings.json 없음: {settings_path}")
         return
@@ -250,9 +257,10 @@ def _show_status() -> None:
     """설치된 훅 상태와 활성 세션 목록을 출력한다."""
     global_path = _settings_path(local=False)
     local_path = _settings_path(local=True)
+    local_only_path = _settings_path(local=False, local_only=True)
 
     click.echo("=== omk 훅 설치 상태 ===")
-    for label, path in [("전역", global_path), ("로컬", local_path)]:
+    for label, path in [("전역", global_path), ("프로젝트", local_path), ("개인로컬", local_only_path)]:
         if not path.exists():
             click.echo(f"  [{label}] {path} — 없음")
             continue
@@ -315,11 +323,18 @@ def hooks() -> None:
     "local",
     is_flag=True,
     default=False,
-    help="현재 디렉토리의 .claude/settings.json에 설치 (기본: 전역)",
+    help="현재 디렉토리의 .claude/settings.json에 설치 — 저장소 전체 공유 (프로젝트 scope)",
 )
-def install(local: bool) -> None:
+@click.option(
+    "--local-only",
+    "local_only",
+    is_flag=True,
+    default=False,
+    help="현재 디렉토리의 .claude/settings.local.json에 설치 — 개인 전용, git 무시 (local scope)",
+)
+def install(local: bool, local_only: bool) -> None:
     """Claude Code에 omk 세션 추적 훅을 설치한다."""
-    _install_hooks(local)
+    _install_hooks(local, local_only)
 
 
 @hooks.command("uninstall")
@@ -328,11 +343,18 @@ def install(local: bool) -> None:
     "local",
     is_flag=True,
     default=False,
-    help="현재 디렉토리의 .claude/settings.json에서 제거 (기본: 전역)",
+    help="현재 디렉토리의 .claude/settings.json에서 제거 (프로젝트 scope)",
 )
-def uninstall(local: bool) -> None:
+@click.option(
+    "--local-only",
+    "local_only",
+    is_flag=True,
+    default=False,
+    help="현재 디렉토리의 .claude/settings.local.json에서 제거 (local scope)",
+)
+def uninstall(local: bool, local_only: bool) -> None:
     """Claude Code에서 omk 세션 추적 훅을 제거한다."""
-    _uninstall_hooks(local)
+    _uninstall_hooks(local, local_only)
 
 
 @hooks.command("status")
