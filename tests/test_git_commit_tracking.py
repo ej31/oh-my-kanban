@@ -106,7 +106,7 @@ class TestPostCommitComment:
 
         with (
             patch("oh_my_kanban.hooks.post_tool.load_config", return_value=cfg),
-            patch("httpx.Client", return_value=mock_cm),
+            patch("oh_my_kanban.hooks.post_tool.create_plane_http_client", return_value=mock_cm),
             patch("oh_my_kanban.hooks.post_tool.output_context"),
         ):
             _post_commit_comment(state, "abc1234", "git commit -m 'feat'")
@@ -122,11 +122,11 @@ class TestPostCommitComment:
 
         with (
             patch("oh_my_kanban.hooks.post_tool.load_config", return_value=cfg),
-            patch("httpx.Client") as mock_httpx,
+            patch("oh_my_kanban.hooks.post_tool.create_plane_http_client") as mock_create,
         ):
             _post_commit_comment(state, "abc1234", "git commit -m '...'")
 
-        mock_httpx.assert_not_called()
+        mock_create.assert_not_called()
 
     def test_skips_when_no_api_key(self):
         """API 키가 없으면 댓글을 게시하지 않는다."""
@@ -135,11 +135,11 @@ class TestPostCommitComment:
 
         with (
             patch("oh_my_kanban.hooks.post_tool.load_config", return_value=cfg),
-            patch("httpx.Client") as mock_httpx,
+            patch("oh_my_kanban.hooks.post_tool.create_plane_http_client") as mock_create,
         ):
             _post_commit_comment(state, "abc1234", "git commit -m '...'")
 
-        mock_httpx.assert_not_called()
+        mock_create.assert_not_called()
 
     def test_outputs_additional_context_on_success(self):
         """댓글 게시 후 Claude에게 additionalContext를 주입한다."""
@@ -149,7 +149,7 @@ class TestPostCommitComment:
 
         with (
             patch("oh_my_kanban.hooks.post_tool.load_config", return_value=cfg),
-            patch("httpx.Client", return_value=mock_cm),
+            patch("oh_my_kanban.hooks.post_tool.create_plane_http_client", return_value=mock_cm),
             patch("oh_my_kanban.hooks.post_tool.output_context") as mock_ctx,
         ):
             _post_commit_comment(state, "abc1234", "git commit -m '...'")
@@ -169,7 +169,7 @@ class TestPostCommitComment:
 
         with (
             patch("oh_my_kanban.hooks.post_tool.load_config", return_value=cfg),
-            patch("httpx.Client", return_value=mock_cm),
+            patch("oh_my_kanban.hooks.post_tool.create_plane_http_client", return_value=mock_cm),
             patch("oh_my_kanban.hooks.post_tool.output_context"),
         ):
             _post_commit_comment(state, "abc1234", "git commit -m '...'")  # 예외 없어야 함

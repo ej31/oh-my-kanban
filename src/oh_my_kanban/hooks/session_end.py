@@ -22,10 +22,6 @@ from oh_my_kanban.hooks.common import (
     sanitize_comment,
 )
 from oh_my_kanban.session.manager import load_session, save_session
-# 업로드 수준 상수
-UPLOAD_LEVEL_METADATA = "metadata"
-UPLOAD_LEVEL_FULL = "full"
-
 from oh_my_kanban.session.state import (
     FILES_DISPLAY_MAX,
     SESSION_ID_DISPLAY_LEN,
@@ -36,6 +32,10 @@ from oh_my_kanban.session.state import (
     TimelineEvent,
     now_iso,
 )
+
+# 업로드 수준 상수
+UPLOAD_LEVEL_METADATA = "metadata"
+UPLOAD_LEVEL_FULL = "full"
 
 
 def _build_summary_comment(state: SessionState) -> str:

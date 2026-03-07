@@ -21,9 +21,9 @@ from oh_my_kanban.hooks.common import PLANE_API_TIMEOUT
 
 # ── 출력 크기 상수 ────────────────────────────────────────────────────────────
 # 전체 WI 컨텍스트 최대 글자 수 (너무 길면 토큰 낭비)
-_CONTEXT_MAX_CHARS = 3000
+_CONTEXT_MAX_CHARS = 4000
 # 한 WI당 설명 최대 글자 수
-_DESCRIPTION_MAX_CHARS = 600
+_DESCRIPTION_MAX_CHARS = 800
 # 한 WI당 가져올 최근 댓글 수 (Phase 1b: 5 → 10으로 강화)
 _COMMENTS_LIMIT = 10
 # 한 댓글 최대 글자 수
@@ -280,7 +280,9 @@ def build_plane_context(
             if wi_data is None or wi_data.get("__deleted__"):
                 return wi_id, wi_data, [], []
             comments = _fetch_comments(client, base_url, workspace_slug, project_id, wi_id, headers)
-            sub_tasks = _fetch_sub_tasks(client, base_url, workspace_slug, project_id, wi_id, headers)
+            sub_tasks = _fetch_sub_tasks(
+                client, base_url, workspace_slug, project_id, wi_id, headers
+            )
             return wi_id, wi_data, comments, sub_tasks
 
     try:
@@ -334,7 +336,8 @@ def build_plane_context(
 
     # 삭제된 WI가 있으면 컨텍스트에 경고 추가
     if deleted_wi_ids:
-        deleted_note = f"\n[omk 경고] 다음 WI가 외부에서 삭제됐습니다: {', '.join(d[:8] + '...' for d in deleted_wi_ids)}"
+        deleted_ids_str = ', '.join(d[:8] + '...' for d in deleted_wi_ids)
+        deleted_note = f"\n[omk 경고] 다음 WI가 외부에서 삭제됐습니다: {deleted_ids_str}"
         parts.append(deleted_note)
         full_context = "\n\n".join(parts)
 

@@ -12,7 +12,6 @@ Claude Code가 세션 상태를 능동적으로 조회·수정할 수 있도록
 from __future__ import annotations
 
 import re
-import sys
 from typing import Any
 
 # mcp 패키지 import — 선택적 의존성이므로 ImportError를 그대로 전파한다.
@@ -217,7 +216,11 @@ def omk_update_scope(
         changed.append("keywords")
 
     if not changed:
-        return {"success": True, "message": "변경할 내용이 없습니다.", "scope": state.scope.__dict__}
+        return {
+            "success": True,
+            "message": "변경할 내용이 없습니다.",
+            "scope": state.scope.__dict__,
+        }
 
     state.timeline.append(
         TimelineEvent(
@@ -324,7 +327,9 @@ def omk_add_comment(
         target_wi_ids = plane.work_item_ids
 
     if not target_wi_ids:
-        return {"error": "세션에 연결된 Work Item이 없습니다. omk_link_work_item으로 먼저 연결하세요."}
+        return {
+            "error": "세션에 연결된 Work Item이 없습니다. omk_link_work_item으로 먼저 연결하세요."
+        }
 
     if not project_id:
         return {"error": "세션에 project_id가 설정되지 않았습니다. omk config set으로 설정하세요."}
@@ -363,11 +368,23 @@ def omk_add_comment(
                         "error": f"HTTP {resp.status_code}",
                     })
         except httpx.TimeoutException:
-            results.append({"work_item_id": wi_id, "success": False, "error": "요청 시간 초과 (10초)"})
+            results.append({
+                "work_item_id": wi_id,
+                "success": False,
+                "error": "요청 시간 초과 (10초)",
+            })
         except httpx.NetworkError as e:
-            results.append({"work_item_id": wi_id, "success": False, "error": f"네트워크 오류: {e}"})
+            results.append({
+                "work_item_id": wi_id,
+                "success": False,
+                "error": f"네트워크 오류: {e}",
+            })
         except Exception as e:
-            results.append({"work_item_id": wi_id, "success": False, "error": f"예외: {type(e).__name__}: {e}"})
+            results.append({
+                "work_item_id": wi_id,
+                "success": False,
+                "error": f"예외: {type(e).__name__}: {e}",
+            })
 
     success_count = sum(1 for r in results if r.get("success"))
     return {

@@ -7,8 +7,8 @@ from __future__ import annotations
 
 import sys
 
-from oh_my_kanban.hooks.common import PLANE_API_TIMEOUT, reset_hud
 from oh_my_kanban.config import load_config
+from oh_my_kanban.hooks.common import PLANE_API_TIMEOUT, reset_hud
 from oh_my_kanban.session.manager import load_session, save_session
 from oh_my_kanban.session.state import (
     STATUS_OPTED_OUT,
@@ -47,7 +47,10 @@ def _post_opt_out_comment(state: SessionState) -> None:
             with httpx.Client(timeout=PLANE_API_TIMEOUT, follow_redirects=False) as client:
                 client.post(url, headers=headers, json={"comment_html": comment})
         except Exception as e:
-            print(f"[omk] opt-out 댓글 추가 실패 (wi_id={wi_id!r}): {type(e).__name__}: {e}", file=sys.stderr)
+            print(
+                f"[omk] opt-out 댓글 추가 실패 (wi_id={wi_id!r}): {type(e).__name__}: {e}",
+                file=sys.stderr,
+            )
             continue
 
 

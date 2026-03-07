@@ -16,7 +16,7 @@ from oh_my_kanban.hooks.common import (
     PLANE_API_TIMEOUT,
     exit_fail_open,
     get_session_id,
-    output_context,
+    output_context,  # noqa: F401 — 테스트에서 패치 대상으로 사용
     output_system_message,
     read_hook_input,
 )
@@ -91,7 +91,9 @@ def _poll_comments(state, cfg) -> None:
         # omk 자체 댓글은 알림에서 제외 (## omk로 시작하는 댓글)
         new_comments = [
             c for c in new_comments
-            if not str(c.get("comment_stripped", "") or c.get("comment_html", "")).startswith("## omk")
+            if not str(
+                c.get("comment_stripped", "") or c.get("comment_html", "")
+            ).startswith("## omk")
         ]
 
         if new_comments:
@@ -114,7 +116,8 @@ def _poll_comments(state, cfg) -> None:
     except Exception as e:
         plane_ctx.comment_poll_failures += 1
         print(
-            f"[omk] 댓글 폴링 실패 ({plane_ctx.comment_poll_failures}/{_COMMENT_POLL_MAX_FAILURES}): "
+            "[omk] 댓글 폴링 실패"
+            f" ({plane_ctx.comment_poll_failures}/{_COMMENT_POLL_MAX_FAILURES}): "
             f"{type(e).__name__}: {e}",
             file=sys.stderr,
         )
@@ -215,7 +218,11 @@ def main() -> None:
         if state.stats.cooldown_remaining > 0:
             state.stats.cooldown_remaining -= 1
             state.timeline.append(
-                TimelineEvent(timestamp=now_iso(), type="prompt", summary=prompt_text[:100] if prompt_text else "(빈 프롬프트)")
+                TimelineEvent(
+                    timestamp=now_iso(),
+                    type="prompt",
+                    summary=prompt_text[:100] if prompt_text else "(빈 프롬프트)",
+                )
             )
             save_session(state)
             sys.exit(0)
@@ -223,7 +230,11 @@ def main() -> None:
         # 4. 스코프가 충분히 초기화되지 않으면 바로 저장 후 종료
         if not state.scope.tokens:
             state.timeline.append(
-                TimelineEvent(timestamp=now_iso(), type="prompt", summary=prompt_text[:100] if prompt_text else "(빈 프롬프트)")
+                TimelineEvent(
+                    timestamp=now_iso(),
+                    type="prompt",
+                    summary=prompt_text[:100] if prompt_text else "(빈 프롬프트)",
+                )
             )
             save_session(state)
             sys.exit(0)
@@ -266,7 +277,10 @@ def main() -> None:
                         TimelineEvent(
                             timestamp=now_iso(),
                             type="scope_expanded",
-                            summary=f"스코프 확장 (suppressed {drift.level}, score={drift.score:.3f})",
+                            summary=(
+                        f"스코프 확장 (suppressed {drift.level},"
+                        f" score={drift.score:.3f})"
+                    ),
                             drift_score=drift.score,
                             drift_level=drift.level,
                         )
