@@ -55,7 +55,8 @@ def _check_plane_api(cfg: Config) -> tuple[str, str]:
     except ImportError:
         return _SKIP, "httpx 미설치"
 
-    base_url = cfg.base_url.rstrip("/")
+    import re
+    base_url = re.sub(r"/api(?:/v1)?$", "", cfg.base_url.rstrip("/"))
     from oh_my_kanban.hooks.http_client import build_plane_headers
     headers = build_plane_headers(cfg.api_key)
 
@@ -63,9 +64,7 @@ def _check_plane_api(cfg: Config) -> tuple[str, str]:
         with httpx.Client(timeout=httpx.Timeout(5.0, connect=3.0), follow_redirects=False) as client:
             resp = client.get(f"{base_url}/api/v1/users/me/", headers=headers)
             if resp.status_code == 200:
-                data = resp.json()
-                email = data.get("email", "")
-                return _PASS, f"인증 성공 ({email})"
+                return _PASS, "인증 성공"
             elif resp.status_code == 401:
                 return _FAIL, "API 키 인증 실패 (401)"
             elif resp.status_code == 403:
@@ -103,9 +102,7 @@ def _check_linear_api(cfg: Config) -> tuple[str, str]:
                 data = resp.json()
                 if errors := data.get("errors"):
                     return _FAIL, f"GraphQL 오류: {errors[0].get('message', '알 수 없음')}"
-                viewer = data.get("data", {}).get("viewer", {})
-                email = viewer.get("email", "")
-                return _PASS, f"인증 성공 ({email})"
+                return _PASS, "인증 성공"
             elif resp.status_code == 401:
                 return _FAIL, "API 키 인증 실패 (401)"
             else:

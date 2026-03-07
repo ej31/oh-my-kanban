@@ -81,7 +81,12 @@ class LinearClient:
                 )
             if errors := body.get("errors"):
                 raise LinearGraphQLError(errors)
-            return body.get("data", {})
+            data = body.get("data", {})
+            if not isinstance(data, dict):
+                raise LinearResponseParseError(
+                    f"예상한 data 객체가 아닙니다: {type(data).__name__}"
+                )
+            return data
 
         # 모든 재시도 실패
         if last_exc is not None:
