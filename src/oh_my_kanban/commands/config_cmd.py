@@ -7,13 +7,21 @@ import re
 
 import click
 
-from oh_my_kanban.config import CONFIG_FILE, Config, list_profiles, load_config, save_config
+from oh_my_kanban.config import (
+    _ALLOWED_CONFIG_KEYS,
+    SOURCE_LABELS,
+    CONFIG_FILE,
+    Config,
+    list_profiles,
+    load_config,
+    save_config,
+)
 
 # plane.so 클라우드 API URL
 _CLOUD_API_URL = "https://api.plane.so"
 
-# Config 클래스에서 허용 키를 동적으로 파생 — 필드 추가 시 자동 반영
-_ALLOWED_KEYS = {f for f in Config.__dataclass_fields__ if f != "profile"}
+# save_config()의 허용 키와 동일한 화이트리스트 사용 (동기화 보장)
+_ALLOWED_KEYS = _ALLOWED_CONFIG_KEYS
 
 
 def _mask_email(email: str) -> str:
@@ -277,16 +285,10 @@ def config_show(profile: str) -> None:
     click.echo(f"base_url    : {cfg.base_url}")
     click.echo(f"api_key     : {masked_key}")
     click.echo(f"workspace   : {cfg.workspace_slug or '(미설정)'}")
-    # project_id 소스 표시
-    _source_labels = {
-        "env": "env",
-        "omk_project_toml": ".omk/project.toml",
-        "claude_md": "CLAUDE.md",
-        "config_toml": "config.toml",
-    }
+    # project_id 소스 표시 (config.py의 SOURCE_LABELS 사용)
     pid_display = cfg.project_id or "(미설정)"
     if cfg.project_id and cfg.project_id_source:
-        source_label = _source_labels.get(cfg.project_id_source, cfg.project_id_source)
+        source_label = SOURCE_LABELS.get(cfg.project_id_source, cfg.project_id_source)
         pid_display = f"{cfg.project_id} ({source_label})"
     click.echo(f"project_id  : {pid_display}")
     click.echo(f"output      : {cfg.output}")

@@ -12,6 +12,21 @@ from pathlib import Path
 # 프로필 이름 허용 문자: 영문자, 숫자, 하이픈, 밑줄만 허용 (TOML 섹션 헤더 인젝션 방지)
 _PROFILE_NAME_RE = re.compile(r'^[a-zA-Z0-9_-]+$')
 
+# UUID 형식 검증 패턴 (project_id 등) — 외부 모듈에서도 import하여 사용
+UUID_RE = re.compile(r'^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$')
+
+# .omk 디렉토리 이름 상수 — 외부 모듈에서도 import하여 사용
+OMK_DIR_NAME = ".omk"
+
+# project_id 소스 레이블 (사람이 읽기 좋은 형식) — 외부 모듈에서도 import하여 사용
+SOURCE_LABELS: dict[str, str] = {
+    "env": "환경변수 (PLANE_PROJECT_ID)",
+    "omk_project_toml": ".omk/project.toml",
+    "claude_md": "CLAUDE.md",
+    "config_toml": "~/.config/oh-my-kanban/config.toml",
+    "": "(소스 불명)",
+}
+
 # 저장 허용 설정 키 화이트리스트 (임의 키 TOML 인젝션 방지)
 _ALLOWED_CONFIG_KEYS = frozenset({
     "base_url", "api_key", "workspace_slug", "project_id",
@@ -82,9 +97,11 @@ def detect_project_toml() -> tuple[str, str]:
                 with open(project_toml, "rb") as f:
                     data = tomllib.load(f)
                 section = data.get("project", {})
+                if not isinstance(section, dict):
+                    continue
                 pid = section.get("project_id", "")
                 provider = section.get("provider", "plane")
-                if pid:
+                if pid and UUID_RE.match(pid.lower()):
                     return pid, provider
             except (OSError, tomllib.TOMLDecodeError):
                 continue
@@ -175,9 +192,15 @@ def load_config(profile: str = "default") -> Config:
     return cfg
 
 
-def _escape_toml_string(v: str) -> str:
-    """TOML 기본 문자열에 포함될 값의 특수문자를 이스케이프한다."""
-    return v.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n").replace("\r", "\\r")
+def escape_toml_string(v: str) -> str:
+    """TOML 기본 문자열에 포함될 값의 특수문자를 이스케이프한다 (TOML v1.0 사양 준수)."""
+    result = v.replace("\\", "\\\\").replace('"', '\\"')
+    result = result.replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+    # U+0000-U+0008, U+000B-U+000C, U+000E-U+001F, U+007F 제어 문자 이스케이프
+    return "".join(
+        c if (ord(c) >= 0x20 and ord(c) != 0x7F) or c == "\t" else f"\\u{ord(c):04X}"
+        for c in result
+    )
 
 
 def save_config(data: dict, profile: str = "default") -> None:
@@ -211,7 +234,7 @@ def save_config(data: dict, profile: str = "default") -> None:
             )
         lines.append(f"[{prof}]")
         for k, v in values.items():
-            lines.append(f'{k} = "{_escape_toml_string(str(v))}"')
+            lines.append(f'{k} = "{escape_toml_string(str(v))}"')
         lines.append("")
 
     CONFIG_FILE.write_text("\n".join(lines), encoding="utf-8")

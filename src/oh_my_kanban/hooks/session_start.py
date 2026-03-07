@@ -11,7 +11,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from oh_my_kanban.config import load_config
+from oh_my_kanban.config import OMK_DIR_NAME, load_config
 from oh_my_kanban.hooks.common import (
     exit_fail_open,
     get_session_id,
@@ -32,7 +32,6 @@ from oh_my_kanban.session.state import (
 )
 
 # .omk 디렉토리 내 마커 파일 상수
-_OMK_DIR = ".omk"
 _DISABLED_FILE = "disabled"
 _PROMPTED_FILE = ".prompted"
 _PROJECT_TOML_FILE = "project.toml"
@@ -111,7 +110,7 @@ def _handle_compact(session_id: str) -> None:
 
 def _is_project_disabled() -> bool:
     """cwd에서 .omk/disabled 마커가 존재하는지 확인한다 (프로젝트 단위 opt-out)."""
-    disabled = Path.cwd() / _OMK_DIR / _DISABLED_FILE
+    disabled = Path.cwd() / OMK_DIR_NAME / _DISABLED_FILE
     return disabled.exists()
 
 
@@ -122,7 +121,7 @@ def _inject_project_guidance() -> None:
     안내 주입 후 .omk/.prompted 마커를 생성한다.
     """
     cwd = Path.cwd()
-    omk_dir = cwd / _OMK_DIR
+    omk_dir = cwd / OMK_DIR_NAME
     project_toml = omk_dir / _PROJECT_TOML_FILE
     prompted = omk_dir / _PROMPTED_FILE
 

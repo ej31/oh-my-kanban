@@ -2,44 +2,38 @@
 
 from __future__ import annotations
 
-import re
 import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 import click
 
-from oh_my_kanban.config import load_config
+from oh_my_kanban.config import (
+    OMK_DIR_NAME,
+    SOURCE_LABELS,
+    UUID_RE,
+    escape_toml_string,
+    load_config,
+)
 
-# UUID 형식 검증 패턴: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (소문자 hex + 하이픈, 36자)
-_UUID_RE = re.compile(r"^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$")
-
-# .omk 디렉토리 이름
-_OMK_DIR = ".omk"
-
-# .omk/project.toml 소스 레이블 (사람이 읽기 좋은 형식)
-_SOURCE_LABELS: dict[str, str] = {
-    "env": "환경변수 (PLANE_PROJECT_ID)",
-    "omk_project_toml": ".omk/project.toml",
-    "claude_md": "CLAUDE.md",
-    "config_toml": "~/.config/oh-my-kanban/config.toml",
-    "": "(소스 불명)",
-}
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    try:
+        import tomllib
+    except ImportError:
+        import tomli as tomllib  # type: ignore[no-redef]
 
 
 def _omk_dir(cwd: Path | None = None) -> Path:
     """cwd 기준 .omk 디렉토리 경로를 반환한다."""
-    return (cwd or Path.cwd()) / _OMK_DIR
+    return (cwd or Path.cwd()) / OMK_DIR_NAME
 
 
 def _project_toml(cwd: Path | None = None) -> Path:
     """cwd 기준 .omk/project.toml 경로를 반환한다."""
     return _omk_dir(cwd) / "project.toml"
-
-
-def _escape_toml_string(v: str) -> str:
-    """TOML 기본 문자열에 포함될 값의 특수문자를 이스케이프한다."""
-    return v.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n").replace("\r", "\\r")
 
 
 def _ensure_omk_gitignore() -> None:
@@ -107,7 +101,7 @@ def project_bind(project_id: str, provider: str) -> None:
       omk project bind a1b2c3d4-e5f6-7890-abcd-ef1234567890 --provider linear
     """
     # project_id 형식 검증: UUID 패턴 [a-f0-9-]{36}
-    if not _UUID_RE.match(project_id.lower()):
+    if not UUID_RE.match(project_id.lower()):
         raise click.UsageError(
             f"project_id 형식이 올바르지 않습니다: '{project_id}'\n"
             "UUID 형식이어야 합니다 (예: a1b2c3d4-e5f6-7890-abcd-ef1234567890)"
@@ -127,8 +121,8 @@ def project_bind(project_id: str, provider: str) -> None:
         raise click.ClickException(f".omk 디렉토리 생성 실패: {e}") from e
 
     # .omk/project.toml 작성 (tomllib은 읽기 전용이므로 직접 문자열 작성)
-    escaped_pid = _escape_toml_string(project_id)
-    escaped_provider = _escape_toml_string(provider)
+    escaped_pid = escape_toml_string(project_id)
+    escaped_provider = escape_toml_string(provider)
     toml_content = (
         "[project]\n"
         f'project_id = "{escaped_pid}"\n'
@@ -190,7 +184,7 @@ def project_show() -> None:
 
     click.echo("=== 프로젝트 바인딩 상태 ===")
     if cfg.project_id:
-        source_label = _SOURCE_LABELS.get(cfg.project_id_source, cfg.project_id_source)
+        source_label = SOURCE_LABELS.get(cfg.project_id_source, cfg.project_id_source)
         click.echo(f"  project_id  : {cfg.project_id} (소스: {source_label})")
     else:
         click.echo("  project_id  : (미설정)")
@@ -200,21 +194,12 @@ def project_show() -> None:
     toml_path = _project_toml()
     if toml_path.exists():
         try:
-            import sys
-
-            if sys.version_info >= (3, 11):
-                import tomllib
-            else:
-                try:
-                    import tomllib
-                except ImportError:
-                    import tomli as tomllib  # type: ignore[no-redef]
-
             with open(toml_path, "rb") as f:
                 data = tomllib.load(f)
             provider_str = data.get("project", {}).get("provider", "plane")
-        except Exception:
+        except (OSError, tomllib.TOMLDecodeError, AttributeError) as e:
             provider_str = "(읽기 오류)"
+            click.echo(f"  경고: provider 읽기 실패: {type(e).__name__}: {e}", err=True)
 
     click.echo(f"  provider    : {provider_str}")
 

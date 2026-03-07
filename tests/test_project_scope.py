@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from io import StringIO
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -82,6 +82,19 @@ class TestDetectProjectToml:
         assert result_pid == ""
         assert result_provider == ""
 
+    def test_returns_empty_on_wrong_structure(self, tmp_path: Path) -> None:
+        """[project] 섹션이 dict가 아닌 잘못된 구조면 빈 튜플을 반환한다."""
+        omk_dir = tmp_path / ".omk"
+        omk_dir.mkdir()
+        # project가 문자열이면 .get() 호출 시 AttributeError 가능 — 방어 필요
+        (omk_dir / "project.toml").write_text('project = "oops"\n', encoding="utf-8")
+
+        with patch("oh_my_kanban.config.Path.cwd", return_value=tmp_path):
+            result_pid, result_provider = detect_project_toml()
+
+        assert result_pid == ""
+        assert result_provider == ""
+
     def test_default_provider_is_plane(self, tmp_path: Path) -> None:
         """provider 필드가 없으면 기본값 plane을 반환한다."""
         omk_dir = tmp_path / ".omk"
@@ -122,8 +135,8 @@ class TestLoadConfigProjectIdPriority:
 
     def test_omk_project_toml_over_claude_md(self, tmp_path: Path) -> None:
         """.omk/project.toml이 CLAUDE.md보다 우선한다."""
-        omk_pid = "omk-00000-0000-0000-000000000000"
-        claude_pid = "cla-00000-0000-0000-000000000000"
+        omk_pid = "aabbccdd-0000-0000-0000-000000000000"
+        claude_pid = "eeff0011-0000-0000-0000-000000000000"
 
         _write_project_toml(tmp_path, omk_pid)
 
@@ -287,6 +300,25 @@ class TestProjectCmd:
 
         assert result.exit_code == 0
         assert pid in result.output
+
+    def test_project_show_with_wrong_structure_toml(self, runner, tmp_path: Path) -> None:
+        """project.toml 구조가 잘못되어도 show는 크래시하지 않는다."""
+        from oh_my_kanban.cli import cli
+
+        omk_dir = tmp_path / ".omk"
+        omk_dir.mkdir()
+        (omk_dir / "project.toml").write_text('project = "oops"\n', encoding="utf-8")
+        config_file = _write_config(tmp_path, "[default]\n")
+
+        with (
+            patch("oh_my_kanban.commands.project_cmd.Path.cwd", return_value=tmp_path),
+            patch("oh_my_kanban.config.CONFIG_FILE", config_file),
+            patch("oh_my_kanban.config.Path.cwd", return_value=tmp_path),
+        ):
+            result = runner.invoke(cli, ["project", "show"])
+
+        assert result.exit_code == 0
+        assert "읽기 오류" in result.output
 
     def test_project_opt_out_creates_disabled(self, runner, tmp_path: Path) -> None:
         """omk project opt-out은 .omk/disabled 파일을 생성한다."""
