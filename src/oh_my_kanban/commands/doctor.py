@@ -16,12 +16,21 @@ _SKIP = "SKIP"
 
 
 def _check_config_file(cfg: Config) -> tuple[str, str]:
-    """config.toml 파일 존재 및 파싱 가능 여부만 검증한다.
+    """config.toml 파일 존재 및 파싱 가능 여부를 검증한다.
 
     인증 정보(api_key, workspace_slug)는 각 프로바이더 검증에서 처리한다.
     """
     if not CONFIG_FILE.exists():
         return _FAIL, f"설정 파일 없음: {CONFIG_FILE}"
+    try:
+        import tomllib
+    except ModuleNotFoundError:
+        import tomli as tomllib  # type: ignore[no-redef]
+    try:
+        with open(CONFIG_FILE, "rb") as f:
+            tomllib.load(f)
+    except Exception as e:
+        return _FAIL, f"TOML 파싱 오류: {e}"
     return _PASS, f"설정 로드 완료 (프로필: {cfg.profile})"
 
 
@@ -102,6 +111,9 @@ def _check_linear_api(cfg: Config) -> tuple[str, str]:
                 data = resp.json()
                 if errors := data.get("errors"):
                     return _FAIL, f"GraphQL 오류: {errors[0].get('message', '알 수 없음')}"
+                viewer = (data.get("data") or {}).get("viewer") or {}
+                if not viewer.get("id"):
+                    return _FAIL, "viewer 정보를 가져올 수 없습니다 (토큰 권한 확인 필요)"
                 return _PASS, "인증 성공"
             elif resp.status_code == 401:
                 return _FAIL, "API 키 인증 실패 (401)"
@@ -135,6 +147,7 @@ def doctor() -> None:
     ]
 
     has_failure = False
+    has_skip = False
     for name, (status, detail) in checks:
         if status == _PASS:
             icon = "✓"
@@ -143,6 +156,7 @@ def doctor() -> None:
             has_failure = True
         else:
             icon = "-"
+            has_skip = True
 
         click.echo(f"  {icon} [{status:4s}] {name}: {detail}")
 
@@ -150,5 +164,7 @@ def doctor() -> None:
     if has_failure:
         click.echo("일부 항목이 실패했습니다. 위 결과를 확인하세요.")
         sys.exit(1)
+    elif has_skip:
+        click.echo("일부 항목을 건너뛰었습니다. 실패 항목은 없습니다.")
     else:
         click.echo("모든 진단이 통과했습니다.")

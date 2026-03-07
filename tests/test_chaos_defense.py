@@ -538,6 +538,17 @@ class TestDoctorCommand:
             status, _ = _check_config_file(cfg)
             assert status == "FAIL"
 
+    def test_check_config_file_invalid_toml(self, tmp_path) -> None:
+        """config.toml이 유효하지 않은 TOML이면 FAIL을 반환한다."""
+        config_file = tmp_path / "config.toml"
+        config_file.write_text("invalid toml [[[")
+        cfg = Config(api_key="key", workspace_slug="ws")
+        with patch("oh_my_kanban.commands.doctor.CONFIG_FILE", config_file):
+            from oh_my_kanban.commands.doctor import _check_config_file
+            status, detail = _check_config_file(cfg)
+            assert status == "FAIL"
+            assert "TOML" in detail
+
     def test_check_plane_sdk_version_pass(self) -> None:
         """plane-sdk가 설치되어 있으면 PASS를 반환한다."""
         from oh_my_kanban.commands.doctor import _check_plane_sdk_version
@@ -558,6 +569,26 @@ class TestDoctorCommand:
         from oh_my_kanban.commands.doctor import _check_linear_api
         status, _ = _check_linear_api(cfg)
         assert status == "SKIP"
+
+    def test_check_linear_api_fail_when_viewer_id_missing(self) -> None:
+        """Linear API 응답에 viewer.id가 없으면 FAIL을 반환한다."""
+        from unittest.mock import MagicMock, patch
+        from oh_my_kanban.commands.doctor import _check_linear_api
+
+        cfg = Config(linear_api_key="lin_api_test")
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {"data": {"viewer": {"id": None, "email": "t@t.com"}}}
+
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.post.return_value = mock_resp
+
+        with patch("httpx.Client", return_value=mock_client):
+            status, detail = _check_linear_api(cfg)
+            assert status == "FAIL"
+            assert "viewer" in detail
 
     def test_doctor_runs_without_crash(self) -> None:
         """doctor 커맨드가 예외 없이 실행된다."""
@@ -845,6 +876,21 @@ class TestStaleReferenceAndLinearRetry:
             with pytest.raises(LinearHttpError) as exc_info:
                 client.execute("{ viewer { id } }")
             assert exc_info.value.status_code == 500
+
+    def test_linear_client_transport_error_wrapped_in_http_error(self) -> None:
+        """LinearClient가 전송 오류 재시도 초과 시 LinearHttpError로 래핑한다."""
+        from unittest.mock import MagicMock, patch
+        from oh_my_kanban.linear_client import LinearClient
+        from oh_my_kanban.linear_errors import LinearHttpError
+
+        with patch("oh_my_kanban.linear_client.time.sleep"):
+            client = LinearClient(api_key="test-key")
+            client._client = MagicMock()
+            client._client.post.side_effect = httpx.ConnectError("Connection refused")
+            with pytest.raises(LinearHttpError) as exc_info:
+                client.execute("{ viewer { id } }")
+            assert exc_info.value.status_code == 0
+            assert "전송 오류" in str(exc_info.value)
 
     def test_health_warnings_record_and_read(self, tmp_path) -> None:
         """record_health_warning이 health_warnings.json에 기록한다."""

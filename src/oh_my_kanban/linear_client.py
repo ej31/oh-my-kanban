@@ -69,7 +69,7 @@ class LinearClient:
                     time.sleep(min(wait, 30.0))
                     last_exc = e
                     continue
-                raise
+                raise LinearHttpError(0, f"전송 오류: {type(e).__name__}: {e}") from e
 
             try:
                 body = response.json()
