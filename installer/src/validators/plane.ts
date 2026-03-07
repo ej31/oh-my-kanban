@@ -39,7 +39,7 @@ export function validateWorkspaceSlugFormat(value: string): string | undefined {
 export async function testPlaneConnection(
   baseUrl: string,
   apiKey: string,
-  workspaceSlug: string
+  workspaceSlug: string,
 ): Promise<ConnectionResult> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);

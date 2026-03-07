@@ -2,6 +2,7 @@ import { confirm, text, password, select, isCancel, spinner } from '@clack/promp
 import pc from 'picocolors';
 import { t, type Messages } from '../i18n.js';
 import { RestartWizard, RESTART_SENTINEL } from '../restart.js';
+import { validateWorkspaceSlugFormat } from '../validators/plane.js';
 
 export interface PlaneConfig {
   baseUrl: string;
@@ -178,6 +179,8 @@ export async function promptPlaneConfig(): Promise<PlaneConfig> {
         placeholder: m.planeWorkspacePlaceholder,
         validate(value) {
           if (!value.trim()) return m.planeWorkspaceRequired;
+          const slug = extractWorkspaceSlug(value);
+          return validateWorkspaceSlugFormat(slug);
         },
       });
 
@@ -242,7 +245,6 @@ export async function promptPlaneConfig(): Promise<PlaneConfig> {
 
   // 프로젝트 선택 또는 생성
   const CREATE_SENTINEL = '__create__';
-  const SKIP_SENTINEL = '__skip__';
   let projectId = '';
 
   if (projects.length > 0) {
@@ -253,14 +255,12 @@ export async function promptPlaneConfig(): Promise<PlaneConfig> {
         options: [
           ...projects.map((p) => ({ value: p.id, label: p.name })),
           { value: CREATE_SENTINEL, label: m.planeCreateProject },
-          { value: SKIP_SENTINEL, label: m.planeSkipProject },
           { value: RESTART_SENTINEL, label: m.returnToFirstStep },
         ],
       });
 
       if (isCancel(selected)) process.exit(0);
       if (selected === RESTART_SENTINEL) throw new RestartWizard();
-      if (selected === SKIP_SENTINEL) break;
 
       if (selected === CREATE_SENTINEL) {
         const created = await createProject(baseUrl, apiKey, workspaceSlug, m);
@@ -276,20 +276,18 @@ export async function promptPlaneConfig(): Promise<PlaneConfig> {
       break;
     }
   } else {
-    // 프로젝트 없음 → 생성 또는 건너뛰기
+    // 프로젝트 없음 → 생성 필수
     while (true) {
       const action = await select<string>({
         message: m.planeNoProjectsFound,
         options: [
           { value: CREATE_SENTINEL, label: m.planeCreateProject },
-          { value: SKIP_SENTINEL, label: m.planeSkipProject },
           { value: RESTART_SENTINEL, label: m.returnToFirstStep },
         ],
       });
 
       if (isCancel(action)) process.exit(0);
       if (action === RESTART_SENTINEL) throw new RestartWizard();
-      if (action === SKIP_SENTINEL) break;
 
       if (action === CREATE_SENTINEL) {
         const created = await createProject(baseUrl, apiKey, workspaceSlug, m);
@@ -354,6 +352,7 @@ async function createProject(
       message: m.planeProjectName,
       validate(value) {
         if (!value.trim()) return m.planeProjectNameRequired;
+        if (value.trim().length > 255) return m.planeProjectNameTooLong;
       },
     });
 

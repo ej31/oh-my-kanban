@@ -2,6 +2,7 @@ import { password, text, select, isCancel, spinner, note } from '@clack/prompts'
 import pc from 'picocolors';
 import { t } from '../i18n.js';
 import { RestartWizard, RESTART_SENTINEL } from '../restart.js';
+import { validateLinearApiKeyFormat, validateLinearTeamIdFormat } from '../validators/linear.js';
 
 export interface LinearConfig {
   apiKey: string;
@@ -85,9 +86,7 @@ export async function promptLinearConfig(): Promise<LinearConfig> {
   while (true) {
     const apiKeyRaw = await password({
       message: m.linearApiKey,
-      validate(value) {
-        if (!value.trim()) return m.linearApiKeyRequired;
-      },
+      validate: validateLinearApiKeyFormat,
     });
 
     if (isCancel(apiKeyRaw)) {
@@ -208,6 +207,7 @@ export async function promptLinearConfig(): Promise<LinearConfig> {
         placeholder: m.linearTeamIdPlaceholder,
         validate(value) {
           if (!value.trim()) return m.linearTeamIdRequired;
+          return validateLinearTeamIdFormat(value);
         },
       });
 

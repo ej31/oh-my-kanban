@@ -37,7 +37,7 @@ export function validateLinearTeamIdFormat(value: string): string | undefined {
  */
 export async function testLinearConnection(
   apiKey: string,
-  teamId: string
+  teamId: string,
 ): Promise<ConnectionResult> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);

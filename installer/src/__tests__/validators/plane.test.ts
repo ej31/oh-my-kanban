@@ -51,7 +51,6 @@ describe('validateWorkspaceSlugFormat', () => {
   });
 
   it('1자 단독도 통과 (소문자/숫자)', () => {
-    // 정규식: ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$ → 1자도 허용
     expect(validateWorkspaceSlugFormat('a')).toBeUndefined();
   });
 
@@ -95,13 +94,11 @@ describe('testPlaneConnection', () => {
 
     await testPlaneConnection('https://api.plane.so/', API_KEY, SLUG);
     const calledUrl = mockFetch.mock.calls[0][0] as string;
-    // 트레일링 슬래시가 중복되지 않아야 한다
     expect(calledUrl).toBe(`https://api.plane.so/api/v1/workspaces/${SLUG}/`);
   });
 
   it('401 응답 시 API 키 오류 메시지', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 401 }));
-
     const result = await testPlaneConnection(BASE_URL, API_KEY, SLUG);
     expect(result.ok).toBe(false);
     expect(result.error).toMatch(/API 키/);
@@ -109,7 +106,6 @@ describe('testPlaneConnection', () => {
 
   it('403 응답 시 API 키 오류 메시지', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 403 }));
-
     const result = await testPlaneConnection(BASE_URL, API_KEY, SLUG);
     expect(result.ok).toBe(false);
     expect(result.error).toMatch(/API 키/);
@@ -117,7 +113,6 @@ describe('testPlaneConnection', () => {
 
   it('404 응답 시 workspace 오류 메시지', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404 }));
-
     const result = await testPlaneConnection(BASE_URL, API_KEY, SLUG);
     expect(result.ok).toBe(false);
     expect(result.error).toMatch(/Workspace/);
@@ -126,7 +121,6 @@ describe('testPlaneConnection', () => {
 
   it('500 응답 시 서버 오류 메시지', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }));
-
     const result = await testPlaneConnection(BASE_URL, API_KEY, SLUG);
     expect(result.ok).toBe(false);
     expect(result.error).toMatch(/500/);
@@ -134,7 +128,6 @@ describe('testPlaneConnection', () => {
 
   it('네트워크 오류 시 연결 실패 메시지', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('ECONNREFUSED')));
-
     const result = await testPlaneConnection(BASE_URL, API_KEY, SLUG);
     expect(result.ok).toBe(false);
     expect(result.error).toMatch(/연결 실패/);
@@ -144,7 +137,6 @@ describe('testPlaneConnection', () => {
     const abortError = new Error('aborted');
     abortError.name = 'AbortError';
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(abortError));
-
     const result = await testPlaneConnection(BASE_URL, API_KEY, SLUG);
     expect(result.ok).toBe(false);
     expect(result.error).toMatch(/초과/);
