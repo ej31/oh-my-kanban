@@ -46,6 +46,7 @@ export async function promptClaudeScope(python: string): Promise<void> {
   const result = spawnSync(python, args, {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
+    timeout: 30_000,
   });
 
   if (result.status !== 0 || result.error) {
@@ -68,6 +69,7 @@ export async function promptClaudeScope(python: string): Promise<void> {
   const mcpResult = spawnSync(python, mcpArgs, {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
+    timeout: 30_000,
   });
 
   if (mcpResult.status !== 0 || mcpResult.error) {

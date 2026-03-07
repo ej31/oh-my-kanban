@@ -78,9 +78,8 @@ def _install_mcp(local: bool, local_only: bool = False) -> None:
     else:
         existing = {}
 
-    # mcpServers에 oh-my-kanban 등록 (기존 항목 보존)
-    mcp_servers = existing.get("mcpServers", {})
-    mcp_servers[MCP_SERVER_KEY] = MCP_SERVER_CONFIG
+    # mcpServers에 oh-my-kanban 등록 (기존 항목 보존, 원본 mutation 방지)
+    mcp_servers = {**existing.get("mcpServers", {}), MCP_SERVER_KEY: MCP_SERVER_CONFIG}
     settings = {**existing, "mcpServers": mcp_servers}
 
     _write_settings_atomic(settings_path, settings)
@@ -101,15 +100,16 @@ def _uninstall_mcp(local: bool, local_only: bool = False) -> None:
     except (json.JSONDecodeError, OSError) as e:
         raise click.ClickException(f"settings.json 파싱 실패: {e}") from e
 
-    mcp_servers = existing.get("mcpServers", {})
-    if MCP_SERVER_KEY not in mcp_servers:
+    existing_mcp = existing.get("mcpServers", {})
+    if MCP_SERVER_KEY not in existing_mcp:
         click.echo("oh-my-kanban MCP 서버가 등록되어 있지 않습니다.")
         return
 
-    del mcp_servers[MCP_SERVER_KEY]
+    # 원본 mutation 방지 — oh-my-kanban만 제외한 새 dict 생성
+    remaining = {k: v for k, v in existing_mcp.items() if k != MCP_SERVER_KEY}
     settings = {**existing}
-    if mcp_servers:
-        settings["mcpServers"] = mcp_servers
+    if remaining:
+        settings["mcpServers"] = remaining
     else:
         settings.pop("mcpServers", None)
 
