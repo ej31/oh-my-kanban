@@ -357,6 +357,11 @@ async function createProject(
       if (res.ok) {
         const json = await res.json() as { id: string };
         s.stop(pc.green(`✓ ${m.planeProjectCreated}: ${name}`));
+        // 생성된 프로젝트 URL 표시 (cloud는 app.plane.so, self-hosted는 baseUrl 그대로)
+        const webBase = baseUrl === 'https://api.plane.so'
+          ? 'https://app.plane.so'
+          : baseUrl;
+        console.log(pc.cyan(`  ${webBase}/${workspaceSlug}/projects/${json.id}/issues/`));
         return json.id;
       } else {
         const body = await res.text().catch(() => '');
