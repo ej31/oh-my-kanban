@@ -137,6 +137,7 @@ export async function promptLinearConfig(): Promise<LinearConfig> {
   s2.start(m.linearFetchingTeams);
 
   let teams: { id: string; name: string }[] = [];
+  let teamFetchSucceeded = false;
   try {
     const res = await fetch(LINEAR_API_URL, {
       method: 'POST',
@@ -152,6 +153,7 @@ export async function promptLinearConfig(): Promise<LinearConfig> {
         data?: { teams: { nodes: { id: string; name: string }[] } };
       };
       teams = json.data?.teams?.nodes ?? [];
+      teamFetchSucceeded = true;
     }
   } catch {
     // 조회 실패 시 수동 입력으로 폴백
@@ -162,7 +164,8 @@ export async function promptLinearConfig(): Promise<LinearConfig> {
   let teamId = '';
   const CREATE_TEAM_SENTINEL = '__create__';
 
-  if (teams.length > 0) {
+  // 조회 성공(빈 목록 포함) → select 메뉴, 조회 실패 → 수동 입력 폴백
+  if (teamFetchSucceeded) {
     // 팀 목록 조회 성공 → select 프롬프트 (새 팀 만들기 + 처음으로 돌아가기 포함)
     while (true) {
       const selected = await select<string>({

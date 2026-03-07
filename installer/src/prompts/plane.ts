@@ -1,11 +1,13 @@
 import { confirm, text, password, select, isCancel, spinner } from '@clack/prompts';
 import pc from 'picocolors';
-import { t } from '../i18n.js';
+import { t, type Messages } from '../i18n.js';
+import { RestartWizard, RESTART_SENTINEL } from '../restart.js';
 
 export interface PlaneConfig {
   baseUrl: string;
   apiKey: string;
   workspaceSlug: string;
+  projectId: string;
 }
 
 const PLANE_API_TIMEOUT_MS = 8000;
@@ -218,9 +220,181 @@ export async function promptPlaneConfig(): Promise<PlaneConfig> {
 
   console.log(pc.cyan(`  workspace slug: ${pc.bold(workspaceSlug)}`));
 
+  // 프로젝트 목록 자동 조회
+  const sp = spinner();
+  sp.start(m.planeFetchingProjects);
+
+  let projects: { id: string; name: string }[] = [];
+  try {
+    const res = await fetch(`${baseUrl}/api/v1/workspaces/${workspaceSlug}/projects/`, {
+      headers: { 'X-Api-Key': apiKey },
+      signal: AbortSignal.timeout(PLANE_API_TIMEOUT_MS),
+    });
+    if (res.ok) {
+      const json = await res.json() as { results?: { id: string; name: string }[] } | { id: string; name: string }[];
+      const arr = Array.isArray(json) ? json : ((json as { results?: { id: string; name: string }[] }).results ?? []);
+      projects = arr.filter((p) => p.id && p.name);
+    }
+  } catch {
+    // 조회 실패 → 선택 없이 건너뛰기
+  }
+  sp.stop();
+
+  // 프로젝트 선택 또는 생성
+  const CREATE_SENTINEL = '__create__';
+  const SKIP_SENTINEL = '__skip__';
+  let projectId = '';
+
+  if (projects.length > 0) {
+    // 기존 프로젝트 선택 메뉴
+    while (true) {
+      const selected = await select<string>({
+        message: m.planeSelectProject,
+        options: [
+          ...projects.map((p) => ({ value: p.id, label: p.name })),
+          { value: CREATE_SENTINEL, label: m.planeCreateProject },
+          { value: SKIP_SENTINEL, label: m.planeSkipProject },
+          { value: RESTART_SENTINEL, label: m.returnToFirstStep },
+        ],
+      });
+
+      if (isCancel(selected)) process.exit(0);
+      if (selected === RESTART_SENTINEL) throw new RestartWizard();
+      if (selected === SKIP_SENTINEL) break;
+
+      if (selected === CREATE_SENTINEL) {
+        const created = await createProject(baseUrl, apiKey, workspaceSlug, m);
+        if (created) {
+          projectId = created;
+          break;
+        }
+        // 생성 실패 → 선택 메뉴 재표시
+        continue;
+      }
+
+      projectId = selected;
+      break;
+    }
+  } else {
+    // 프로젝트 없음 → 생성 또는 건너뛰기
+    while (true) {
+      const action = await select<string>({
+        message: m.planeNoProjectsFound,
+        options: [
+          { value: CREATE_SENTINEL, label: m.planeCreateProject },
+          { value: SKIP_SENTINEL, label: m.planeSkipProject },
+          { value: RESTART_SENTINEL, label: m.returnToFirstStep },
+        ],
+      });
+
+      if (isCancel(action)) process.exit(0);
+      if (action === RESTART_SENTINEL) throw new RestartWizard();
+      if (action === SKIP_SENTINEL) break;
+
+      if (action === CREATE_SENTINEL) {
+        const created = await createProject(baseUrl, apiKey, workspaceSlug, m);
+        if (created) {
+          projectId = created;
+          break;
+        }
+        // 생성 실패 → 선택 메뉴 재표시
+        continue;
+      }
+    }
+  }
+
   return {
     baseUrl,
     apiKey,
     workspaceSlug,
+    projectId,
   };
+}
+
+/** 프로젝트 이름에서 식별자를 자동 생성한다. 유니코드 글자/숫자를 모두 지원한다.
+ *  예: "My Project" → "MP", "한글 프로젝트" → "한프", "テスト" → "テス"
+ */
+function generateIdentifier(name: string): string {
+  const UNICODE_CHAR = /\p{L}|\p{N}/u;
+
+  // 각 단어의 첫 번째 유니코드 글자/숫자를 이니셜로 추출
+  const words = name.trim().split(/\s+/);
+  const initials = words
+    .map((w) => Array.from(w).find((ch) => UNICODE_CHAR.test(ch)) ?? '')
+    .filter(Boolean)
+    .join('')
+    .toUpperCase();
+
+  if (initials.length >= 2) return initials.slice(0, 6);
+
+  // 단어가 하나뿐이면 유니코드 글자/숫자 앞 6자
+  const chars = Array.from(name)
+    .filter((ch) => UNICODE_CHAR.test(ch))
+    .join('')
+    .toUpperCase();
+  if (chars.length > 0) return chars.slice(0, 6);
+
+  // 모든 문자가 필터링된 경우 → 이름 기반 해시로 고유 식별자 생성
+  const hash = Array.from(name).reduce(
+    (acc, ch) => ((acc * 31 + ch.charCodeAt(0)) & 0xffff),
+    0,
+  );
+  return `P${hash.toString(16).toUpperCase().slice(0, 5)}`;
+}
+
+/** 새 프로젝트를 생성하고 project id를 반환한다. 실패 시 null 반환 */
+async function createProject(
+  baseUrl: string,
+  apiKey: string,
+  workspaceSlug: string,
+  m: Messages,
+): Promise<string | null> {
+  while (true) {
+    const nameRaw = await text({
+      message: m.planeProjectName,
+      validate(value) {
+        if (!value.trim()) return m.planeProjectNameRequired;
+      },
+    });
+
+    if (isCancel(nameRaw)) process.exit(0);
+
+    const name = (nameRaw as string).trim();
+    const identifier = generateIdentifier(name);
+
+    const s = spinner();
+    s.start(m.planeProjectCreating);
+
+    try {
+      const res = await fetch(`${baseUrl}/api/v1/workspaces/${workspaceSlug}/projects/`, {
+        method: 'POST',
+        headers: {
+          'X-Api-Key': apiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, identifier, network: 2 }),
+        signal: AbortSignal.timeout(PLANE_API_TIMEOUT_MS),
+      });
+
+      if (res.ok) {
+        const json = await res.json() as { id: string };
+        s.stop(pc.green(`✓ ${m.planeProjectCreated}: ${name}`));
+        // 생성된 프로젝트 URL 표시 (cloud는 app.plane.so, self-hosted는 baseUrl 그대로)
+        const webBase = baseUrl === 'https://api.plane.so'
+          ? 'https://app.plane.so'
+          : baseUrl;
+        console.log(pc.cyan(`  ${webBase}/${workspaceSlug}/projects/${json.id}/issues/`));
+        return json.id;
+      } else {
+        const body = await res.text().catch(() => '');
+        s.stop(pc.red(`✗ ${m.planeProjectCreateFailed}`));
+        if (body) console.log(pc.dim(body.slice(0, 200)));
+        // 실패 시 루프 탈출 (null 반환)
+        return null;
+      }
+    } catch {
+      s.stop(pc.red(`✗ ${m.planeProjectCreateFailed}`));
+      return null;
+    }
+  }
 }

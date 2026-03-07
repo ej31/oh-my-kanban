@@ -3,7 +3,7 @@ import cfonts from 'cfonts';
 import pc from 'picocolors';
 
 const _require = createRequire(import.meta.url);
-const { version: WIZARD_VERSION } = _require('../../package.json') as { version: string };
+const { version: WIZARD_VERSION } = _require('../package.json') as { version: string };
 
 export function printLogo(): void {
   cfonts.say('OH MY|KANBAN', {
