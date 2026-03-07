@@ -19,6 +19,7 @@ from oh_my_kanban.hooks.common import (
     exit_fail_open,
     get_session_id,
     output_context,
+    output_system_message,
     read_hook_input,
     sanitize_comment,
 )
@@ -29,6 +30,8 @@ from oh_my_kanban.session.tracker import extract_file_paths, update_files_touche
 _COMMIT_HASH_RE = re.compile(r'\[[\w/.-]+\s+([0-9a-f]{7,40})\]')
 # 커밋 메시지에서 WI 식별자 패턴 (예: OMK-123, YCF-42, ABC-1)
 _WI_IDENTIFIER_RE = re.compile(r'\b([A-Z]{2,6}-\d+)\b')
+# 파일 핫스팟 임계값: 이 이상 세션에서 수정된 파일은 리팩토링 후보로 알림 (ST-31)
+_HOTSPOT_SESSION_THRESHOLD = 5
 
 
 def _detect_git_commit(tool_name: str, tool_input: dict) -> tuple[bool, str]:
@@ -125,6 +128,51 @@ def _suggest_wi_link_from_commit(state, commit_command: str) -> None:
     )
 
 
+def _get_file_session_counts(current_session_id: str) -> dict[str, int]:
+    """과거 세션 데이터에서 파일별 수정 세션 수를 집계한다 (현재 세션 제외)."""
+    from oh_my_kanban.session.manager import list_sessions
+
+    counts: dict[str, int] = {}
+    try:
+        for session in list_sessions():
+            if session.session_id == current_session_id:
+                continue
+            for f in session.stats.files_touched:
+                counts[f] = counts.get(f, 0) + 1
+    except Exception as e:
+        print(f"[omk] 세션 집계 실패 (fail-open): {type(e).__name__}: {e}", file=sys.stderr)
+    return counts
+
+
+def _check_file_hotspot(state, file_paths: list[str]) -> None:
+    """수정된 파일이 핫스팟(다수 세션에서 반복 수정)인지 확인하고 Claude에게 알린다 (ST-31).
+
+    이미 알림을 보낸 파일은 건너뜀 (state.plane_context.hotspot_alerted_files로 추적).
+    """
+    if not file_paths:
+        return
+
+    # 이미 알림한 파일은 제외
+    alerted = set(state.plane_context.hotspot_alerted_files)
+    new_files = [f for f in file_paths if f not in alerted]
+    if not new_files:
+        return
+
+    try:
+        counts = _get_file_session_counts(state.session_id)
+    except Exception:
+        return
+
+    for f in new_files:
+        session_count = counts.get(f, 0)
+        if session_count >= _HOTSPOT_SESSION_THRESHOLD:
+            output_system_message(
+                f"[omk] {f}이(가) 최근 {session_count}개 세션에서 수정되었습니다. "
+                "리팩토링 대상일 수 있습니다."
+            )
+            state.plane_context.hotspot_alerted_files.append(f)
+
+
 @contextlib.contextmanager
 def _session_write_lock(session_id: str):
     """세션 파일에 대한 배타적 잠금 — async 훅 동시 실행 시 lost-update 방지."""
@@ -170,6 +218,14 @@ def main() -> None:
                 exit_fail_open()
                 return
             update_files_touched(state, file_paths)
+            # ST-31: 파일 핫스팟 확인 (hotspot_alerted_files 갱신 포함)
+            try:
+                _check_file_hotspot(state, file_paths)
+            except Exception as e:
+                print(
+                    f"[omk] 핫스팟 확인 실패 (fail-open): {type(e).__name__}: {e}",
+                    file=sys.stderr,
+                )
             save_session(state)
 
         # ST-24: WI에 커밋 댓글 추가 (잠금 밖에서 수행, fail-open)

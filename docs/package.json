@@ -1,0 +1,13 @@
+{
+  "name": "oh-my-kanban-docs",
+  "version": "1.0.0",
+  "description": "oh-my-kanban 문서 사이트 (VitePress)",
+  "scripts": {
+    "docs:dev": "vitepress dev",
+    "docs:build": "vitepress build",
+    "docs:preview": "vitepress preview"
+  },
+  "devDependencies": {
+    "vitepress": "^1.5.0"
+  }
+}
