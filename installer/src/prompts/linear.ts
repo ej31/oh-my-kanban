@@ -43,13 +43,14 @@ async function createLinearTeam(
       },
       body: JSON.stringify({
         query: `
-          mutation {
-            teamCreate(input: { name: "${teamName}" }) {
+          mutation CreateTeam($name: String!) {
+            teamCreate(input: { name: $name }) {
               success
               team { id name }
             }
           }
         `,
+        variables: { name: teamName },
       }),
       signal: AbortSignal.timeout(LINEAR_API_TIMEOUT_MS),
     });
@@ -228,7 +229,8 @@ export async function promptLinearConfig(): Promise<LinearConfig> {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            query: `{ team(id: "${candidateTeamId}") { id name } }`,
+            query: 'query CheckTeam($id: String!) { team(id: $id) { id name } }',
+            variables: { id: candidateTeamId },
           }),
           signal: AbortSignal.timeout(LINEAR_API_TIMEOUT_MS),
         });
