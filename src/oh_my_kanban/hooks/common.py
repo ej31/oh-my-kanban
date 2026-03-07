@@ -2,15 +2,45 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import sys
+from pathlib import Path
 from typing import Any, Optional
+
+import httpx
 
 from oh_my_kanban.session.manager import load_session
 from oh_my_kanban.session.state import SessionState
 
-# Plane API 호출 타임아웃 (초 단위)
-PLANE_API_TIMEOUT = 10.0
+# Plane API 호출 타임아웃 (connect/read 분리)
+PLANE_API_TIMEOUT = httpx.Timeout(10.0, connect=3.0, read=10.0)
+
+# fcntl은 Unix 전용 — Windows에서는 no-op fallback
+try:
+    import fcntl
+    _HAS_FCNTL = True
+except ImportError:
+    _HAS_FCNTL = False
+
+
+@contextlib.contextmanager
+def session_write_lock(lock_path: Path):
+    """세션 파일에 대한 배타적 잠금 — async 훅 동시 실행 시 lost-update 방지.
+
+    Windows 등 fcntl 미지원 환경에서는 no-op으로 동작한다.
+    """
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    if _HAS_FCNTL:
+        with open(lock_path, "w") as lf:
+            fcntl.flock(lf, fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                fcntl.flock(lf, fcntl.LOCK_UN)
+    else:
+        # Windows: 잠금 없이 진행 (best-effort)
+        yield
 
 
 def read_hook_input() -> dict[str, Any]:
@@ -68,6 +98,37 @@ def output_system_message(
             "additionalContext": additional_context,
         }
     print(json.dumps(payload, ensure_ascii=False))
+
+
+def record_health_warning(warning: dict[str, Any]) -> None:
+    """훅 실패 시 health_warnings.json에 경고를 기록한다.
+
+    기록 실패해도 훅을 차단하지 않는다 (fail-open).
+    """
+    from oh_my_kanban.config import CONFIG_DIR
+
+    warnings_file = CONFIG_DIR / "health_warnings.json"
+    try:
+        warnings_file.parent.mkdir(parents=True, exist_ok=True)
+        existing: list[dict[str, Any]] = []
+        if warnings_file.exists():
+            try:
+                existing = json.loads(warnings_file.read_text(encoding="utf-8"))
+                if not isinstance(existing, list):
+                    existing = []
+            except (json.JSONDecodeError, OSError):
+                existing = []
+        # 최대 50개 유지 (오래된 것부터 제거)
+        existing.append(warning)
+        if len(existing) > 50:
+            existing = existing[-50:]
+        warnings_file.write_text(
+            json.dumps(existing, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+    except Exception:
+        # 기록 실패해도 훅 차단 안됨
+        pass
 
 
 def exit_fail_open() -> None:

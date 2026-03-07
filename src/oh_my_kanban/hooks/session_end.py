@@ -11,11 +11,12 @@ import sys
 
 from oh_my_kanban.config import load_config
 from oh_my_kanban.hooks.common import (
-    PLANE_API_TIMEOUT,
     exit_fail_open,
     get_session_id,
     read_hook_input,
+    record_health_warning,
 )
+from oh_my_kanban.hooks.http_client import build_plane_headers, plane_http_client, plane_request
 from oh_my_kanban.session.manager import load_session, save_session
 from oh_my_kanban.session.state import (
     FILES_DISPLAY_MAX,
@@ -81,30 +82,32 @@ def _post_plane_comment(state: SessionState, comment: str) -> bool:
         return False
 
     base_url = cfg.base_url.rstrip("/")
-    headers = {
-        "X-API-Key": cfg.api_key,
-        "Content-Type": "application/json",
-    }
 
     success_count = 0
-    for wi_id in wi_ids:
-        url = (
-            f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
-            f"/projects/{project_id}/issues/{wi_id}/comments/"
-        )
-        try:
-            with httpx.Client(timeout=PLANE_API_TIMEOUT, follow_redirects=False) as client:
-                resp = client.post(
-                    url, headers=headers, json={"comment_html": comment}
+    try:
+        with plane_http_client(cfg.api_key) as client:
+            for wi_id in wi_ids:
+                url = (
+                    f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
+                    f"/projects/{project_id}/issues/{wi_id}/comments/"
                 )
-                if resp.status_code in (200, 201):
-                    success_count += 1
-        except (httpx.TimeoutException, httpx.NetworkError, httpx.HTTPStatusError) as e:
-            print(f"[omk] Plane 댓글 추가 실패 (wi_id={wi_id!r}): {type(e).__name__}: {e}", file=sys.stderr)
-            continue
-        except Exception as e:
-            print(f"[omk] Plane 댓글 추가 중 예외 (wi_id={wi_id!r}): {type(e).__name__}: {e}", file=sys.stderr)
-            continue
+                try:
+                    resp = plane_request(
+                        client, "POST", url,
+                        json={"comment_html": comment},
+                        context=f"댓글 추가 wi_id={wi_id}",
+                    )
+                    if resp.status_code in (200, 201):
+                        success_count += 1
+                except (httpx.TimeoutException, httpx.NetworkError) as e:
+                    print(f"[omk] Plane 댓글 추가 실패 (wi_id={wi_id!r}): {type(e).__name__}: {e}", file=sys.stderr)
+                    continue
+                except Exception as e:
+                    print(f"[omk] Plane 댓글 추가 중 예외 (wi_id={wi_id!r}): {type(e).__name__}: {e}", file=sys.stderr)
+                    continue
+    except Exception as e:
+        print(f"[omk] Plane 클라이언트 생성 실패: {type(e).__name__}: {e}", file=sys.stderr)
+        return False
 
     return success_count > 0
 
@@ -156,6 +159,11 @@ def main() -> None:
 
     except Exception as e:
         print(f"[omk] SessionEnd 훅 예외 (fail-open): {type(e).__name__}: {e}", file=sys.stderr)
+        record_health_warning({
+            "type": "session_end_failure",
+            "error": f"{type(e).__name__}: {e}",
+            "timestamp": now_iso(),
+        })
         exit_fail_open()
 
 

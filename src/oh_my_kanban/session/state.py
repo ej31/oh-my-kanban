@@ -50,6 +50,7 @@ class PlaneContext:
     project_id: str = ""
     work_item_ids: list[str] = field(default_factory=list)
     module_id: Optional[str] = None
+    stale_work_item_ids: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -153,6 +154,7 @@ class SessionState:
                 project_id=plane_data.get("project_id", ""),
                 work_item_ids=plane_data.get("work_item_ids", []),
                 module_id=plane_data.get("module_id"),
+                stale_work_item_ids=plane_data.get("stale_work_item_ids", []),
             ),
             timeline=[
                 TimelineEvent(

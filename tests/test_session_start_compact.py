@@ -74,7 +74,7 @@ class TestCompactIncludesPlaneContext:
             patch("oh_my_kanban.hooks.session_start.load_config", return_value=_make_config()),
             patch(
                 "oh_my_kanban.hooks.session_start.build_plane_context",
-                return_value=wi_content,
+                return_value=(wi_content, []),
             ),
         ):
             result = _run_compact()
@@ -94,7 +94,7 @@ class TestCompactIncludesPlaneContext:
             patch("oh_my_kanban.hooks.session_start.load_config", return_value=_make_config()),
             patch(
                 "oh_my_kanban.hooks.session_start.build_plane_context",
-                return_value="### WI: X\n상태: Done",
+                return_value=("### WI: X\n상태: Done", []),
             ),
         ):
             result = _run_compact()
@@ -160,7 +160,7 @@ class TestCompactEmptyPlaneContent:
             patch("oh_my_kanban.hooks.session_start.load_config", return_value=_make_config()),
             patch(
                 "oh_my_kanban.hooks.session_start.build_plane_context",
-                return_value="",
+                return_value=("", []),
             ),
         ):
             result = _run_compact()
@@ -178,7 +178,7 @@ class TestCompactEmptyPlaneContent:
             patch("oh_my_kanban.hooks.session_start.load_config", return_value=_make_config()),
             patch(
                 "oh_my_kanban.hooks.session_start.build_plane_context",
-                return_value="",
+                return_value=("", []),
             ),
         ):
             result = _run_compact()

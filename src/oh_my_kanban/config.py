@@ -91,11 +91,15 @@ def load_config(profile: str = "default") -> Config:
         except (OSError, tomllib.TOMLDecodeError) as e:
             print(f"경고: 설정 파일 파싱 오류 ({CONFIG_FILE}): {e}", file=sys.stderr)
 
-    # 2. 환경변수 오버라이드
-    cfg.base_url = os.environ.get("PLANE_BASE_URL", cfg.base_url)
-    cfg.api_key = os.environ.get("PLANE_API_KEY", cfg.api_key)
-    cfg.workspace_slug = os.environ.get("PLANE_WORKSPACE_SLUG", cfg.workspace_slug)
-    cfg.project_id = os.environ.get("PLANE_PROJECT_ID", cfg.project_id)
+    # 2. 환경변수 오버라이드 (빈 문자열은 무시하여 config 값 보호)
+    if env_val := os.environ.get("PLANE_BASE_URL"):
+        cfg.base_url = env_val
+    if env_val := os.environ.get("PLANE_API_KEY"):
+        cfg.api_key = env_val
+    if env_val := os.environ.get("PLANE_WORKSPACE_SLUG"):
+        cfg.workspace_slug = env_val
+    if env_val := os.environ.get("PLANE_PROJECT_ID"):
+        cfg.project_id = env_val
     if env_val := os.environ.get("LINEAR_API_KEY"):
         cfg.linear_api_key = env_val
     if env_val := os.environ.get("LINEAR_TEAM_ID"):

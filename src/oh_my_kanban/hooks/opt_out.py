@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import sys
 
-from oh_my_kanban.hooks.common import PLANE_API_TIMEOUT
+from oh_my_kanban.hooks.http_client import build_plane_headers, plane_http_client, plane_request
 from oh_my_kanban.config import load_config
 from oh_my_kanban.session.manager import load_session, save_session
 from oh_my_kanban.session.state import (
@@ -35,20 +35,26 @@ def _post_opt_out_comment(state: SessionState) -> None:
         return
 
     base_url = cfg.base_url.rstrip("/")
-    headers = {"X-API-Key": cfg.api_key, "Content-Type": "application/json"}
     comment = "-- 사용자 요청에 의해 이 세션의 자동 추적이 중단되었습니다 --"
 
-    for wi_id in wi_ids:
-        url = (
-            f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
-            f"/projects/{project_id}/issues/{wi_id}/comments/"
-        )
-        try:
-            with httpx.Client(timeout=PLANE_API_TIMEOUT, follow_redirects=False) as client:
-                client.post(url, headers=headers, json={"comment_html": comment})
-        except Exception as e:
-            print(f"[omk] opt-out 댓글 추가 실패 (wi_id={wi_id!r}): {type(e).__name__}: {e}", file=sys.stderr)
-            continue
+    try:
+        with plane_http_client(cfg.api_key) as client:
+            for wi_id in wi_ids:
+                url = (
+                    f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
+                    f"/projects/{project_id}/issues/{wi_id}/comments/"
+                )
+                try:
+                    plane_request(
+                        client, "POST", url,
+                        json={"comment_html": comment},
+                        context=f"opt-out 댓글 wi_id={wi_id}",
+                    )
+                except Exception as e:
+                    print(f"[omk] opt-out 댓글 추가 실패 (wi_id={wi_id!r}): {type(e).__name__}: {e}", file=sys.stderr)
+                    continue
+    except Exception as e:
+        print(f"[omk] Plane 클라이언트 생성 실패: {type(e).__name__}: {e}", file=sys.stderr)
 
 
 def _delete_work_items(state: SessionState) -> int:
@@ -68,22 +74,27 @@ def _delete_work_items(state: SessionState) -> int:
         return 0
 
     base_url = cfg.base_url.rstrip("/")
-    headers = {"X-API-Key": cfg.api_key}
     deleted = 0
 
-    for wi_id in wi_ids:
-        url = (
-            f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
-            f"/projects/{project_id}/issues/{wi_id}/"
-        )
-        try:
-            with httpx.Client(timeout=PLANE_API_TIMEOUT, follow_redirects=False) as client:
-                resp = client.delete(url, headers=headers)
-                if resp.status_code in (200, 204):
-                    deleted += 1
-        except Exception as e:
-            print(f"[omk] Work Item 삭제 실패 (wi_id={wi_id!r}): {type(e).__name__}: {e}", file=sys.stderr)
-            continue
+    try:
+        with plane_http_client(cfg.api_key) as client:
+            for wi_id in wi_ids:
+                url = (
+                    f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
+                    f"/projects/{project_id}/issues/{wi_id}/"
+                )
+                try:
+                    resp = plane_request(
+                        client, "DELETE", url,
+                        context=f"WI 삭제 wi_id={wi_id}",
+                    )
+                    if resp.status_code in (200, 204):
+                        deleted += 1
+                except Exception as e:
+                    print(f"[omk] Work Item 삭제 실패 (wi_id={wi_id!r}): {type(e).__name__}: {e}", file=sys.stderr)
+                    continue
+    except Exception as e:
+        print(f"[omk] Plane 클라이언트 생성 실패: {type(e).__name__}: {e}", file=sys.stderr)
 
     return deleted
 
