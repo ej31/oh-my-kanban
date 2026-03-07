@@ -1,6 +1,7 @@
 import { note } from '@clack/prompts';
 import { spawnSync } from 'child_process';
 import { t } from '../i18n.js';
+import { padForNote, padTitle } from '../ui/pad-for-note.js';
 
 // GitHub 태스크 관리에 필요한 필수 권한(scope)
 // - repo: 이슈, PR 읽기/쓰기
@@ -55,29 +56,6 @@ function getInstallInstructions(m: ReturnType<typeof t>): string {
   return m.ghInstallUnsupported;
 }
 
-// @clack/prompts의 note()는 문자 수로 박스 너비를 계산하여 한글(2열) 포함 시 박스가 깨짐.
-// 각 줄의 와이드 문자 수만큼 공백을 추가해 표시 너비를 보정한다.
-function padForNote(text: string): string {
-  return text
-    .split('\n')
-    .map((line) => {
-      let wideCount = 0;
-      for (const char of line) {
-        const code = char.codePointAt(0) ?? 0;
-        if (
-          (code >= 0xac00 && code <= 0xd7af) || // 한글 음절
-          (code >= 0x1100 && code <= 0x11ff) || // 한글 자모
-          (code >= 0x3130 && code <= 0x318f) || // 한글 호환 자모
-          (code >= 0x4e00 && code <= 0x9fff) || // CJK 통합 한자
-          (code >= 0xff01 && code <= 0xff60) // 전각 ASCII
-        ) {
-          wideCount++;
-        }
-      }
-      return wideCount > 0 ? line + ' '.repeat(wideCount) : line;
-    })
-    .join('\n');
-}
 
 export async function promptGithubConfig(): Promise<void> {
   const m = t();
@@ -88,7 +66,7 @@ export async function promptGithubConfig(): Promise<void> {
     const installGuide = getInstallInstructions(m);
     note(
       padForNote(`${installGuide}\n\n${m.ghAuthInstruction}\n\n${m.ghRerun}`),
-      m.ghNotInstalled,
+      padTitle(m.ghNotInstalled),
     );
     process.exit(1);
   }
@@ -97,7 +75,7 @@ export async function promptGithubConfig(): Promise<void> {
   if (!authenticated) {
     note(
       padForNote(`${m.ghAuthInstruction}\n\n${m.ghRerun}`),
-      m.ghNotAuthenticated,
+      padTitle(m.ghNotAuthenticated),
     );
     process.exit(1);
   }
@@ -110,7 +88,7 @@ export async function promptGithubConfig(): Promise<void> {
       padForNote(
         `${m.ghScopeMissing}: ${missingScopes.join(', ')}\n\n${m.ghAddScopes}\n  gh auth refresh --scopes ${scopeArg}\n\n${m.ghRerun}`,
       ),
-      m.ghScopesRequired,
+      padTitle(m.ghScopesRequired),
     );
     process.exit(1);
   }
@@ -122,10 +100,10 @@ export async function promptGithubConfig(): Promise<void> {
   });
 
   if (apiTestResult.status !== 0 || apiTestResult.error) {
-    note(padForNote(m.ghApiTestFailed), m.ghReadyTitle);
+    note(padForNote(m.ghApiTestFailed), padTitle(m.ghReadyTitle));
     process.exit(1);
   }
 
   // 5. 설치 + 인증 + 권한 + API 호출 모두 확인 완료
-  note(padForNote(m.ghReadyNote), m.ghReadyTitle);
+  note(padForNote(m.ghReadyNote), padTitle(m.ghReadyTitle));
 }
