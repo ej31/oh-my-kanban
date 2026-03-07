@@ -1,5 +1,6 @@
 import { select, note, spinner, isCancel } from '@clack/prompts';
 import { spawnSync } from 'node:child_process';
+import { join } from 'node:path';
 import pc from 'picocolors';
 import { t } from '../i18n.js';
 import { RestartWizard, RESTART_SENTINEL } from '../restart.js';
@@ -34,11 +35,14 @@ export async function promptClaudeScope(python: string): Promise<void> {
   // 범위 선택 전 추천 이유 안내
   note(padForNote(m.claudeScopeNote), m.claudeScopeTitle);
 
+  const projectScopePath = join(process.cwd(), '.claude', 'settings.json');
+  const userScopePath = join(process.env['HOME'] ?? '~', '.claude', 'settings.json');
+
   const scope = await select<string>({
     message: m.claudeScopeSelect,
     options: [
-      { value: 'project', label: m.claudeScopeProject, hint: m.claudeScopeProjectHint },
-      { value: 'user', label: m.claudeScopeUser, hint: m.claudeScopeUserHint },
+      { value: 'project', label: m.claudeScopeProject, hint: projectScopePath },
+      { value: 'user', label: m.claudeScopeUser, hint: userScopePath },
       { value: RESTART_SENTINEL, label: m.returnToFirstStep },
     ],
   });
@@ -52,7 +56,7 @@ export async function promptClaudeScope(python: string): Promise<void> {
   }
 
   const isLocal = scope === 'project';
-  const settingsPath = isLocal ? './.claude/settings.json' : '~/.claude/settings.json';
+  const settingsPath = isLocal ? projectScopePath : userScopePath;
 
   // omk hooks install [--local] 실행
   const s = spinner();
