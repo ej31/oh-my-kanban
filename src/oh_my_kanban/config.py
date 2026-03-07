@@ -17,6 +17,8 @@ _ALLOWED_CONFIG_KEYS = frozenset({
     "base_url", "api_key", "workspace_slug", "project_id",
     "output", "linear_api_key", "linear_team_id",
     "drift_sensitivity", "drift_cooldown",
+    "task_mode", "upload_level", "auto_archive_days",
+    "auto_complete_subtasks", "session_retention_days",
 })
 
 if sys.version_info >= (3, 11):
@@ -49,6 +51,12 @@ class Config:
     linear_team_id: str = ""
     drift_sensitivity: float = 0.5
     drift_cooldown: int = 3
+    # WI 워크플로우 설정
+    task_mode: str = "main-sub"          # "main-sub" | "module-task-sub"
+    upload_level: str = "metadata"       # "metadata" | "full"
+    auto_archive_days: int = 7           # 0이면 비활성화
+    auto_complete_subtasks: bool = True
+    session_retention_days: int = 30
 
 
 def detect_project_id() -> str:
@@ -88,6 +96,17 @@ def load_config(profile: str = "default") -> Config:
                 cfg.drift_sensitivity = max(0.0, min(1.0, float(section["drift_sensitivity"])))
             if "drift_cooldown" in section:
                 cfg.drift_cooldown = max(0, int(section["drift_cooldown"]))
+            if "task_mode" in section:
+                cfg.task_mode = section["task_mode"]
+            if "upload_level" in section:
+                cfg.upload_level = section["upload_level"]
+            if "auto_archive_days" in section:
+                cfg.auto_archive_days = max(0, int(section["auto_archive_days"]))
+            if "auto_complete_subtasks" in section:
+                val = section["auto_complete_subtasks"]
+                cfg.auto_complete_subtasks = val if isinstance(val, bool) else str(val).lower() == "true"
+            if "session_retention_days" in section:
+                cfg.session_retention_days = max(1, int(section["session_retention_days"]))
         except (OSError, tomllib.TOMLDecodeError) as e:
             print(f"경고: 설정 파일 파싱 오류 ({CONFIG_FILE}): {e}", file=sys.stderr)
 
@@ -120,6 +139,10 @@ def load_config(profile: str = "default") -> Config:
                 f"기본값 {cfg.drift_cooldown} 사용.",
                 file=sys.stderr,
             )
+    if env_val := os.environ.get("OMK_TASK_MODE"):
+        cfg.task_mode = env_val
+    if env_val := os.environ.get("OMK_UPLOAD_LEVEL"):
+        cfg.upload_level = env_val
 
     # 3. CLAUDE.md에서 project_id 자동 감지 (env/config에 없을 때)
     if not cfg.project_id:

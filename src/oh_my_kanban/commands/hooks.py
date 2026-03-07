@@ -277,7 +277,41 @@ def _ensure_gitignore_entry() -> None:
         click.echo(f"  경고: .gitignore 업데이트 실패: {e}", err=True)
 
 
-def _install_hooks(local: bool, local_only: bool = False) -> None:
+def _prompt_task_mode() -> str:
+    """Task 관리 방식을 사용자에게 선택받는다. 기본값: main-sub."""
+    click.echo("")
+    click.echo("  [Step 3] Task 관리 방식")
+    click.echo("    1. MainTask-Subtask (추천) — 세션 단위 Task 자동 생성, 진입 장벽 낮음")
+    click.echo("    2. Module-Task-Subtask — 기능 단위 Module로 묶음, 팀 환경 적합")
+    choice = click.prompt(
+        "  선택",
+        type=click.Choice(["1", "2"]),
+        default="1",
+        show_default=True,
+    )
+    mode = "main-sub" if choice == "1" else "module-task-sub"
+    click.echo(f"  → task_mode = {mode}")
+    return mode
+
+
+def _prompt_upload_level() -> str:
+    """세션 데이터 업로드 수준을 사용자에게 선택받는다. 기본값: metadata."""
+    click.echo("")
+    click.echo("  [Step 4] 세션 데이터 업로드 수준")
+    click.echo("    1. 메타데이터만 (추천) — 통계, 파일 목록, 범위만 기록 (프라이버시 보호)")
+    click.echo("    2. 전체 기록 — 현재 미지원 (메타데이터 모드로 동작)")
+    choice = click.prompt(
+        "  선택",
+        type=click.Choice(["1", "2"]),
+        default="1",
+        show_default=True,
+    )
+    level = "metadata" if choice == "1" else "full"
+    click.echo(f"  → upload_level = {level}")
+    return level
+
+
+def _install_hooks(local: bool, local_only: bool = False, non_interactive: bool = False) -> None:
     """Claude Code settings 파일에 omk 훅을 등록한다."""
     python_path = sys.executable
 
@@ -339,6 +373,28 @@ def _install_hooks(local: bool, local_only: bool = False) -> None:
     # 플러그인 파일을 캐시 디렉토리에 복사
     _install_plugin_files()
 
+    # Task 관리 방식 + 업로드 수준 설정 (인터랙티브 모드에서만)
+    if not non_interactive:
+        task_mode = _prompt_task_mode()
+        upload_level = _prompt_upload_level()
+        try:
+            from oh_my_kanban.config import save_config
+            save_config({"task_mode": task_mode, "upload_level": upload_level})
+            click.echo("")
+            click.echo(f"  설정 저장: task_mode={task_mode}, upload_level={upload_level}")
+        except Exception as e:
+            click.echo(f"  경고: 설정 저장 실패: {e}", err=True)
+
+    # omk 표준 라벨 초기화 (설정이 있는 경우)
+    try:
+        from oh_my_kanban.config import load_config
+        from oh_my_kanban.hooks.label_conventions import ensure_omk_labels
+        cfg = load_config()
+        if cfg.api_key and cfg.workspace_slug and cfg.project_id:
+            ensure_omk_labels(cfg.project_id, cfg)
+    except Exception as e:
+        click.echo(f"  경고: 라벨 초기화 실패 (무시): {e}", err=True)
+
     click.echo("")
     click.echo("  oh-my-kanban 세션 추적 활성화")
     click.echo("")
@@ -349,10 +405,7 @@ def _install_hooks(local: bool, local_only: bool = False) -> None:
         "  어디까지 했는지, 무엇을 결정했는지, 범위가 벗어났는지 자동으로 기록됩니다."
     )
     click.echo("")
-    click.echo("  비활성화: /omk-off-this-session       (이 세션만)")
-    click.echo(
-        "           /omk-off-this-session-with-delete-task  (+ task 삭제)"
-    )
+    click.echo("  비활성화: /oh-my-kanban:disable-this-session  (이 세션만)")
     click.echo("")
     click.echo(f"  설정 위치: {settings_path}")
     click.echo(f"  Python:    {python_path}")
@@ -458,9 +511,16 @@ def hooks() -> None:
     default=False,
     help="현재 디렉토리의 .claude/settings.local.json에 설치 — 개인 전용, git 무시 (local scope)",
 )
-def install(local: bool, local_only: bool) -> None:
+@click.option(
+    "--non-interactive",
+    "non_interactive",
+    is_flag=True,
+    default=False,
+    help="프롬프트 없이 기본값으로 설치 (CI/CD 환경용)",
+)
+def install(local: bool, local_only: bool, non_interactive: bool) -> None:
     """Claude Code에 omk 세션 추적 훅을 설치한다."""
-    _install_hooks(local, local_only)
+    _install_hooks(local, local_only, non_interactive)
 
 
 @hooks.command("uninstall")
@@ -491,15 +551,8 @@ def status() -> None:
 
 @hooks.command("opt-out")
 @click.option("--session-id", "session_id", default=None, help="세션 ID (기본: 최근 활성 세션)")
-@click.option(
-    "--delete-tasks",
-    "delete_tasks",
-    is_flag=True,
-    default=False,
-    help="생성된 Plane Work Item도 삭제",
-)
-def opt_out(session_id: Optional[str], delete_tasks: bool) -> None:
-    """현재 세션의 omk 자동 추적을 중단한다."""
+def opt_out(session_id: Optional[str]) -> None:
+    """현재 세션의 omk 자동 추적을 중단한다. WI는 삭제하지 않는다."""
     from oh_my_kanban.hooks.opt_out import opt_out as _opt_out
     from oh_my_kanban.session.manager import list_sessions as _list_sessions
 
@@ -517,7 +570,7 @@ def opt_out(session_id: Optional[str], delete_tasks: bool) -> None:
         target_id = active[0].session_id
         click.echo(f"대상 세션: {target_id[:SESSION_ID_DISPLAY_LEN]}...")
 
-    _opt_out(target_id, delete_tasks=delete_tasks)
+    _opt_out(target_id)
 
 
 @hooks.command("drift-report")

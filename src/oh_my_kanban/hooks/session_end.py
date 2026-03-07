@@ -21,6 +21,10 @@ from oh_my_kanban.hooks.common import (
     sanitize_comment,
 )
 from oh_my_kanban.session.manager import load_session, save_session
+# 업로드 수준 상수
+UPLOAD_LEVEL_METADATA = "metadata"
+UPLOAD_LEVEL_FULL = "full"
+
 from oh_my_kanban.session.state import (
     FILES_DISPLAY_MAX,
     SESSION_ID_DISPLAY_LEN,
@@ -167,6 +171,15 @@ def main() -> None:
             save_session(state)
             exit_fail_open()
             return
+
+        # upload_level 확인 (ST-15: Recording Mode)
+        cfg = load_config()
+        upload_level = getattr(cfg, "upload_level", UPLOAD_LEVEL_METADATA)
+        if upload_level == UPLOAD_LEVEL_FULL:
+            print(
+                "[omk] upload_level=full은 현재 미지원입니다. metadata 모드로 동작합니다.",
+                file=sys.stderr,
+            )
 
         # 세션 완료 처리
         state.status = STATUS_COMPLETED

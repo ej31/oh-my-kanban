@@ -1,11 +1,12 @@
 """Plane Work Item 컨텍스트 빌더.
 
 compact 복원 시 Claude가 Plane API를 일일이 호출하는 토큰 낭비를 방지한다.
-Work Item 제목·설명·최근 댓글을 일괄 조회해 단일 텍스트 덩어리로 반환한다.
+Work Item 제목·설명·최근 댓글·Sub-task를 ThreadPoolExecutor로 병렬 조회하여
+단일 텍스트 덩어리로 반환한다.
 
 사용 시나리오:
     /compact 발생 → SessionStart(compact) 훅 → 이 모듈 호출
-    → Plane WI 내용 조회 → 단일 additionalContext 주입
+    → Plane WI 내용 병렬 조회 → 단일 additionalContext 주입
     → Claude가 컨텍스트를 복원하는 데 추가 API 호출 불필요
 """
 
@@ -13,6 +14,7 @@ from __future__ import annotations
 
 import re
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 from oh_my_kanban.hooks.common import PLANE_API_TIMEOUT
@@ -22,10 +24,14 @@ from oh_my_kanban.hooks.common import PLANE_API_TIMEOUT
 _CONTEXT_MAX_CHARS = 3000
 # 한 WI당 설명 최대 글자 수
 _DESCRIPTION_MAX_CHARS = 600
-# 한 WI당 가져올 최근 댓글 수
-_COMMENTS_LIMIT = 5
+# 한 WI당 가져올 최근 댓글 수 (Phase 1b: 5 → 10으로 강화)
+_COMMENTS_LIMIT = 10
 # 한 댓글 최대 글자 수
 _COMMENT_MAX_CHARS = 300
+# Sub-task 표시 최대 수
+_SUBTASKS_DISPLAY_MAX = 5
+# 병렬 WI 조회 최대 워커 수
+_MAX_WORKERS = 4
 
 # HTML 태그 제거 정규식
 _HTML_TAG_RE = re.compile(r'<[^>]+>')
@@ -118,10 +124,46 @@ def _fetch_comments(
         return []
 
 
+def _fetch_sub_tasks(
+    client: Any,
+    base_url: str,
+    workspace_slug: str,
+    project_id: str,
+    wi_id: str,
+    headers: dict[str, str],
+) -> list[dict[str, Any]]:
+    """Work Item의 하위 태스크(Sub-task) 목록을 조회한다. 실패 시 빈 리스트 반환."""
+    url = (
+        f"{base_url}/api/v1/workspaces/{workspace_slug}"
+        f"/projects/{project_id}/issues/"
+    )
+    try:
+        resp = client.get(url, headers=headers, params={"parent": wi_id})
+        if resp.status_code == 200:
+            data = resp.json()
+            if isinstance(data, dict):
+                return data.get("results", [])
+            if isinstance(data, list):
+                return data
+        else:
+            print(
+                f"[omk] Plane Sub-task 조회 실패 (wi_id={wi_id!r}): HTTP {resp.status_code}",
+                file=sys.stderr,
+            )
+        return []
+    except Exception as e:
+        print(
+            f"[omk] Plane Sub-task 조회 예외 (wi_id={wi_id!r}): {type(e).__name__}: {e}",
+            file=sys.stderr,
+        )
+        return []
+
+
 def _build_wi_context(
     wi_data: dict[str, Any],
     comments: list[dict[str, Any]],
     wi_id: str,
+    sub_tasks: list[dict[str, Any]] | None = None,
 ) -> str:
     """Work Item 데이터와 댓글을 사람이 읽기 좋은 텍스트로 변환한다."""
     lines: list[str] = []
@@ -172,6 +214,23 @@ def _build_wi_context(
                     f"{_truncate(comment_text, _COMMENT_MAX_CHARS)}"
                 )
 
+    # Sub-task 목록 (최대 _SUBTASKS_DISPLAY_MAX개)
+    if sub_tasks:
+        lines.append(f"Sub-tasks ({len(sub_tasks)}개):")
+        for st in sub_tasks[:_SUBTASKS_DISPLAY_MAX]:
+            st_name = st.get("name", "").strip()
+            st_state = st.get("state__name") or ""
+            if not st_state:
+                st_state_raw = st.get("state")
+                if isinstance(st_state_raw, dict):
+                    st_state = st_state_raw.get("name", "")
+                elif isinstance(st_state_raw, str):
+                    st_state = st_state_raw
+            completed = "✓" if "complete" in st_state.lower() or "done" in st_state.lower() else "○"
+            lines.append(f"  {completed} {st_name}")
+        if len(sub_tasks) > _SUBTASKS_DISPLAY_MAX:
+            lines.append(f"  ...외 {len(sub_tasks) - _SUBTASKS_DISPLAY_MAX}개")
+
     return "\n".join(lines)
 
 
@@ -214,30 +273,53 @@ def build_plane_context(
 
     parts: list[str] = []
 
-    try:
+    def _fetch_single_wi(wi_id: str) -> tuple[str, dict | None, list, list]:
+        """단일 WI의 상세정보, 댓글, Sub-task를 조회한다. 순서 보장을 위해 wi_id를 함께 반환."""
         with httpx.Client(timeout=PLANE_API_TIMEOUT, follow_redirects=False) as client:
-            deleted_wi_ids: list[str] = []
-            for wi_id in work_item_ids[:3]:  # 최대 3개 WI만 조회 (토큰 절약)
-                wi_data = _fetch_work_item(
-                    client, base_url, workspace_slug, project_id, wi_id, headers
-                )
-                if wi_data is None:
-                    continue
-                # 삭제된 WI 마커 처리
-                if wi_data.get("__deleted__"):
-                    deleted_wi_ids.append(wi_id)
+            wi_data = _fetch_work_item(client, base_url, workspace_slug, project_id, wi_id, headers)
+            if wi_data is None or wi_data.get("__deleted__"):
+                return wi_id, wi_data, [], []
+            comments = _fetch_comments(client, base_url, workspace_slug, project_id, wi_id, headers)
+            sub_tasks = _fetch_sub_tasks(client, base_url, workspace_slug, project_id, wi_id, headers)
+            return wi_id, wi_data, comments, sub_tasks
+
+    try:
+        target_ids = work_item_ids[:3]  # 최대 3개 WI만 조회 (토큰 절약)
+        deleted_wi_ids: list[str] = []
+
+        # ThreadPoolExecutor로 병렬 조회 (순서 보장: work_item_ids 원래 순서 유지)
+        results: dict[str, tuple] = {}
+        with ThreadPoolExecutor(max_workers=min(_MAX_WORKERS, len(target_ids))) as executor:
+            future_to_id = {executor.submit(_fetch_single_wi, wi_id): wi_id for wi_id in target_ids}
+            for future in as_completed(future_to_id):
+                wi_id = future_to_id[future]
+                try:
+                    results[wi_id] = future.result()
+                except Exception as e:
                     print(
-                        f"[omk] Plane WI 삭제 감지 (wi_id={wi_id!r}): HTTP {wi_data.get('__status__')}",
+                        f"[omk] Plane WI 병렬 조회 예외 (wi_id={wi_id!r}): {type(e).__name__}: {e}",
                         file=sys.stderr,
                     )
-                    continue
+                    results[wi_id] = (wi_id, None, [], [])
 
-                comments = _fetch_comments(
-                    client, base_url, workspace_slug, project_id, wi_id, headers
+        # 원래 순서대로 컨텍스트 구성
+        for wi_id in target_ids:
+            if wi_id not in results:
+                continue
+            _, wi_data, comments, sub_tasks = results[wi_id]
+            if wi_data is None:
+                continue
+            if wi_data.get("__deleted__"):
+                deleted_wi_ids.append(wi_id)
+                print(
+                    f"[omk] Plane WI 삭제 감지 (wi_id={wi_id!r}): HTTP {wi_data.get('__status__')}",
+                    file=sys.stderr,
                 )
-                wi_context = _build_wi_context(wi_data, comments, wi_id)
-                if wi_context:
-                    parts.append(wi_context)
+                continue
+            wi_context = _build_wi_context(wi_data, comments, wi_id, sub_tasks)
+            if wi_context:
+                parts.append(wi_context)
+
     except Exception as e:
         print(
             f"[omk] Plane 컨텍스트 빌드 예외: {type(e).__name__}: {e}",

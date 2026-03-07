@@ -39,6 +39,62 @@ from oh_my_kanban.session.state import (
 )
 
 
+def _get_task_mode(cfg: Any) -> str:
+    """설정에서 task_mode를 읽는다. 기본값: 'main-sub'."""
+    return getattr(cfg, "task_mode", "main-sub") or "main-sub"
+
+
+def _apply_task_labels(wi_id: str, cfg: Any, is_main: bool = True) -> None:
+    """WI에 omk 표준 라벨(omk:session, omk:type:main/sub)을 적용한다.
+
+    실패 시 fail-open으로 처리 — 라벨 적용 실패가 훅을 실패시키지 않는다.
+
+    Args:
+        wi_id: 라벨을 적용할 WI UUID.
+        cfg: Config 객체.
+        is_main: True면 omk:type:main, False면 omk:type:sub 라벨 적용.
+    """
+    try:
+        import httpx
+        from oh_my_kanban.hooks.label_conventions import get_label_id_by_name
+    except ImportError:
+        return
+
+    project_id = cfg.project_id
+    if not project_id or not cfg.api_key or not cfg.workspace_slug:
+        return
+
+    # 적용할 라벨 이름 목록
+    label_names = ["omk:session"]
+    label_names.append("omk:type:main" if is_main else "omk:type:sub")
+
+    # 라벨 ID 조회
+    label_ids = []
+    for name in label_names:
+        label_id = get_label_id_by_name(name, project_id, cfg)
+        if label_id:
+            label_ids.append(label_id)
+
+    if not label_ids:
+        return
+
+    # WI에 라벨 적용 (PATCH)
+    base_url = cfg.base_url.rstrip("/")
+    headers = {"X-API-Key": cfg.api_key, "Content-Type": "application/json"}
+    url = (
+        f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
+        f"/projects/{project_id}/issues/{wi_id}/"
+    )
+    try:
+        with httpx.Client(timeout=PLANE_API_TIMEOUT, follow_redirects=False) as client:
+            client.patch(url, headers=headers, json={"label_ids": label_ids})
+    except Exception as e:
+        print(
+            f"[omk] WI 라벨 적용 실패 (wi_id={wi_id!r}): {type(e).__name__}: {e}",
+            file=sys.stderr,
+        )
+
+
 def _post_session_start_comment(state: SessionState, cfg: Any) -> None:
     """Plane Work Item에 세션 시작 댓글을 추가한다. 실패 시 무시 (fail-open)."""
     try:
@@ -237,6 +293,12 @@ def _handle_startup_or_resume(session_id: str, source: str) -> None:
     if state.plane_context.work_item_ids:
         _post_session_start_comment(state, cfg)
         _notify_wi_connected(state, cfg)
+        # task_mode에 따라 WI에 omk 표준 라벨 적용 (fail-open)
+        focused_id = state.plane_context.focused_work_item_id
+        target_wi = focused_id or state.plane_context.work_item_ids[0]
+        task_mode = _get_task_mode(cfg)
+        is_main = task_mode == "main-sub"
+        _apply_task_labels(target_wi, cfg, is_main=is_main)
 
     # 재개 세션이고 scope가 있으면 컨텍스트 재주입
     # (알려진 버그 #10373: 새 세션 SessionStart에서는 stdout 주입이 실패할 수 있음)

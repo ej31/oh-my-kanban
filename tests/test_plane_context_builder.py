@@ -9,6 +9,7 @@ import pytest
 from oh_my_kanban.session.plane_context_builder import (
     _build_wi_context,
     _fetch_comments,
+    _fetch_sub_tasks,
     _fetch_work_item,
     _strip_html,
     _truncate,
@@ -318,25 +319,26 @@ class TestBuildPlaneContext:
         """4개를 줘도 최대 3개만 조회한다."""
         mock_client_instance = MagicMock()
 
-        wi_resp = MagicMock()
-        wi_resp.status_code = 200
-        wi_resp.json.return_value = {
-            "name": "작업",
-            "state__name": "Todo",
-            "priority": "none",
-            "description_html": "",
-        }
+        # URL 패턴 기반으로 응답을 분기한다 (ThreadPoolExecutor 병렬 실행 시 순서 비결정적)
+        def _route_get(url, **kwargs):
+            resp = MagicMock()
+            resp.status_code = 200
+            if "/comments/" in url:
+                resp.json.return_value = {"results": []}
+            elif kwargs.get("params", {}).get("parent"):
+                # sub-tasks 조회
+                resp.json.return_value = {"results": []}
+            else:
+                # WI 상세 조회
+                resp.json.return_value = {
+                    "name": "작업",
+                    "state__name": "Todo",
+                    "priority": "none",
+                    "description_html": "",
+                }
+            return resp
 
-        comments_resp = MagicMock()
-        comments_resp.status_code = 200
-        comments_resp.json.return_value = {"results": []}
-
-        mock_client_instance.get.side_effect = [
-            wi_resp, comments_resp,
-            wi_resp, comments_resp,
-            wi_resp, comments_resp,
-            # 4번째 WI 호출은 없어야 한다
-        ]
+        mock_client_instance.get.side_effect = _route_get
 
         mock_client_ctx = MagicMock()
         mock_client_ctx.__enter__ = MagicMock(return_value=mock_client_instance)
@@ -351,8 +353,9 @@ class TestBuildPlaneContext:
                 **self._BASE_PARAMS,
             )
 
-        # get 호출 횟수: WI 3개 x (WI조회1 + 댓글조회1) = 6번
-        assert mock_client_instance.get.call_count == 6
+        # get 호출 횟수: WI 3개 x (WI조회1 + 댓글조회1 + sub-tasks조회1) = 9번
+        # (4번째 WI는 조회하지 않아야 한다)
+        assert mock_client_instance.get.call_count == 9
 
     def test_full_context_limited_to_3000_chars(self):
         """결과가 3000자를 초과하지 않는다."""
@@ -415,3 +418,161 @@ class TestBuildPlaneContext:
                 **self._BASE_PARAMS,
             )
         assert result == ""
+
+
+# ─── _fetch_sub_tasks ─────────────────────────────────────────────────────────
+
+
+class TestFetchSubTasks:
+    def _args(self, client):
+        return (
+            client,
+            "https://api.plane.so",
+            "my-workspace",
+            "proj-123",
+            "wi-parent",
+            {"X-API-Key": "key"},
+        )
+
+    def test_results_array_returned(self):
+        """results 배열이 있으면 해당 리스트를 반환한다."""
+        client = MagicMock()
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = {
+            "results": [
+                {"name": "하위 태스크 1", "state__name": "Todo"},
+                {"name": "하위 태스크 2", "state__name": "Done"},
+            ]
+        }
+        client.get.return_value = resp
+
+        result = _fetch_sub_tasks(*self._args(client))
+        assert len(result) == 2
+        assert result[0]["name"] == "하위 태스크 1"
+
+    def test_list_directly_returned(self):
+        """Plane API가 list를 직접 반환하는 경우도 처리한다."""
+        client = MagicMock()
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = [{"name": "태스크A"}, {"name": "태스크B"}]
+        client.get.return_value = resp
+
+        result = _fetch_sub_tasks(*self._args(client))
+        assert len(result) == 2
+
+    def test_empty_results_returns_empty_list(self):
+        """빈 결과이면 빈 리스트를 반환한다."""
+        client = MagicMock()
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = {"results": []}
+        client.get.return_value = resp
+
+        result = _fetch_sub_tasks(*self._args(client))
+        assert result == []
+
+    def test_non200_returns_empty_list(self):
+        """HTTP 200이 아니면 빈 리스트를 반환한다."""
+        client = MagicMock()
+        resp = MagicMock()
+        resp.status_code = 403
+        client.get.return_value = resp
+
+        result = _fetch_sub_tasks(*self._args(client))
+        assert result == []
+
+    def test_exception_returns_empty_list(self, capsys):
+        """예외 발생 시 빈 리스트를 반환한다 (fail-open)."""
+        client = MagicMock()
+        client.get.side_effect = RuntimeError("연결 실패")
+
+        result = _fetch_sub_tasks(*self._args(client))
+        assert result == []
+        captured = capsys.readouterr()
+        assert "RuntimeError" in captured.err
+
+    def test_parent_param_sent(self):
+        """parent=wi_id 쿼리 파라미터를 함께 전송한다."""
+        client = MagicMock()
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = {"results": []}
+        client.get.return_value = resp
+
+        _fetch_sub_tasks(*self._args(client))
+
+        # params에 parent 파라미터가 있는지 확인
+        _, kwargs = client.get.call_args
+        assert kwargs.get("params", {}).get("parent") == "wi-parent"
+
+
+# ─── _build_wi_context with sub_tasks ─────────────────────────────────────────
+
+
+class TestBuildWiContextSubTasks:
+    def _make_wi(self) -> dict:
+        return {
+            "name": "메인 태스크",
+            "state__name": "In Progress",
+            "priority": "high",
+            "description_html": "<p>설명</p>",
+        }
+
+    def test_sub_tasks_section_shown(self):
+        """sub_tasks가 있으면 'Sub-tasks' 섹션이 표시된다."""
+        wi = self._make_wi()
+        sub_tasks = [
+            {"name": "하위 1", "state__name": "Done"},
+            {"name": "하위 2", "state__name": "Todo"},
+        ]
+        result = _build_wi_context(wi, [], "wi-001", sub_tasks=sub_tasks)
+        assert "Sub-tasks" in result
+        assert "하위 1" in result
+        assert "하위 2" in result
+
+    def test_completed_subtask_shows_checkmark(self):
+        """완료된 sub-task는 '✓' 기호로 표시된다."""
+        wi = self._make_wi()
+        sub_tasks = [{"name": "완료 태스크", "state__name": "Done"}]
+        result = _build_wi_context(wi, [], "wi-001", sub_tasks=sub_tasks)
+        assert "✓" in result
+
+    def test_incomplete_subtask_shows_circle(self):
+        """미완료 sub-task는 '○' 기호로 표시된다."""
+        wi = self._make_wi()
+        sub_tasks = [{"name": "미완료 태스크", "state__name": "In Progress"}]
+        result = _build_wi_context(wi, [], "wi-001", sub_tasks=sub_tasks)
+        assert "○" in result
+
+    def test_sub_tasks_capped_at_display_max(self):
+        """sub_tasks가 최대 표시 수(5)를 초과하면 잘라낸다."""
+        wi = self._make_wi()
+        sub_tasks = [
+            {"name": f"태스크{i}", "state__name": "Todo"} for i in range(8)
+        ]
+        result = _build_wi_context(wi, [], "wi-001", sub_tasks=sub_tasks)
+        # 초과분 안내 문구가 있어야 한다
+        assert "...외" in result
+        assert "3개" in result
+
+    def test_no_sub_tasks_section_absent(self):
+        """sub_tasks=None이면 'Sub-tasks' 섹션이 없다."""
+        wi = self._make_wi()
+        result = _build_wi_context(wi, [], "wi-001", sub_tasks=None)
+        assert "Sub-tasks" not in result
+
+    def test_empty_sub_tasks_section_absent(self):
+        """sub_tasks=[]이면 'Sub-tasks' 섹션이 없다."""
+        wi = self._make_wi()
+        result = _build_wi_context(wi, [], "wi-001", sub_tasks=[])
+        assert "Sub-tasks" not in result
+
+    def test_complete_state_variations(self):
+        """'complete' 또는 'done'이 포함된 상태는 완료(✓)로 표시한다."""
+        wi = self._make_wi()
+        for state_name in ["Complete", "Completed", "Done", "DONE"]:
+            sub_tasks = [{"name": "태스크", "state__name": state_name}]
+            result = _build_wi_context(wi, [], "wi-001", sub_tasks=sub_tasks)
+            assert "✓" in result, f"state_name={state_name!r}에서 ✓가 없음"
