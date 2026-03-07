@@ -28,10 +28,17 @@ env/
 # 로그
 *.log
 
-# OMC 세션 상태 (프로젝트 메모리는 포함)
+# OMC 세션 상태
 .omc/state/
 .omc/notepad.md
 .omc/prd.json
+.omc/plans/
+.omc/progress.txt
+.omc/project-memory.json
+.omc/sessions/
+
+# Claude Code 로컬 설정 (omk hooks install이 자동 관리)
+.claude/settings.json
 
 # 테스트 캐시
 .pytest_cache/
