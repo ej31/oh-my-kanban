@@ -40,7 +40,7 @@ class LinearClient:
         5xx/429 응답 시 최대 3회 재시도한다 (exponential backoff + jitter).
         Retry-After 헤더가 있으면 해당 값을 우선 사용한다.
         """
-        last_exc: httpx.HTTPStatusError | None = None
+        last_exc: Exception | None = None
         for attempt in range(self._MAX_RETRIES + 1):
             try:
                 response = self._client.post(
@@ -62,6 +62,13 @@ class LinearClient:
                     last_exc = e
                     continue
                 raise LinearHttpError(e.response.status_code, str(e)) from e
+            except (httpx.TimeoutException, httpx.NetworkError) as e:
+                if attempt < self._MAX_RETRIES:
+                    wait = 2 ** attempt + random.uniform(0, 1)
+                    time.sleep(min(wait, 30.0))
+                    last_exc = e
+                    continue
+                raise
 
             body = response.json()
             if errors := body.get("errors"):
@@ -70,10 +77,12 @@ class LinearClient:
 
         # 모든 재시도 실패
         if last_exc is not None:
-            raise LinearHttpError(
-                last_exc.response.status_code,
-                f"최대 재시도 횟수({self._MAX_RETRIES})를 초과했습니다: {last_exc}",
-            ) from last_exc
+            if isinstance(last_exc, httpx.HTTPStatusError):
+                raise LinearHttpError(
+                    last_exc.response.status_code,
+                    f"최대 재시도 횟수({self._MAX_RETRIES})를 초과했습니다: {last_exc}",
+                ) from last_exc
+            raise last_exc
         raise RuntimeError("Unexpected retry loop exit")
 
     def paginate_relay(

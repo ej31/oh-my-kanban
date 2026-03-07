@@ -72,6 +72,8 @@ def _handle_compact(session_id: str) -> None:
                 api_key=cfg.api_key,
                 workspace_slug=cfg.workspace_slug,
             )
+            # stale IDs를 항상 갱신 — 이전 실패가 복구되면 빈 리스트로 클리어
+            state.plane_context.stale_work_item_ids = stale_ids
             if stale_ids:
                 state.plane_context.stale_work_item_ids = stale_ids
                 context_lines.append(

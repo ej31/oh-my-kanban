@@ -50,7 +50,7 @@ def _check_plane_api(cfg: Config) -> tuple[str, str]:
     headers = build_plane_headers(cfg.api_key)
 
     try:
-        with httpx.Client(timeout=httpx.Timeout(connect=3.0, read=5.0), follow_redirects=False) as client:
+        with httpx.Client(timeout=httpx.Timeout(5.0, connect=3.0), follow_redirects=False) as client:
             resp = client.get(f"{base_url}/api/v1/users/me/", headers=headers)
             if resp.status_code == 200:
                 data = resp.json()
@@ -80,7 +80,7 @@ def _check_linear_api(cfg: Config) -> tuple[str, str]:
         return _SKIP, "httpx 미설치"
 
     try:
-        with httpx.Client(timeout=httpx.Timeout(connect=3.0, read=5.0)) as client:
+        with httpx.Client(timeout=httpx.Timeout(5.0, connect=3.0)) as client:
             resp = client.post(
                 "https://api.linear.app/graphql",
                 headers={

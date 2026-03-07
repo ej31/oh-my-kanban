@@ -51,9 +51,12 @@ def _run_plane_healthcheck(base_url: str, api_key: str) -> None:
     try:
         from oh_my_kanban.hooks.http_client import build_plane_headers
     except ImportError:
+        click.echo("  경고: http_client 모듈을 로드할 수 없어 헬스체크를 건너뜁니다.", err=True)
         return
 
-    url = f"{base_url.rstrip('/')}/api/v1/users/me/"
+    # base_url에 이미 /api 또는 /api/v1이 포함된 경우 정규화
+    normalized = re.sub(r"/api(?:/v1)?$", "", base_url.rstrip("/"))
+    url = f"{normalized}/api/v1/users/me/"
     headers = build_plane_headers(api_key)
     try:
         with httpx.Client(timeout=httpx.Timeout(5.0, connect=3.0), follow_redirects=False) as client:
@@ -61,7 +64,8 @@ def _run_plane_healthcheck(base_url: str, api_key: str) -> None:
             if resp.status_code == 200:
                 data = resp.json()
                 email = data.get("email", "")
-                click.echo(f"  Plane API 연결 확인: {email}")
+                masked_email = email[:2] + "***" + email[email.index("@"):] if "@" in email and len(email) > 3 else "확인됨"
+                click.echo(f"  Plane API 연결 확인: {masked_email}")
             elif resp.status_code == 401:
                 click.echo("  경고: API 키가 유효하지 않습니다 (401). 설정은 저장되었습니다.", err=True)
             elif resp.status_code == 403:
@@ -91,7 +95,8 @@ def _run_linear_healthcheck(api_key: str) -> None:
                 else:
                     viewer = data.get("data", {}).get("viewer", {})
                     email = viewer.get("email", "")
-                    click.echo(f"  Linear API 연결 확인: {email}")
+                    masked_email = email[:2] + "***" + email[email.index("@"):] if "@" in email and len(email) > 3 else "확인됨"
+                    click.echo(f"  Linear API 연결 확인: {masked_email}")
             elif resp.status_code == 401:
                 click.echo("  경고: Linear API 키가 유효하지 않습니다 (401). 설정은 저장되었습니다.", err=True)
             else:
@@ -302,9 +307,10 @@ def config_set(key: str, value: str, profile: str) -> None:
     click.echo(f"[{profile}] {key} = {masked} 저장 완료")
 
     # 헬스체크 (실패해도 설정은 이미 저장됨)
-    if key == "api_key" and value:
+    if key in ("api_key", "base_url"):
         cfg = load_config(profile)
-        _run_plane_healthcheck(cfg.base_url, value)
+        if cfg.base_url and cfg.api_key:
+            _run_plane_healthcheck(cfg.base_url, cfg.api_key)
     elif key == "linear_api_key" and value:
         _run_linear_healthcheck(value)
 

@@ -12,9 +12,11 @@ import httpx
 _LINEAR_EXIT_CODES: dict[int, int] = {
     401: 77,  # EX_NOPERM
     403: 77,  # EX_NOPERM
+    429: 69,  # EX_UNAVAILABLE (rate limit)
     500: 69,  # EX_UNAVAILABLE
     502: 69,
     503: 69,
+    504: 69,  # Gateway Timeout
 }
 
 

@@ -326,6 +326,7 @@ class TestBuildPlaneContext:
 
         # get 호출 횟수: WI 3개 x (WI조회1 + 댓글조회1) = 6번
         assert mock_client_instance.get.call_count == 6
+        assert failed == []
 
     def test_full_context_limited_to_3000_chars(self):
         """결과가 3000자를 초과하지 않는다."""
@@ -362,6 +363,7 @@ class TestBuildPlaneContext:
             )
 
         assert len(result) <= 3003  # 3000자 + '...' 3자
+        assert failed == []
 
     def test_httpx_import_error_returns_empty(self):
         """httpx가 없으면 빈 문자열 반환 (fail-open)."""

@@ -244,10 +244,15 @@ class TestLinearErrorExtensions:
         exc = LinearHttpError(500, "Internal Server Error")
         assert _exit_code_for_linear(exc) == 69
 
-    def test_exit_code_429_is_1(self) -> None:
-        """429 에러의 exit code가 1(기본값)이다."""
+    def test_exit_code_429_is_69(self) -> None:
+        """429 에러의 exit code가 69(EX_UNAVAILABLE)이다."""
         exc = LinearHttpError(429, "Too Many Requests")
-        assert _exit_code_for_linear(exc) == 1
+        assert _exit_code_for_linear(exc) == 69
+
+    def test_exit_code_504_is_69(self) -> None:
+        """504 에러의 exit code가 69(EX_UNAVAILABLE)이다."""
+        exc = LinearHttpError(504, "Gateway Timeout")
+        assert _exit_code_for_linear(exc) == 69
 
     def test_exit_code_network_error_is_69(self) -> None:
         """NetworkError의 exit code가 69이다."""
@@ -335,22 +340,22 @@ class TestPlaneAuthHeaderFactory:
         captured = capsys.readouterr()
         assert captured.err == ""
 
-    def test_session_end_uses_build_plane_headers(self) -> None:
-        """session_end.py가 build_plane_headers를 import한다."""
+    def test_session_end_uses_plane_http_client(self) -> None:
+        """session_end.py가 plane_http_client를 import한다."""
         import oh_my_kanban.hooks.session_end as mod
         import inspect
 
         source = inspect.getsource(mod)
-        assert "build_plane_headers" in source
+        assert "plane_http_client" in source
         assert '"X-API-Key"' not in source
 
-    def test_opt_out_uses_build_plane_headers(self) -> None:
-        """opt_out.py가 build_plane_headers를 import한다."""
+    def test_opt_out_uses_plane_http_client(self) -> None:
+        """opt_out.py가 plane_http_client를 import한다."""
         import oh_my_kanban.hooks.opt_out as mod
         import inspect
 
         source = inspect.getsource(mod)
-        assert "build_plane_headers" in source
+        assert "plane_http_client" in source
         assert '"X-API-Key"' not in source
 
 
@@ -519,8 +524,6 @@ class TestDoctorCommand:
 
     def test_check_config_file_pass(self, tmp_path, monkeypatch) -> None:
         """config.toml이 유효하면 PASS를 반환한다."""
-        from unittest.mock import patch
-        from oh_my_kanban.config import Config
         config_file = tmp_path / "config.toml"
         config_file.write_text('[default]\napi_key = "key"\nworkspace_slug = "ws"\n')
         cfg = Config(api_key="key", workspace_slug="ws")
@@ -531,8 +534,6 @@ class TestDoctorCommand:
 
     def test_check_config_file_missing(self, tmp_path) -> None:
         """config.toml이 없으면 FAIL을 반환한다."""
-        from unittest.mock import patch
-        from oh_my_kanban.config import Config
         missing = tmp_path / "nonexistent.toml"
         cfg = Config(api_key="key", workspace_slug="ws")
         with patch("oh_my_kanban.commands.doctor.CONFIG_FILE", missing):
@@ -549,7 +550,6 @@ class TestDoctorCommand:
 
     def test_check_plane_api_skip_when_no_key(self) -> None:
         """API 키 미설정 시 SKIP을 반환한다."""
-        from oh_my_kanban.config import Config
         cfg = Config(api_key="", workspace_slug="")
         from oh_my_kanban.commands.doctor import _check_plane_api
         status, _ = _check_plane_api(cfg)
@@ -557,7 +557,6 @@ class TestDoctorCommand:
 
     def test_check_linear_api_skip_when_no_key(self) -> None:
         """Linear API 키 미설정 시 SKIP을 반환한다."""
-        from oh_my_kanban.config import Config
         cfg = Config(linear_api_key="")
         from oh_my_kanban.commands.doctor import _check_linear_api
         status, _ = _check_linear_api(cfg)
@@ -696,7 +695,7 @@ class TestConfigHealthcheck:
             _run_linear_healthcheck("lin_test_key")
 
         captured = capsys.readouterr()
-        assert "test@example.com" in captured.out
+        assert "te***@example.com" in captured.out
 
     def test_run_linear_healthcheck_warns_on_401(self, capsys) -> None:
         """Linear 헬스체크 401 시 경고를 출력한다."""
@@ -915,8 +914,8 @@ class TestUnifiedHttpWrapper:
             assert client.headers.get("X-API-Key") == "test-key"
             assert client.headers.get("Content-Type") == "application/json"
 
-    def test_plane_request_retries_on_500(self) -> None:
-        """plane_request가 500 응답 시 재시도한다."""
+    def test_plane_request_retries_on_500_get(self) -> None:
+        """plane_request가 GET 500 응답 시 재시도한다."""
         from unittest.mock import MagicMock, patch
         from oh_my_kanban.hooks.http_client import plane_request
 
@@ -930,9 +929,24 @@ class TestUnifiedHttpWrapper:
         mock_client.request.side_effect = [resp_500, resp_ok]
 
         with patch("oh_my_kanban.hooks.http_client.time.sleep"):
-            result = plane_request(mock_client, "POST", "https://example.com")
+            result = plane_request(mock_client, "GET", "https://example.com")
         assert result.status_code == 200
         assert mock_client.request.call_count == 2
+
+    def test_plane_request_no_retry_on_post(self) -> None:
+        """plane_request가 POST 메서드는 재시도하지 않는다 (멱등성 보호)."""
+        from unittest.mock import MagicMock, patch
+        from oh_my_kanban.hooks.http_client import plane_request
+
+        mock_client = MagicMock()
+        resp_500 = MagicMock()
+        resp_500.status_code = 500
+        resp_500.headers = {}
+        mock_client.request.return_value = resp_500
+
+        result = plane_request(mock_client, "POST", "https://example.com")
+        assert result.status_code == 500
+        assert mock_client.request.call_count == 1
 
     def test_plane_request_warns_auth_failure(self, capsys) -> None:
         """plane_request가 401 시 경고를 출력한다."""
@@ -954,14 +968,16 @@ class TestUnifiedHttpWrapper:
         import inspect
         import oh_my_kanban.hooks.session_end as mod
         source = inspect.getsource(mod)
-        assert "httpx.Client(" not in source or "plane_http_client" in source
+        assert "httpx.Client(" not in source
+        assert "plane_http_client" in source
 
     def test_no_direct_httpx_client_in_opt_out(self) -> None:
         """opt_out.py에서 직접 httpx.Client 생성이 없다."""
         import inspect
         import oh_my_kanban.hooks.opt_out as mod
         source = inspect.getsource(mod)
-        assert "httpx.Client(" not in source or "plane_http_client" in source
+        assert "httpx.Client(" not in source
+        assert "plane_http_client" in source
 
     def test_no_direct_httpx_client_in_mcp_server(self) -> None:
         """mcp/server.py 소스 파일에서 직접 httpx.Client 생성이 없다."""
@@ -979,7 +995,8 @@ class TestUnifiedHttpWrapper:
         import inspect
         import oh_my_kanban.session.plane_context_builder as mod
         source = inspect.getsource(mod)
-        assert "httpx.Client(" not in source or "plane_http_client" in source
+        assert "httpx.Client(" not in source
+        assert "plane_http_client" in source
 
     def test_plane_request_retries_on_timeout(self) -> None:
         """plane_request가 TimeoutException 시 재시도한다."""

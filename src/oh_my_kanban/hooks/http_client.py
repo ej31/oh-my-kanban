@@ -13,6 +13,7 @@ from oh_my_kanban.hooks.common import PLANE_API_TIMEOUT
 
 # 재시도 대상 상태 코드
 _RETRYABLE_STATUS = frozenset({429, 500, 502, 503, 504})
+_SAFE_RETRY_METHODS = frozenset({"GET", "HEAD", "OPTIONS", "PUT", "DELETE"})
 _MAX_RETRIES = 2  # 훅 컨텍스트이므로 CLI(3회)보다 적게 재시도 (fail-open 우선)
 _BACKOFF_BASE = 1.0  # 지수 백오프 기본 대기 시간 (초)
 _MAX_RETRY_AFTER_WAIT = 10.0  # 훅 컨텍스트이므로 CLI(30초)보다 짧게 대기
@@ -104,12 +105,14 @@ def plane_request(
         httpx.TimeoutException: 재시도 후에도 타임아웃 시.
         httpx.NetworkError: 재시도 후에도 네트워크 에러 시.
     """
+    # POST 등 비멱등 메서드는 중복 실행 위험이 있으므로 재시도하지 않는다
+    effective_retries = max_retries if method.upper() in _SAFE_RETRY_METHODS else 0
     resp: httpx.Response | None = None
-    for attempt in range(max_retries + 1):
+    for attempt in range(effective_retries + 1):
         try:
             resp = client.request(method, url, **kwargs)
-            # 재시도 대상 상태 코드
-            if resp.status_code in _RETRYABLE_STATUS and attempt < max_retries:
+            # 재시도 대상 상태 코드 (멱등 메서드만)
+            if resp.status_code in _RETRYABLE_STATUS and attempt < effective_retries:
                 retry_after = resp.headers.get("Retry-After")
                 if retry_after:
                     try:
@@ -124,7 +127,7 @@ def plane_request(
             warn_auth_failure(resp.status_code, context=context)
             return resp
         except (httpx.TimeoutException, httpx.NetworkError) as e:
-            if attempt < max_retries:
+            if attempt < effective_retries:
                 time.sleep(_BACKOFF_BASE * (2 ** attempt))
                 continue
             raise

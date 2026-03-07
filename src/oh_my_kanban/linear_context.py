@@ -4,8 +4,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 import click
+import httpx
 
 from oh_my_kanban.linear_client import LinearClient
+from oh_my_kanban.linear_errors import LinearGraphQLError, LinearHttpError
 
 
 @dataclass
@@ -58,7 +60,7 @@ class LinearContext:
             self._validated_team = True
         except click.UsageError:
             raise
-        except Exception as e:
+        except (httpx.TimeoutException, httpx.NetworkError, LinearHttpError, LinearGraphQLError) as e:
             # 검증 실패가 작업을 차단하지 않도록 — 경고만 출력
             click.echo(f"경고: 팀 검증 실패 ({type(e).__name__}). 후속 명령에서 에러가 발생할 수 있습니다.", err=True)
         return team_id

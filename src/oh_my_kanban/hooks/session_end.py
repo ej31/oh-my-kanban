@@ -84,6 +84,7 @@ def _post_plane_comment(state: SessionState, comment: str) -> bool:
     base_url = cfg.base_url.rstrip("/")
 
     success_count = 0
+    failure_count = 0
     try:
         with plane_http_client(cfg.api_key) as client:
             for wi_id in wi_ids:
@@ -99,17 +100,24 @@ def _post_plane_comment(state: SessionState, comment: str) -> bool:
                     )
                     if resp.status_code in (200, 201):
                         success_count += 1
+                    else:
+                        failure_count += 1
+                        print(f"[omk] Plane 댓글 추가 HTTP {resp.status_code} (wi_id={wi_id!r})", file=sys.stderr)
                 except (httpx.TimeoutException, httpx.NetworkError) as e:
+                    failure_count += 1
                     print(f"[omk] Plane 댓글 추가 실패 (wi_id={wi_id!r}): {type(e).__name__}: {e}", file=sys.stderr)
                     continue
                 except Exception as e:
+                    failure_count += 1
                     print(f"[omk] Plane 댓글 추가 중 예외 (wi_id={wi_id!r}): {type(e).__name__}: {e}", file=sys.stderr)
                     continue
     except Exception as e:
         print(f"[omk] Plane 클라이언트 생성 실패: {type(e).__name__}: {e}", file=sys.stderr)
         return False
 
-    return success_count > 0
+    if failure_count > 0:
+        print(f"[omk] Plane 댓글 동기화: {success_count} 성공, {failure_count} 실패", file=sys.stderr)
+    return success_count > 0 and failure_count == 0
 
 
 def main() -> None:
