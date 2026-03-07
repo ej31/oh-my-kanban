@@ -101,10 +101,11 @@ export const messages = {
     planeSkipProject: 'Skip (set later with: omk config set project_id <id>)',
     planeProjectName: 'New project name',
     planeProjectNameRequired: 'Please enter a project name',
+    planeProjectNameTooLong: 'Project name must be 255 characters or fewer',
     planeProjectCreating: 'Creating project...',
     planeProjectCreated: 'Project created',
     planeProjectCreateFailed: 'Failed to create project — check your permissions',
-    planeNoProjectsFound: 'No projects found — create one or skip',
+    planeNoProjectsFound: 'No projects found — create one to get started',
   },
   ko: {
     intro: 'oh-my-kanban 설정 위저드',
@@ -205,10 +206,11 @@ export const messages = {
     planeSkipProject: '건너뛰기 (나중에: omk config set project_id <id>)',
     planeProjectName: '새 프로젝트 이름을 입력하세요',
     planeProjectNameRequired: '프로젝트 이름을 입력해주세요',
+    planeProjectNameTooLong: '프로젝트 이름은 255자 이하여야 합니다',
     planeProjectCreating: '프로젝트 생성 중...',
     planeProjectCreated: '프로젝트 생성 완료',
     planeProjectCreateFailed: '프로젝트 생성 실패 — 권한을 확인해주세요',
-    planeNoProjectsFound: '프로젝트가 없습니다 — 새로 만들거나 건너뛰기',
+    planeNoProjectsFound: '프로젝트가 없습니다 — 새로 만드세요',
   },
 };
 

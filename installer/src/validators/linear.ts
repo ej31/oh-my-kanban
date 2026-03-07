@@ -37,20 +37,22 @@ export function validateLinearTeamIdFormat(value: string): string | undefined {
  */
 export async function testLinearConnection(
   apiKey: string,
-  teamId: string
+  teamId: string,
 ): Promise<ConnectionResult> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   try {
-    const query = `{ viewer { id } team(id: "${teamId}") { id name } }`;
     const response = await fetch('https://api.linear.app/graphql', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: apiKey,
       },
-      body: JSON.stringify({ query }),
+      body: JSON.stringify({
+        query: 'query CheckTeam($id: String!) { viewer { id } team(id: $id) { id name } }',
+        variables: { id: teamId },
+      }),
       signal: controller.signal,
     });
 
