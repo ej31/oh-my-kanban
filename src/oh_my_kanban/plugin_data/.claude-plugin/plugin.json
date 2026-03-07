@@ -1,0 +1,7 @@
+{
+  "name": "oh-my-kanban",
+  "version": "0.1.3",
+  "description": "Plane/Linear 프로젝트 관리 + Claude Code 세션 추적 훅. Drift 감지, 파일 추적, 자동 WI 연동.",
+  "skills": "./skills/",
+  "homepage": "https://github.com/ej31/oh-my-kanban"
+}

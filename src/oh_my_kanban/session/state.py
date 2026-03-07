@@ -61,6 +61,19 @@ class TimelineEvent:
     type: str
     summary: str
     drift_score: Optional[float] = None
+    # drift_detected 이벤트의 레벨 (none|minor|significant|major). 파싱 없이 직접 참조
+    drift_level: Optional[str] = None
+
+
+@dataclass
+class DriftResult:
+    """드리프트 감지 결과."""
+
+    score: float
+    # 'none' | 'minor' | 'significant' | 'major'
+    level: str
+    components: dict
+    suppressed: bool
 
 
 @dataclass
@@ -148,6 +161,7 @@ class SessionState:
                     type=e.get("type", ""),
                     summary=e.get("summary", ""),
                     drift_score=e.get("drift_score"),
+                    drift_level=e.get("drift_level"),
                 )
                 for e in timeline_data
                 if isinstance(e, dict)
