@@ -120,6 +120,72 @@ def _poll_comments(state, cfg) -> None:
         )
 
 
+def _check_subtask_completion(state, cfg) -> None:
+    """현재 WI의 모든 sub-task가 완료됐으면 사용자에게 알린다 (ST-26).
+
+    - subtask_completion_nudged가 True이면 중복 알림 방지
+    - sub-task 없으면 알리지 않음
+    - API 실패 시 fail-open
+    """
+    plane_ctx = state.plane_context
+    if plane_ctx.subtask_completion_nudged:
+        return
+
+    focused_id = plane_ctx.focused_work_item_id
+    if not focused_id:
+        return
+
+    project_id = plane_ctx.project_id or cfg.project_id
+    if not project_id or not cfg.api_key or not cfg.workspace_slug:
+        return
+
+    try:
+        import httpx
+    except ImportError:
+        return
+
+    base_url = cfg.base_url.rstrip("/")
+    headers = {"X-API-Key": cfg.api_key}
+    # 현재 WI의 하위 이슈(sub-tasks) 조회
+    url = (
+        f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
+        f"/projects/{project_id}/issues/{focused_id}/sub-issues/"
+    )
+    try:
+        with httpx.Client(timeout=PLANE_API_TIMEOUT, follow_redirects=False) as client:
+            resp = client.get(url, headers=headers)
+        if resp.status_code != 200:
+            return
+
+        data = resp.json()
+        sub_issues = data.get("results", data if isinstance(data, list) else [])
+        if not sub_issues:
+            return  # sub-task 없으면 알리지 않음
+
+        # 모두 완료 그룹인지 확인
+        all_done = all(
+            isinstance(s, dict)
+            and s.get("state_detail", {}).get("group") in ("completed", "cancelled")
+            for s in sub_issues
+        )
+        if not all_done:
+            return
+
+        # 모두 완료됨 → 사용자에게 알림
+        count = len(sub_issues)
+        output_system_message(
+            f"[omk] 연결된 Work Item의 하위 Task {count}개가 모두 완료되었습니다!\n"
+            f"  /oh-my-kanban:done 으로 메인 Task를 완료 처리할 수 있습니다."
+        )
+        plane_ctx.subtask_completion_nudged = True
+
+    except Exception as e:
+        print(
+            f"[omk] sub-task 완료 체크 실패 (fail-open): {type(e).__name__}: {e}",
+            file=sys.stderr,
+        )
+
+
 def main() -> None:
     """UserPromptSubmit 훅 메인. 예외는 모두 catch해 fail-open으로 처리한다."""
     try:
@@ -248,6 +314,8 @@ def main() -> None:
             cfg = load_config()
             if cfg.api_key:
                 _poll_comments(state, cfg)
+                # ST-26: sub-task 전체 완료 → 완료 처리 유도
+                _check_subtask_completion(state, cfg)
         except Exception as e:
             print(
                 f"[omk] 댓글 폴링 중 예외 (fail-open): {type(e).__name__}: {e}",

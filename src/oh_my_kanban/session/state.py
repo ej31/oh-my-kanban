@@ -57,6 +57,7 @@ class PlaneContext:
     known_comment_ids: list[str] = field(default_factory=list)   # 이미 본 댓글 ID 목록
     stale_work_item_ids: list[str] = field(default_factory=list) # 외부 삭제된 WI ID 목록
     comment_poll_failures: int = 0                               # 연속 폴링 실패 횟수 (circuit breaker)
+    subtask_completion_nudged: bool = False                      # sub-task 전체 완료 알림 발송 여부 (중복 방지)
 
 
 @dataclass
@@ -184,6 +185,7 @@ class SessionState:
                 known_comment_ids=plane_data.get("known_comment_ids", []),
                 stale_work_item_ids=plane_data.get("stale_work_item_ids", []),
                 comment_poll_failures=plane_data.get("comment_poll_failures", 0),
+                subtask_completion_nudged=plane_data.get("subtask_completion_nudged", False),
             ),
             timeline=[
                 TimelineEvent(

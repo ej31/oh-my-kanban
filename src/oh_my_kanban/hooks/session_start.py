@@ -108,6 +108,109 @@ def _inject_new_session_wi_guidance(cfg: Any) -> None:
     output_system_message(user_msg, "SessionStart", claude_ctx)
 
 
+def _check_blocked_and_cycle_deadline(state: SessionState, cfg: Any) -> None:
+    """차단 WI와 Cycle 마감 임박을 감지하여 사용자에게 알린다 (ST-28).
+
+    - 현재 WI가 blocked_by 관계를 가지면 차단 WI 알림
+    - 현재 프로젝트에 활성 Cycle이 있고 마감이 3일 이내이면 마감 알림
+    - 모두 fail-open
+    """
+    from datetime import datetime, timezone, timedelta
+
+    try:
+        import httpx
+    except ImportError:
+        return
+
+    focused_id = state.plane_context.focused_work_item_id
+    project_id = state.plane_context.project_id or cfg.project_id
+    if not project_id or not cfg.api_key or not cfg.workspace_slug:
+        return
+
+    base_url = cfg.base_url.rstrip("/")
+    headers = {"X-API-Key": cfg.api_key}
+
+    # 1. 차단 WI 조회 (blocked_by 관계)
+    if focused_id:
+        try:
+            rel_url = (
+                f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
+                f"/projects/{project_id}/issues/{focused_id}/issue-relations/"
+            )
+            with httpx.Client(timeout=PLANE_API_TIMEOUT, follow_redirects=False) as client:
+                resp = client.get(rel_url, headers=headers)
+            if resp.status_code == 200:
+                relations = resp.json()
+                if isinstance(relations, dict):
+                    relations = relations.get("results", [])
+                blocked_by = [
+                    r for r in relations
+                    if isinstance(r, dict) and r.get("relation_type") == "blocked_by"
+                ]
+                if blocked_by:
+                    blocker_names = []
+                    for r in blocked_by[:3]:
+                        related = r.get("related_issue", r.get("issue_detail", {}))
+                        seq = related.get("sequence_id", "?") if isinstance(related, dict) else "?"
+                        name = related.get("name", "Work Item") if isinstance(related, dict) else "Work Item"
+                        blocker_names.append(f"OMK-{seq} ({name[:40]})")
+                    blockers_str = "\n".join(f"  - {b}" for b in blocker_names)
+                    output_system_message(
+                        f"[omk] 주의: 현재 Task가 차단되어 있습니다.\n"
+                        f"  차단 중인 Work Item:\n{blockers_str}"
+                    )
+        except Exception as e:
+            print(
+                f"[omk] 차단 WI 조회 실패 (fail-open): {type(e).__name__}: {e}",
+                file=sys.stderr,
+            )
+
+    # 2. Cycle 마감 임박 조회 (3일 이내)
+    try:
+        cycle_url = (
+            f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
+            f"/projects/{project_id}/cycles/"
+        )
+        with httpx.Client(timeout=PLANE_API_TIMEOUT, follow_redirects=False) as client:
+            resp = client.get(cycle_url, headers=headers)
+        if resp.status_code == 200:
+            data = resp.json()
+            cycles = data.get("results", []) if isinstance(data, dict) else data
+            now = datetime.now(timezone.utc)
+            deadline_threshold = now + timedelta(days=3)
+
+            for cycle in cycles:
+                if not isinstance(cycle, dict):
+                    continue
+                status = cycle.get("status", "")
+                if status not in ("current", "in_progress", ""):
+                    continue
+                end_date_str = cycle.get("end_date") or cycle.get("end_at")
+                if not end_date_str:
+                    continue
+                try:
+                    # end_date는 "2026-03-10" 또는 "2026-03-10T..." 형식
+                    if "T" not in end_date_str:
+                        end_date_str += "T23:59:59+00:00"
+                    end_dt = datetime.fromisoformat(end_date_str)
+                    if end_dt.tzinfo is None:
+                        end_dt = end_dt.replace(tzinfo=timezone.utc)
+                    days_left = (end_dt - now).days
+                    if 0 <= days_left <= 3:
+                        cycle_name = cycle.get("name", "Sprint")
+                        output_system_message(
+                            f"[omk] {cycle_name} 마감 {days_left}일 전입니다.\n"
+                            f"  미완료 Task 상태를 확인해보세요."
+                        )
+                except (ValueError, TypeError):
+                    pass
+    except Exception as e:
+        print(
+            f"[omk] Cycle 마감 조회 실패 (fail-open): {type(e).__name__}: {e}",
+            file=sys.stderr,
+        )
+
+
 def _get_task_mode(cfg: Any) -> str:
     """설정에서 task_mode를 읽는다. 기본값: 'main-sub'."""
     return getattr(cfg, "task_mode", "main-sub") or "main-sub"
@@ -387,6 +490,15 @@ def _handle_startup_or_resume(session_id: str, source: str) -> None:
         task_mode = _get_task_mode(cfg)
         is_main = task_mode == "main-sub"
         _apply_task_labels(target_wi, cfg, is_main=is_main)
+        # ST-28: 차단 WI / Cycle 마감 알림 (fail-open)
+        if source in ("startup", "resume") and cfg.api_key:
+            try:
+                _check_blocked_and_cycle_deadline(state, cfg)
+            except Exception as e:
+                print(
+                    f"[omk] 차단/마감 알림 실패 (fail-open): {type(e).__name__}: {e}",
+                    file=sys.stderr,
+                )
     elif source == "startup":
         # ST-18: 신규 세션이고 WI가 연결되지 않은 경우: 활성 WI 목록 안내
         _inject_new_session_wi_guidance(cfg)

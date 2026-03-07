@@ -27,6 +27,8 @@ from oh_my_kanban.session.tracker import extract_file_paths, update_files_touche
 
 # git commit 해시 추출 패턴
 _COMMIT_HASH_RE = re.compile(r'\[[\w/.-]+\s+([0-9a-f]{7,40})\]')
+# 커밋 메시지에서 WI 식별자 패턴 (예: OMK-123, YCF-42, ABC-1)
+_WI_IDENTIFIER_RE = re.compile(r'\b([A-Z]{2,6}-\d+)\b')
 
 
 def _detect_git_commit(tool_name: str, tool_input: dict) -> tuple[bool, str]:
@@ -99,6 +101,30 @@ def _post_commit_comment(state, commit_hash: str, commit_command: str) -> None:
     )
 
 
+def _suggest_wi_link_from_commit(state, commit_command: str) -> None:
+    """커밋 메시지에서 WI 식별자를 찾아 세션 연결을 Claude에게 제안한다 (ST-27).
+
+    세션에 WI가 없을 때만 동작. 식별자 발견 시 additionalContext로 연결 제안.
+    """
+    if state.plane_context.work_item_ids:
+        return  # 이미 WI가 연결됨 — ST-24가 처리
+
+    identifiers = _WI_IDENTIFIER_RE.findall(commit_command)
+    if not identifiers:
+        return
+
+    # 중복 제거, 최대 3개
+    unique_ids = list(dict.fromkeys(identifiers))[:3]
+    ids_str = ", ".join(unique_ids)
+
+    output_context(
+        "PostToolUse",
+        f"[omk] 커밋 메시지에서 Work Item 식별자를 감지했습니다: {ids_str}\n"
+        f"세션이 Work Item에 연결되지 않은 상태입니다.\n"
+        f"/oh-my-kanban:focus {unique_ids[0]} 를 사용하여 세션을 연결할 수 있습니다.",
+    )
+
+
 @contextlib.contextmanager
 def _session_write_lock(session_id: str):
     """세션 파일에 대한 배타적 잠금 — async 훅 동시 실행 시 lost-update 방지."""
@@ -153,6 +179,15 @@ def main() -> None:
             except Exception as e:
                 print(
                     f"[omk] 커밋 추적 실패 (fail-open): {type(e).__name__}: {e}",
+                    file=sys.stderr,
+                )
+        # ST-27: WI 미연결 상태에서 커밋 메시지에 WI 식별자 발견 시 연결 제안
+        elif is_git_commit:
+            try:
+                _suggest_wi_link_from_commit(state, commit_command)
+            except Exception as e:
+                print(
+                    f"[omk] WI 연결 제안 실패 (fail-open): {type(e).__name__}: {e}",
                     file=sys.stderr,
                 )
 
