@@ -538,13 +538,15 @@ def drift_report() -> None:
         return
 
     # 드리프트 레벨별 통계 집계
-    level_counts = {"none": 0, "minor": 0, "significant": 0, "major": 0}
+    level_counts = {"none": 0, "minor": 0, "significant": 0, "major": 0, "unknown": 0}
 
     for event in drift_events:
         # drift_level 필드를 직접 사용 (summary 파싱 의존성 제거)
         level = getattr(event, "drift_level", None) or "unknown"
         if level in level_counts:
             level_counts[level] += 1
+        else:
+            level_counts["unknown"] += 1
 
     total = len(drift_events)
     session_ok = len(sessions) >= 20

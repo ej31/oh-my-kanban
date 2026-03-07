@@ -96,15 +96,15 @@ def main() -> None:
                 if state.config.auto_expand:
                     expand_scope(state, prompt_text)
                     state.stats.scope_expansions += 1
-                state.timeline.append(
-                    TimelineEvent(
-                        timestamp=now_iso(),
-                        type="scope_expanded",
-                        summary=f"스코프 확장 (suppressed {drift.level}, score={drift.score:.3f})",
-                        drift_score=drift.score,
-                        drift_level=drift.level,
+                    state.timeline.append(
+                        TimelineEvent(
+                            timestamp=now_iso(),
+                            type="scope_expanded",
+                            summary=f"스코프 확장 (suppressed {drift.level}, score={drift.score:.3f})",
+                            drift_score=drift.score,
+                            drift_level=drift.level,
+                        )
                     )
-                )
             else:
                 # 경고 주입
                 state.stats.drift_warnings += 1

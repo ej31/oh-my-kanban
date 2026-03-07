@@ -193,6 +193,7 @@ def init_scope(state: "SessionState", prompt_text: str) -> None:
     state.scope.tokens = tokens[:MAX_SCOPE_TOKENS]
     state.scope.keywords = _top_keywords(tokens, 20)
     state.scope.topics = []
+    state.scope.expanded_topics = []
 
 
 def expand_scope(state: "SessionState", prompt_text: str) -> None:

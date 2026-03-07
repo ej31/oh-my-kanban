@@ -49,8 +49,9 @@ class TestPostToolHookEdit:
             _run_hook(payload)
 
         mock_save.assert_called_once()
-        assert "/project/src/main.py" in state.stats.files_touched or \
-               "project/src/main.py" in state.stats.files_touched[0]
+        assert len(state.stats.files_touched) == 1
+        touched_path = state.stats.files_touched[0]
+        assert "/project/src/main.py" in touched_path or touched_path.endswith("main.py")
 
 
 class TestPostToolHookWrite:

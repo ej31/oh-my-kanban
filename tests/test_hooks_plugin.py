@@ -250,10 +250,17 @@ class TestInstallPluginFiles:
                 "oh_my_kanban.commands.hooks.shutil.copytree",
                 side_effect=OSError("permission denied"),
             ),
+            patch(
+                "oh_my_kanban.commands.hooks.click",
+            ) as mock_click,
             patch.dict("sys.modules", {"oh_my_kanban": fake_module}),
         ):
             # 예외가 발생하지 않아야 함 (fail-open)
             _install_plugin_files()
+
+            # 경고가 출력되어야 함
+            mock_click.echo.assert_called()
+            assert "경고" in str(mock_click.echo.call_args)
 
     def test_install_hooks_calls_install_plugin_files(self, tmp_path: Path) -> None:
         """_install_hooks() 실행 시 _install_plugin_files() 호출됨."""

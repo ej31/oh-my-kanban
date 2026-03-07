@@ -84,8 +84,10 @@ def load_config(profile: str = "default") -> Config:
             cfg.output = section.get("output", cfg.output)
             cfg.linear_api_key = section.get("linear_api_key", cfg.linear_api_key)
             cfg.linear_team_id = section.get("linear_team_id", cfg.linear_team_id)
-            cfg.drift_sensitivity = section.get("drift_sensitivity", cfg.drift_sensitivity)
-            cfg.drift_cooldown = section.get("drift_cooldown", cfg.drift_cooldown)
+            if "drift_sensitivity" in section:
+                cfg.drift_sensitivity = max(0.0, min(1.0, float(section["drift_sensitivity"])))
+            if "drift_cooldown" in section:
+                cfg.drift_cooldown = max(0, int(section["drift_cooldown"]))
         except (OSError, tomllib.TOMLDecodeError) as e:
             print(f"경고: 설정 파일 파싱 오류 ({CONFIG_FILE}): {e}", file=sys.stderr)
 
