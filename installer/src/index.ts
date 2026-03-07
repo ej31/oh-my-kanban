@@ -44,8 +44,8 @@ async function runSetup(): Promise<void> {
       linear_team_id: result.teamId,
     };
   } else {
+    // GitHub는 config 파일이 없지만 Python 환경 + Claude Code 연동은 동일하게 설정
     await promptGithubConfig();
-    return;
   }
 
   // 3. Python 환경 확인
@@ -76,19 +76,23 @@ async function runSetup(): Promise<void> {
     process.exit(1);
   }
 
-  // 5. 설정 파일 저장
-  try {
-    await writeConfig(planeConfig, linearConfig);
-  } catch (err) {
-    cancel(pc.red(`${m.configSaveFailed}${err instanceof Error ? err.message : String(err)}`));
-    process.exit(1);
+  // 5. 설정 파일 저장 (Plane/Linear만 해당, GitHub는 config 없음)
+  if (planeConfig || linearConfig) {
+    try {
+      await writeConfig(planeConfig, linearConfig);
+    } catch (err) {
+      cancel(pc.red(`${m.configSaveFailed}${err instanceof Error ? err.message : String(err)}`));
+      process.exit(1);
+    }
   }
 
   // 6. Claude Code 연동 설정 (scope 선택 + hooks 설치 + MCP 안내)
   await promptClaudeScope(python);
 
   const outroMsg =
-    service === 'plane' ? m.outroPlane : m.outroLinear;
+    service === 'plane' ? m.outroPlane
+    : service === 'linear' ? m.outroLinear
+    : m.outro;
   outro(pc.green(outroMsg));
 }
 

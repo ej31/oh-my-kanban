@@ -277,21 +277,29 @@ export async function promptPlaneConfig(): Promise<PlaneConfig> {
     }
   } else {
     // 프로젝트 없음 → 생성 또는 건너뛰기
-    const action = await select<string>({
-      message: m.planeNoProjectsFound,
-      options: [
-        { value: CREATE_SENTINEL, label: m.planeCreateProject },
-        { value: SKIP_SENTINEL, label: m.planeSkipProject },
-        { value: RESTART_SENTINEL, label: m.returnToFirstStep },
-      ],
-    });
+    while (true) {
+      const action = await select<string>({
+        message: m.planeNoProjectsFound,
+        options: [
+          { value: CREATE_SENTINEL, label: m.planeCreateProject },
+          { value: SKIP_SENTINEL, label: m.planeSkipProject },
+          { value: RESTART_SENTINEL, label: m.returnToFirstStep },
+        ],
+      });
 
-    if (isCancel(action)) process.exit(0);
-    if (action === RESTART_SENTINEL) throw new RestartWizard();
+      if (isCancel(action)) process.exit(0);
+      if (action === RESTART_SENTINEL) throw new RestartWizard();
+      if (action === SKIP_SENTINEL) break;
 
-    if (action === CREATE_SENTINEL) {
-      const created = await createProject(baseUrl, apiKey, workspaceSlug, m);
-      if (created) projectId = created;
+      if (action === CREATE_SENTINEL) {
+        const created = await createProject(baseUrl, apiKey, workspaceSlug, m);
+        if (created) {
+          projectId = created;
+          break;
+        }
+        // 생성 실패 → 선택 메뉴 재표시
+        continue;
+      }
     }
   }
 
@@ -303,21 +311,35 @@ export async function promptPlaneConfig(): Promise<PlaneConfig> {
   };
 }
 
-/** 프로젝트 이름에서 식별자를 자동 생성한다. 예: "My Project" → "MP" */
+/** 프로젝트 이름에서 식별자를 자동 생성한다. 유니코드 글자/숫자를 모두 지원한다.
+ *  예: "My Project" → "MP", "한글 프로젝트" → "한프", "テスト" → "テス"
+ */
 function generateIdentifier(name: string): string {
-  // 단어 첫 글자 대문자 조합 (최대 6자)
-  const initials = name
-    .split(/\s+/)
-    .map((w) => w.replace(/[^a-zA-Z0-9]/g, ''))
+  const UNICODE_CHAR = /\p{L}|\p{N}/u;
+
+  // 각 단어의 첫 번째 유니코드 글자/숫자를 이니셜로 추출
+  const words = name.trim().split(/\s+/);
+  const initials = words
+    .map((w) => Array.from(w).find((ch) => UNICODE_CHAR.test(ch)) ?? '')
     .filter(Boolean)
-    .map((w) => w[0].toUpperCase())
-    .join('');
+    .join('')
+    .toUpperCase();
 
   if (initials.length >= 2) return initials.slice(0, 6);
 
-  // 단어가 하나뿐이면 앞 글자들
-  const cleaned = name.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-  return cleaned.slice(0, 6) || 'PROJ';
+  // 단어가 하나뿐이면 유니코드 글자/숫자 앞 6자
+  const chars = Array.from(name)
+    .filter((ch) => UNICODE_CHAR.test(ch))
+    .join('')
+    .toUpperCase();
+  if (chars.length > 0) return chars.slice(0, 6);
+
+  // 모든 문자가 필터링된 경우 → 이름 기반 해시로 고유 식별자 생성
+  const hash = Array.from(name).reduce(
+    (acc, ch) => ((acc * 31 + ch.charCodeAt(0)) & 0xffff),
+    0,
+  );
+  return `P${hash.toString(16).toUpperCase().slice(0, 5)}`;
 }
 
 /** 새 프로젝트를 생성하고 project id를 반환한다. 실패 시 null 반환 */

@@ -1,5 +1,6 @@
 import { select, note, spinner, isCancel } from '@clack/prompts';
 import { spawnSync } from 'node:child_process';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import pc from 'picocolors';
 import { t } from '../i18n.js';
@@ -14,7 +15,7 @@ export async function promptClaudeScope(python: string): Promise<void> {
 
   const projectScopePath = join(process.cwd(), '.claude', 'settings.json');
   const localScopePath = join(process.cwd(), '.claude', 'settings.local.json');
-  const userScopePath = join(process.env['HOME'] ?? '~', '.claude', 'settings.json');
+  const userScopePath = join(homedir(), '.claude', 'settings.json');
 
   const scope = await select<string>({
     message: m.claudeScopeSelect,
