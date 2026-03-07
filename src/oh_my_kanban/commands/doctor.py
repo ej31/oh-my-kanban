@@ -6,7 +6,7 @@ import sys
 
 import click
 
-from oh_my_kanban.config import CONFIG_FILE, load_config
+from oh_my_kanban.config import CONFIG_FILE, Config, load_config
 
 
 # 진단 결과 상수
@@ -15,19 +15,15 @@ _FAIL = "FAIL"
 _SKIP = "SKIP"
 
 
-def _check_config_file() -> tuple[str, str]:
+def _check_config_file(cfg: Config) -> tuple[str, str]:
     """config.toml 파일 존재 및 유효성 검증."""
     if not CONFIG_FILE.exists():
         return _FAIL, f"설정 파일 없음: {CONFIG_FILE}"
-    try:
-        cfg = load_config()
-        if not cfg.api_key:
-            return _FAIL, "api_key 미설정"
-        if not cfg.workspace_slug:
-            return _FAIL, "workspace_slug 미설정"
-        return _PASS, f"설정 로드 완료 (프로필: {cfg.profile})"
-    except Exception as e:
-        return _FAIL, f"설정 파싱 오류: {e}"
+    if not cfg.api_key:
+        return _FAIL, "api_key 미설정"
+    if not cfg.workspace_slug:
+        return _FAIL, "workspace_slug 미설정"
+    return _PASS, f"설정 로드 완료 (프로필: {cfg.profile})"
 
 
 def _check_plane_sdk_version() -> tuple[str, str]:
@@ -40,9 +36,8 @@ def _check_plane_sdk_version() -> tuple[str, str]:
         return _FAIL, "plane-sdk 미설치"
 
 
-def _check_plane_api() -> tuple[str, str]:
+def _check_plane_api(cfg: Config) -> tuple[str, str]:
     """Plane API 연결 헬스체크 (/api/v1/users/me/)."""
-    cfg = load_config()
     if not cfg.api_key or not cfg.workspace_slug:
         return _SKIP, "Plane API 미설정"
     try:
@@ -75,9 +70,8 @@ def _check_plane_api() -> tuple[str, str]:
         return _FAIL, f"예외: {type(e).__name__}: {e}"
 
 
-def _check_linear_api() -> tuple[str, str]:
+def _check_linear_api(cfg: Config) -> tuple[str, str]:
     """Linear API 연결 헬스체크 (viewer { id email })."""
-    cfg = load_config()
     if not cfg.linear_api_key:
         return _SKIP, "Linear API 미설정"
     try:
@@ -120,16 +114,21 @@ def doctor() -> None:
     click.echo("oh-my-kanban 진단을 시작합니다...")
     click.echo()
 
-    checks = [
-        ("설정 파일", _check_config_file),
-        ("plane-sdk 버전", _check_plane_sdk_version),
-        ("Plane API 연결", _check_plane_api),
-        ("Linear API 연결", _check_linear_api),
+    try:
+        cfg = load_config()
+    except Exception as e:
+        click.echo(f"  ✗ [FAIL] 설정 파일: 파싱 오류: {e}")
+        sys.exit(1)
+
+    checks: list[tuple[str, tuple[str, str]]] = [
+        ("설정 파일", _check_config_file(cfg)),
+        ("plane-sdk 버전", _check_plane_sdk_version()),
+        ("Plane API 연결", _check_plane_api(cfg)),
+        ("Linear API 연결", _check_linear_api(cfg)),
     ]
 
     has_failure = False
-    for name, check_fn in checks:
-        status, detail = check_fn()
+    for name, (status, detail) in checks:
         if status == _PASS:
             icon = "✓"
         elif status == _FAIL:

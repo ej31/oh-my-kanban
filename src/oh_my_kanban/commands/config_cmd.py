@@ -70,8 +70,8 @@ def _run_plane_healthcheck(base_url: str, api_key: str) -> None:
                 click.echo(f"  경고: Plane API 응답 HTTP {resp.status_code}. 설정은 저장되었습니다.", err=True)
     except (httpx.TimeoutException, httpx.NetworkError) as e:
         click.echo(f"  경고: Plane API 연결 실패 ({type(e).__name__}). 설정은 저장되었습니다.", err=True)
-    except Exception:
-        pass  # 헬스체크 실패는 설정 저장을 차단하지 않는다
+    except Exception as e:
+        click.echo(f"  경고: 헬스체크 중 예외 ({type(e).__name__}). 설정은 저장되었습니다.", err=True)
 
 
 def _run_linear_healthcheck(api_key: str) -> None:
@@ -98,8 +98,8 @@ def _run_linear_healthcheck(api_key: str) -> None:
                 click.echo(f"  경고: Linear API 응답 HTTP {resp.status_code}. 설정은 저장되었습니다.", err=True)
     except (httpx.TimeoutException, httpx.NetworkError) as e:
         click.echo(f"  경고: Linear API 연결 실패 ({type(e).__name__}). 설정은 저장되었습니다.", err=True)
-    except Exception:
-        pass  # 헬스체크 실패는 설정 저장을 차단하지 않는다
+    except Exception as e:
+        click.echo(f"  경고: 헬스체크 중 예외 ({type(e).__name__}). 설정은 저장되었습니다.", err=True)
 
 
 @config.command("init")

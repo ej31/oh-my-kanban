@@ -13,8 +13,9 @@ from oh_my_kanban.hooks.common import PLANE_API_TIMEOUT
 
 # 재시도 대상 상태 코드
 _RETRYABLE_STATUS = frozenset({429, 500, 502, 503, 504})
-_MAX_RETRIES = 2
+_MAX_RETRIES = 2  # 훅 컨텍스트이므로 CLI(3회)보다 적게 재시도 (fail-open 우선)
 _BACKOFF_BASE = 1.0  # 지수 백오프 기본 대기 시간 (초)
+_MAX_RETRY_AFTER_WAIT = 10.0  # 훅 컨텍스트이므로 CLI(30초)보다 짧게 대기
 
 
 def build_plane_headers(api_key: str, content_type: str = "application/json") -> dict[str, str]:
@@ -112,7 +113,7 @@ def plane_request(
                 retry_after = resp.headers.get("Retry-After")
                 if retry_after:
                     try:
-                        wait = min(float(retry_after), 10.0)
+                        wait = min(float(retry_after), _MAX_RETRY_AFTER_WAIT)
                     except ValueError:
                         wait = _BACKOFF_BASE * (2 ** attempt)
                 else:
@@ -128,5 +129,6 @@ def plane_request(
                 continue
             raise
     # 모든 재시도 후에도 재시도 대상 상태 코드면 마지막 응답 반환
-    assert resp is not None
+    if resp is None:
+        raise RuntimeError("Retry loop exited without response")
     return resp

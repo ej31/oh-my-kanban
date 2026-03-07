@@ -520,21 +520,24 @@ class TestDoctorCommand:
     def test_check_config_file_pass(self, tmp_path, monkeypatch) -> None:
         """config.toml이 유효하면 PASS를 반환한다."""
         from unittest.mock import patch
+        from oh_my_kanban.config import Config
         config_file = tmp_path / "config.toml"
         config_file.write_text('[default]\napi_key = "key"\nworkspace_slug = "ws"\n')
-        with patch("oh_my_kanban.commands.doctor.CONFIG_FILE", config_file), \
-             patch("oh_my_kanban.config.CONFIG_FILE", config_file):
+        cfg = Config(api_key="key", workspace_slug="ws")
+        with patch("oh_my_kanban.commands.doctor.CONFIG_FILE", config_file):
             from oh_my_kanban.commands.doctor import _check_config_file
-            status, _ = _check_config_file()
+            status, _ = _check_config_file(cfg)
             assert status == "PASS"
 
     def test_check_config_file_missing(self, tmp_path) -> None:
         """config.toml이 없으면 FAIL을 반환한다."""
         from unittest.mock import patch
+        from oh_my_kanban.config import Config
         missing = tmp_path / "nonexistent.toml"
+        cfg = Config(api_key="key", workspace_slug="ws")
         with patch("oh_my_kanban.commands.doctor.CONFIG_FILE", missing):
             from oh_my_kanban.commands.doctor import _check_config_file
-            status, _ = _check_config_file()
+            status, _ = _check_config_file(cfg)
             assert status == "FAIL"
 
     def test_check_plane_sdk_version_pass(self) -> None:
@@ -544,27 +547,21 @@ class TestDoctorCommand:
         assert status == "PASS"
         assert "plane-sdk" in detail
 
-    def test_check_plane_api_skip_when_no_key(self, tmp_path, monkeypatch) -> None:
+    def test_check_plane_api_skip_when_no_key(self) -> None:
         """API 키 미설정 시 SKIP을 반환한다."""
-        from unittest.mock import patch
-        config_file = tmp_path / "config.toml"
-        config_file.write_text('[default]\napi_key = ""\n')
-        with patch("oh_my_kanban.commands.doctor.load_config") as mock_load:
-            from oh_my_kanban.config import Config
-            mock_load.return_value = Config(api_key="", workspace_slug="")
-            from oh_my_kanban.commands.doctor import _check_plane_api
-            status, _ = _check_plane_api()
-            assert status == "SKIP"
+        from oh_my_kanban.config import Config
+        cfg = Config(api_key="", workspace_slug="")
+        from oh_my_kanban.commands.doctor import _check_plane_api
+        status, _ = _check_plane_api(cfg)
+        assert status == "SKIP"
 
     def test_check_linear_api_skip_when_no_key(self) -> None:
         """Linear API 키 미설정 시 SKIP을 반환한다."""
-        from unittest.mock import patch
         from oh_my_kanban.config import Config
-        with patch("oh_my_kanban.commands.doctor.load_config") as mock_load:
-            mock_load.return_value = Config(linear_api_key="")
-            from oh_my_kanban.commands.doctor import _check_linear_api
-            status, _ = _check_linear_api()
-            assert status == "SKIP"
+        cfg = Config(linear_api_key="")
+        from oh_my_kanban.commands.doctor import _check_linear_api
+        status, _ = _check_linear_api(cfg)
+        assert status == "SKIP"
 
     def test_doctor_runs_without_crash(self) -> None:
         """doctor 커맨드가 예외 없이 실행된다."""

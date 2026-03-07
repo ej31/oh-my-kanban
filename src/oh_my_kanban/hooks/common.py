@@ -126,9 +126,9 @@ def record_health_warning(warning: dict[str, Any]) -> None:
             json.dumps(existing, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
-    except Exception:
-        # 기록 실패해도 훅 차단 안됨
-        pass
+    except Exception as e:
+        # fail-open: 기록 실패 시 훅을 차단하지 않는다
+        print(f"[omk] health_warnings 기록 실패: {type(e).__name__}", file=sys.stderr)
 
 
 def exit_fail_open() -> None:
