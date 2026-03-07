@@ -274,18 +274,21 @@ class TestBuildPlaneContext:
     )
 
     def test_empty_work_item_ids_returns_empty(self):
-        result = build_plane_context(work_item_ids=[], **self._BASE_PARAMS)
+        result, failed = build_plane_context(work_item_ids=[], **self._BASE_PARAMS)
         assert result == ""
+        assert failed == []
 
     def test_none_api_key_returns_empty(self):
         params = {**self._BASE_PARAMS, "api_key": None}
-        result = build_plane_context(work_item_ids=["wi-1"], **params)
+        result, failed = build_plane_context(work_item_ids=["wi-1"], **params)
         assert result == ""
+        assert failed == []
 
     def test_empty_api_key_returns_empty(self):
         params = {**self._BASE_PARAMS, "api_key": ""}
-        result = build_plane_context(work_item_ids=["wi-1"], **params)
+        result, failed = build_plane_context(work_item_ids=["wi-1"], **params)
         assert result == ""
+        assert failed == []
 
     def test_max_3_work_items_queried(self):
         """4개를 줘도 최대 3개만 조회한다."""
@@ -315,17 +318,15 @@ class TestBuildPlaneContext:
         mock_client_ctx.__enter__ = MagicMock(return_value=mock_client_instance)
         mock_client_ctx.__exit__ = MagicMock(return_value=False)
 
-        mock_httpx = MagicMock()
-        mock_httpx.Client.return_value = mock_client_ctx
-
-        with patch.dict(sys.modules, {"httpx": mock_httpx}):
-            result = build_plane_context(
+        with patch("oh_my_kanban.session.plane_context_builder.plane_http_client", return_value=mock_client_ctx):
+            result, failed = build_plane_context(
                 work_item_ids=["wi-1", "wi-2", "wi-3", "wi-4"],
                 **self._BASE_PARAMS,
             )
 
         # get 호출 횟수: WI 3개 x (WI조회1 + 댓글조회1) = 6번
         assert mock_client_instance.get.call_count == 6
+        assert failed == []
 
     def test_full_context_limited_to_3000_chars(self):
         """결과가 3000자를 초과하지 않는다."""
@@ -355,16 +356,14 @@ class TestBuildPlaneContext:
         mock_client_ctx.__enter__ = MagicMock(return_value=mock_client_instance)
         mock_client_ctx.__exit__ = MagicMock(return_value=False)
 
-        mock_httpx = MagicMock()
-        mock_httpx.Client.return_value = mock_client_ctx
-
-        with patch.dict(sys.modules, {"httpx": mock_httpx}):
-            result = build_plane_context(
+        with patch("oh_my_kanban.session.plane_context_builder.plane_http_client", return_value=mock_client_ctx):
+            result, failed = build_plane_context(
                 work_item_ids=["wi-1", "wi-2", "wi-3"],
                 **self._BASE_PARAMS,
             )
 
         assert len(result) <= 3003  # 3000자 + '...' 3자
+        assert failed == []
 
     def test_httpx_import_error_returns_empty(self):
         """httpx가 없으면 빈 문자열 반환 (fail-open)."""
@@ -383,8 +382,9 @@ class TestBuildPlaneContext:
             return real_import(name, *args, **kwargs)
 
         with patch("builtins.__import__", side_effect=mock_import):
-            result = build_plane_context(
+            result, failed = build_plane_context(
                 work_item_ids=["wi-1"],
                 **self._BASE_PARAMS,
             )
         assert result == ""
+        assert failed == []

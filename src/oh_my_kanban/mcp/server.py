@@ -26,7 +26,7 @@ except ImportError as e:
     ) from e
 
 from oh_my_kanban.config import load_config
-from oh_my_kanban.hooks.common import PLANE_API_TIMEOUT
+from oh_my_kanban.hooks.http_client import build_plane_headers, plane_http_client, plane_request, warn_auth_failure
 from oh_my_kanban.session.manager import list_sessions, load_session, save_session
 from oh_my_kanban.session.state import STATUS_ACTIVE, TimelineEvent, now_iso
 
@@ -340,34 +340,40 @@ def omk_add_comment(
         return {"error": "Plane API 키 또는 워크스페이스 슬러그가 설정되지 않았습니다."}
 
     base_url = cfg.base_url.rstrip("/")
-    headers = {
-        "X-API-Key": cfg.api_key,
-        "Content-Type": "application/json",
-    }
 
     results: list[dict[str, Any]] = []
-    for wi_id in target_wi_ids:
-        url = (
-            f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
-            f"/projects/{project_id}/issues/{wi_id}/comments/"
-        )
-        try:
-            with httpx.Client(timeout=PLANE_API_TIMEOUT, follow_redirects=False) as client:
-                resp = client.post(url, headers=headers, json={"comment_html": comment.strip()})
-                if resp.status_code in (200, 201):
-                    results.append({"work_item_id": wi_id, "success": True})
-                else:
-                    results.append({
-                        "work_item_id": wi_id,
-                        "success": False,
-                        "error": f"HTTP {resp.status_code}",
-                    })
-        except httpx.TimeoutException:
-            results.append({"work_item_id": wi_id, "success": False, "error": "요청 시간 초과 (10초)"})
-        except httpx.NetworkError as e:
-            results.append({"work_item_id": wi_id, "success": False, "error": f"네트워크 오류: {e}"})
-        except Exception as e:
-            results.append({"work_item_id": wi_id, "success": False, "error": f"예외: {type(e).__name__}: {e}"})
+    try:
+        with plane_http_client(cfg.api_key) as client:
+            for wi_id in target_wi_ids:
+                url = (
+                    f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
+                    f"/projects/{project_id}/issues/{wi_id}/comments/"
+                )
+                try:
+                    resp = plane_request(
+                        client, "POST", url,
+                        json={"comment_html": comment.strip()},
+                        context=f"댓글 추가 wi_id={wi_id}",
+                    )
+                    if resp.status_code in (200, 201):
+                        results.append({"work_item_id": wi_id, "success": True})
+                    else:
+                        error_info: dict[str, Any] = {
+                            "work_item_id": wi_id,
+                            "success": False,
+                            "error": f"HTTP {resp.status_code}",
+                        }
+                        if resp.status_code in (401, 403):
+                            error_info["error_code"] = "AUTH_FAILURE"
+                        results.append(error_info)
+                except httpx.TimeoutException:
+                    results.append({"work_item_id": wi_id, "success": False, "error": "요청 시간 초과 (10초)"})
+                except httpx.NetworkError as e:
+                    results.append({"work_item_id": wi_id, "success": False, "error": f"네트워크 오류: {e}"})
+                except Exception as e:
+                    results.append({"work_item_id": wi_id, "success": False, "error": f"예외: {type(e).__name__}: {e}"})
+    except Exception as e:
+        return {"error": f"Plane 클라이언트 생성 실패: {type(e).__name__}: {e}"}
 
     success_count = sum(1 for r in results if r.get("success"))
     return {

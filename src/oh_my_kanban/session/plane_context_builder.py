@@ -15,7 +15,7 @@ import re
 import sys
 from typing import Any
 
-from oh_my_kanban.hooks.common import PLANE_API_TIMEOUT
+from oh_my_kanban.hooks.http_client import build_plane_headers, plane_http_client, warn_auth_failure
 
 # ── 출력 크기 상수 ────────────────────────────────────────────────────────────
 # 전체 WI 컨텍스트 최대 글자 수 (너무 길면 토큰 낭비)
@@ -66,6 +66,7 @@ def _fetch_work_item(
         resp = client.get(url, headers=headers)
         if resp.status_code == 200:
             return resp.json()
+        warn_auth_failure(resp.status_code, context=f"WI 조회 wi_id={wi_id}")
         print(
             f"[omk] Plane WI 조회 실패 (wi_id={wi_id!r}): HTTP {resp.status_code}",
             file=sys.stderr,
@@ -178,11 +179,11 @@ def build_plane_context(
     base_url: str,
     api_key: str,
     workspace_slug: str,
-) -> str:
+) -> tuple[str, list[str]]:
     """Work Item 목록을 조회해 단일 컨텍스트 문자열로 반환한다.
 
     compact 복원 시 session_start.py에서 호출한다.
-    Plane API 미설정이거나 조회 실패 시 빈 문자열 반환 (fail-open).
+    Plane API 미설정이거나 조회 실패 시 fail-open으로 처리한다.
 
     Args:
         work_item_ids: 조회할 Work Item UUID 목록.
@@ -192,32 +193,32 @@ def build_plane_context(
         workspace_slug: Plane 워크스페이스 슬러그.
 
     Returns:
-        Work Item 내용을 포함한 컨텍스트 문자열. 실패 시 빈 문자열.
+        (컨텍스트 문자열, 실패한 WI ID 목록) 튜플.
+        조회 실패 또는 미설정 시 ("", []) 또는 ("", 실패한 ID 목록) 반환.
     """
     # 필수 설정 검증
     if not all([work_item_ids, project_id, base_url, api_key, workspace_slug]):
-        return ""
+        return "", []
 
     try:
         import httpx
     except ImportError:
-        return ""
+        return "", []
 
     base_url = base_url.rstrip("/")
-    headers = {
-        "X-API-Key": api_key,
-        "Content-Type": "application/json",
-    }
+    headers = build_plane_headers(api_key)
 
     parts: list[str] = []
+    failed_ids: list[str] = []
 
     try:
-        with httpx.Client(timeout=PLANE_API_TIMEOUT, follow_redirects=False) as client:
+        with plane_http_client(api_key) as client:
             for wi_id in work_item_ids[:3]:  # 최대 3개 WI만 조회 (토큰 절약)
                 wi_data = _fetch_work_item(
                     client, base_url, workspace_slug, project_id, wi_id, headers
                 )
                 if wi_data is None:
+                    failed_ids.append(wi_id)
                     continue
 
                 comments = _fetch_comments(
@@ -231,10 +232,10 @@ def build_plane_context(
             f"[omk] Plane 컨텍스트 빌드 예외: {type(e).__name__}: {e}",
             file=sys.stderr,
         )
-        return ""
+        return "", list(work_item_ids[:3])
 
     if not parts:
-        return ""
+        return "", failed_ids
 
     full_context = "\n\n".join(parts)
-    return _truncate(full_context, _CONTEXT_MAX_CHARS)
+    return _truncate(full_context, _CONTEXT_MAX_CHARS), failed_ids

@@ -16,6 +16,7 @@ from oh_my_kanban.hooks.common import (
     get_session_id,
     output_context,
     read_hook_input,
+    record_health_warning,
 )
 from oh_my_kanban.session.manager import create_session, load_session, save_session
 from oh_my_kanban.session.plane_context_builder import build_plane_context
@@ -64,13 +65,26 @@ def _handle_compact(session_id: str) -> None:
         cfg = load_config()
         project_id = state.plane_context.project_id or cfg.project_id
         if project_id and cfg.api_key and cfg.workspace_slug:
-            plane_content = build_plane_context(
+            plane_content, stale_ids = build_plane_context(
                 work_item_ids=wi_ids,
                 project_id=project_id,
                 base_url=cfg.base_url,
                 api_key=cfg.api_key,
                 workspace_slug=cfg.workspace_slug,
             )
+            # stale IDs를 항상 갱신 — 이전 실패가 복구되면 빈 리스트로 클리어
+            state.plane_context.stale_work_item_ids = stale_ids
+            if stale_ids:
+                state.plane_context.stale_work_item_ids = stale_ids
+                context_lines.append(
+                    f"\n[경고] 다음 Work Item을 조회할 수 없습니다 (삭제/이동 가능): {', '.join(stale_ids)}"
+                )
+                record_health_warning({
+                    "type": "stale_work_items",
+                    "session_id": session_id,
+                    "stale_ids": stale_ids,
+                    "timestamp": now_iso(),
+                })
 
     if plane_content:
         context_lines.append("\n[Plane Work Item 상세]")

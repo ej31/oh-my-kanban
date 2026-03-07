@@ -16,6 +16,14 @@ _CLOUD_API_URL = "https://api.plane.so"
 _ALLOWED_KEYS = {f for f in Config.__dataclass_fields__ if f != "profile"}
 
 
+def _mask_email(email: str) -> str:
+    """이메일을 마스킹한다. 짧은 주소는 '확인됨'으로 대체한다."""
+    if "@" in email and len(email) > 5:
+        local, domain = email.split("@", 1)
+        return f"{local[:2]}***@{domain}"
+    return "확인됨"
+
+
 def _save_config_safe(data: dict, profile: str = "default") -> None:
     """save_config 호출 실패를 Click 친화적 UsageError로 변환한다."""
     try:
@@ -43,6 +51,75 @@ def _extract_slug_from_url(url: str) -> str:
 def config() -> None:
     """설정 파일 관리."""
     pass
+
+
+def _run_plane_healthcheck(base_url: str, api_key: str) -> None:
+    """Plane API 연결 헬스체크. 실패 시 경고만 출력한다."""
+    try:
+        import httpx
+    except ImportError:
+        click.echo("  경고: httpx 미설치로 헬스체크를 건너뜁니다.", err=True)
+        return
+    try:
+        from oh_my_kanban.hooks.http_client import build_plane_headers
+    except ImportError:
+        click.echo("  경고: http_client 모듈을 로드할 수 없어 헬스체크를 건너뜁니다.", err=True)
+        return
+
+    # base_url에 이미 /api 또는 /api/v1이 포함된 경우 정규화
+    normalized = re.sub(r"/api(?:/v1)?$", "", base_url.rstrip("/"))
+    url = f"{normalized}/api/v1/users/me/"
+    headers = build_plane_headers(api_key)
+    try:
+        with httpx.Client(timeout=httpx.Timeout(5.0, connect=3.0), follow_redirects=False) as client:
+            resp = client.get(url, headers=headers)
+            if resp.status_code == 200:
+                data = resp.json()
+                email = data.get("email", "")
+                click.echo(f"  Plane API 연결 확인: {_mask_email(email)}")
+            elif resp.status_code == 401:
+                click.echo("  경고: API 키가 유효하지 않습니다 (401). 설정은 저장되었습니다.", err=True)
+            elif resp.status_code == 403:
+                click.echo("  경고: API 접근 권한이 부족합니다 (403). 설정은 저장되었습니다.", err=True)
+            else:
+                click.echo(f"  경고: Plane API 응답 HTTP {resp.status_code}. 설정은 저장되었습니다.", err=True)
+    except (httpx.TimeoutException, httpx.NetworkError) as e:
+        click.echo(f"  경고: Plane API 연결 실패 ({type(e).__name__}). 설정은 저장되었습니다.", err=True)
+    except Exception as e:
+        click.echo(f"  경고: 헬스체크 중 예외 ({type(e).__name__}). 설정은 저장되었습니다.", err=True)
+
+
+def _run_linear_healthcheck(api_key: str) -> None:
+    """Linear API 연결 헬스체크 (viewer { id }). 실패 시 경고만 출력한다."""
+    try:
+        import httpx
+    except ImportError:
+        click.echo("  경고: httpx 미설치로 헬스체크를 건너뜁니다.", err=True)
+        return
+    url = "https://api.linear.app/graphql"
+    try:
+        with httpx.Client(timeout=httpx.Timeout(5.0, connect=3.0)) as client:
+            resp = client.post(
+                url,
+                headers={"Authorization": api_key, "Content-Type": "application/json"},
+                json={"query": "{ viewer { id email } }"},
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                if errors := data.get("errors"):
+                    click.echo(f"  경고: Linear GraphQL 오류: {errors[0].get('message', '알 수 없음')}. 설정은 저장되었습니다.", err=True)
+                else:
+                    viewer = data.get("data", {}).get("viewer", {})
+                    email = viewer.get("email", "")
+                    click.echo(f"  Linear API 연결 확인: {_mask_email(email)}")
+            elif resp.status_code == 401:
+                click.echo("  경고: Linear API 키가 유효하지 않습니다 (401). 설정은 저장되었습니다.", err=True)
+            else:
+                click.echo(f"  경고: Linear API 응답 HTTP {resp.status_code}. 설정은 저장되었습니다.", err=True)
+    except (httpx.TimeoutException, httpx.NetworkError) as e:
+        click.echo(f"  경고: Linear API 연결 실패 ({type(e).__name__}). 설정은 저장되었습니다.", err=True)
+    except Exception as e:
+        click.echo(f"  경고: 헬스체크 중 예외 ({type(e).__name__}). 설정은 저장되었습니다.", err=True)
 
 
 @config.command("init")
@@ -81,6 +158,8 @@ def config_init() -> None:
         )
         click.echo()
         click.echo(f"설정이 저장되었습니다: {CONFIG_FILE}")
+        # 헬스체크 (실패해도 설정은 이미 저장됨)
+        _run_plane_healthcheck(base_url, env_api_key)
         return
 
     # 기존 설정 로드 (있으면 기본값으로 사용)
@@ -173,6 +252,8 @@ def config_init() -> None:
 
     click.echo()
     click.echo(f"설정이 저장되었습니다: {CONFIG_FILE}")
+    # 헬스체크 (실패해도 설정은 이미 저장됨)
+    _run_plane_healthcheck(base_url, api_key)
     click.echo()
     click.echo("설정 확인: omk config show")
 
@@ -237,7 +318,16 @@ def config_set(key: str, value: str, profile: str) -> None:
         raise click.UsageError("output 값은 json, table, plain 중 하나여야 합니다.")
 
     _save_config_safe({key: value}, profile=profile)
-    click.echo(f"[{profile}] {key} = {value if key != 'api_key' else '****'} 저장 완료")
+    masked = value if key not in ("api_key", "linear_api_key") else "****"
+    click.echo(f"[{profile}] {key} = {masked} 저장 완료")
+
+    # 헬스체크 (실패해도 설정은 이미 저장됨)
+    if key in ("api_key", "base_url"):
+        cfg = load_config(profile)
+        if cfg.base_url and cfg.api_key:
+            _run_plane_healthcheck(cfg.base_url, cfg.api_key)
+    elif key == "linear_api_key" and value:
+        _run_linear_healthcheck(value)
 
 
 @config.group("profile")

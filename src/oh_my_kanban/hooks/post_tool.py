@@ -8,26 +8,11 @@ stdin: {"session_id": "...", "tool_name": "Edit|Write|MultiEdit", "tool_input": 
 
 from __future__ import annotations
 
-import contextlib
-import fcntl
 import sys
 
-from oh_my_kanban.hooks.common import exit_fail_open, get_session_id, read_hook_input
+from oh_my_kanban.hooks.common import exit_fail_open, get_session_id, read_hook_input, session_write_lock
 from oh_my_kanban.session.manager import _session_path, load_session, save_session
 from oh_my_kanban.session.tracker import extract_file_paths, update_files_touched
-
-
-@contextlib.contextmanager
-def _session_write_lock(session_id: str):
-    """세션 파일에 대한 배타적 잠금 — async 훅 동시 실행 시 lost-update 방지."""
-    lock_path = _session_path(session_id).with_suffix(".lock")
-    lock_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(lock_path, "w") as lf:
-        fcntl.flock(lf, fcntl.LOCK_EX)
-        try:
-            yield
-        finally:
-            fcntl.flock(lf, fcntl.LOCK_UN)
 
 
 def main() -> None:
@@ -47,7 +32,7 @@ def main() -> None:
         file_paths = extract_file_paths(tool_name, tool_input)
 
         # 배타적 잠금 후 reload → 수정 → save (lost-update 방지)
-        with _session_write_lock(session_id):
+        with session_write_lock(_session_path(session_id).with_suffix(".lock")):
             state = load_session(session_id)
             if state is None:
                 exit_fail_open()

@@ -129,5 +129,9 @@ def _register_commands() -> None:
     from oh_my_kanban.commands.mcp_cmd import mcp_group
     cli.add_command(mcp_group, name="mcp")
 
+    # ── Doctor 커맨드 ───────────────────────────────────────────────
+    from oh_my_kanban.commands.doctor import doctor
+    cli.add_command(doctor)
+
 
 _register_commands()
