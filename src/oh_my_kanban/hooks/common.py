@@ -270,45 +270,6 @@ def exit_fail_open() -> None:
     sys.exit(0)
 
 
-def _is_throttled(state: SessionState, category: str) -> bool:
-    """동일 카테고리 에러가 쿨다운 기간 내 반복되면 True를 반환한다."""
-    t = state.error_throttle
-    if t is None or t.category != category or t.last_error_at is None:
-        return False
-    try:
-        from datetime import datetime, timezone
-        last = datetime.fromisoformat(t.last_error_at)
-        elapsed = (datetime.now(timezone.utc) - last).total_seconds()
-        return elapsed < t.cooldown_seconds
-    except (ValueError, TypeError) as e:
-        # ISO 날짜 형식 오류 — 쓰로틀 우회하되 경고는 남김
-        print(f"[omk] 쓰로틀 날짜 파싱 실패 (fail-open): {type(e).__name__}: {e}", file=sys.stderr)
-        return False
-
-
-def update_error_throttle(state: SessionState, category: str) -> None:
-    """에러 발생 시 ErrorThrottle 상태를 업데이트한다."""
-    from datetime import datetime, timezone
-
-    from oh_my_kanban.session.state import ErrorThrottle
-    now = datetime.now(timezone.utc).isoformat()
-    if state.error_throttle is None or state.error_throttle.category != category:
-        state.error_throttle = ErrorThrottle(
-            category=category,
-            last_error_at=now,
-            error_count=1,
-        )
-    else:
-        # 새 객체 생성 — 기존 ErrorThrottle 직접 변경 없음
-        prev = state.error_throttle
-        state.error_throttle = ErrorThrottle(
-            category=prev.category,
-            last_error_at=now,
-            error_count=prev.error_count + 1,
-            cooldown_seconds=prev.cooldown_seconds,
-        )
-
-
 def handle_orphan_wi(
     state: SessionState,
     wi_id: str,

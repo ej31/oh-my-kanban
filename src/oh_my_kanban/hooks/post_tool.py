@@ -108,7 +108,7 @@ def _post_commit_comment(state, commit_hash: str, commit_command: str) -> None:
 
     # 커밋 해시를 세션 통계에 기록 — POST 성공 시에만 (ST-24)
     if commit_hash and any_success and commit_hash not in state.stats.commit_hashes:
-        state.stats.commit_hashes.append(commit_hash)
+        state.stats.commit_hashes = [*state.stats.commit_hashes, commit_hash]
 
     # Claude에게 커밋 기록 완료 additionalContext 주입
     wi_id_short = target_ids[0][:8] if target_ids else ""
@@ -184,7 +184,9 @@ def _check_file_hotspot(state, file_paths: list[str]) -> None:
                 f"[omk] {f}이(가) 최근 {session_count}개 세션에서 수정되었습니다. "
                 "리팩토링 대상일 수 있습니다."
             )
-            state.plane_context.hotspot_alerted_files.append(f)
+            state.plane_context.hotspot_alerted_files = [
+                *state.plane_context.hotspot_alerted_files, f
+            ]
 
 
 @contextlib.contextmanager
