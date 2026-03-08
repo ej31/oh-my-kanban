@@ -6,7 +6,7 @@
 
 [![PyPI version](https://badge.fury.io/py/oh-my-kanban.svg)](https://pypi.org/project/oh-my-kanban/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/ej31/oh-my-kanban/blob/main/LICENSE)
 [![GitHub](https://img.shields.io/badge/GitHub-ej31%2Foh--my--kanban-black)](https://github.com/ej31/oh-my-kanban)
 
 ## Why oh-my-kanban?
@@ -637,7 +637,7 @@ pytest tests/
 
 ## License
 
-MIT License - See [LICENSE](LICENSE) for details
+MIT License - See [LICENSE](https://github.com/ej31/oh-my-kanban/blob/main/LICENSE) for details
 
 ## Support
 
