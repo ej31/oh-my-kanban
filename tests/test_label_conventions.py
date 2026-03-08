@@ -51,11 +51,14 @@ def test_omk_label_is_frozen():
 
 # ── ensure_omk_labels 테스트 ─────────────────────────────────────────────────
 
+_TEST_PROJECT_UUID = "00000000-0000-0000-0000-000000000001"
+
+
 class _FakeCfg:
     api_key = "test_key"
     workspace_slug = "test_ws"
     base_url = "https://plane.example.com"
-    project_id = "proj-uuid"
+    project_id = _TEST_PROJECT_UUID
 
 
 def _make_mock_response(status_code: int, json_data) -> MagicMock:
@@ -80,7 +83,7 @@ def test_ensure_omk_labels_creates_missing(capsys):
     mock_cm.__exit__ = MagicMock(return_value=False)
 
     with patch("httpx.Client", return_value=mock_cm):
-        ensure_omk_labels("proj-uuid", cfg)
+        ensure_omk_labels(_TEST_PROJECT_UUID, cfg)
 
     # 3개 라벨 생성 시도
     assert mock_client.post.call_count == len(OMK_LABELS)
@@ -105,7 +108,7 @@ def test_ensure_omk_labels_idempotent(capsys):
     mock_cm.__exit__ = MagicMock(return_value=False)
 
     with patch("httpx.Client", return_value=mock_cm):
-        ensure_omk_labels("proj-uuid", cfg)
+        ensure_omk_labels(_TEST_PROJECT_UUID, cfg)
 
     # POST 없어야 함
     mock_client.post.assert_not_called()
@@ -129,7 +132,7 @@ def test_ensure_omk_labels_fail_open(capsys):
 
     with patch("httpx.Client", side_effect=Exception("연결 실패")):
         # 예외가 전파되지 않아야 한다
-        ensure_omk_labels("proj-uuid", cfg)
+        ensure_omk_labels(_TEST_PROJECT_UUID, cfg)
 
 
 def test_ensure_omk_labels_partial_create(capsys):
@@ -147,7 +150,7 @@ def test_ensure_omk_labels_partial_create(capsys):
     mock_cm.__exit__ = MagicMock(return_value=False)
 
     with patch("httpx.Client", return_value=mock_cm):
-        ensure_omk_labels("proj-uuid", cfg)
+        ensure_omk_labels(_TEST_PROJECT_UUID, cfg)
 
     # omk:type:main, omk:type:sub 2개만 생성
     assert mock_client.post.call_count == 2
@@ -168,7 +171,7 @@ def test_get_label_id_by_name_found():
     mock_cm.__exit__ = MagicMock(return_value=False)
 
     with patch("httpx.Client", return_value=mock_cm):
-        result = get_label_id_by_name("omk:session", "proj-uuid", cfg)
+        result = get_label_id_by_name("omk:session", _TEST_PROJECT_UUID, cfg)
 
     assert result == "label-uuid-123"
 
@@ -183,6 +186,6 @@ def test_get_label_id_by_name_not_found():
     mock_cm.__exit__ = MagicMock(return_value=False)
 
     with patch("httpx.Client", return_value=mock_cm):
-        result = get_label_id_by_name("omk:session", "proj-uuid", cfg)
+        result = get_label_id_by_name("omk:session", _TEST_PROJECT_UUID, cfg)
 
     assert result is None

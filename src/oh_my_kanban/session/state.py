@@ -23,6 +23,7 @@ FILES_COMPACT_MAX = 5
 WORK_ITEMS_DISPLAY_MAX = 3
 WORK_ITEMS_RESUME_MAX = 2
 ACTIVE_SESSIONS_DISPLAY_MAX = 10
+TIMELINE_DISPLAY_MAX = 50
 
 
 def now_iso() -> str:
@@ -162,6 +163,13 @@ class SessionState:
                 work_item_ids=plane_data.get("work_item_ids", []),
                 module_id=plane_data.get("module_id"),
                 stale_work_item_ids=plane_data.get("stale_work_item_ids", []),
+                focused_work_item_id=plane_data.get("focused_work_item_id"),
+                last_comment_check=plane_data.get("last_comment_check"),
+                known_comment_ids=plane_data.get("known_comment_ids", []),
+                comment_poll_failures=plane_data.get("comment_poll_failures", 0),
+                last_subtask_check=plane_data.get("last_subtask_check"),
+                subtask_check_failures=plane_data.get("subtask_check_failures", 0),
+                subtask_completion_nudged_ids=plane_data.get("subtask_completion_nudged_ids", []),
             ),
             timeline=[
                 TimelineEvent(

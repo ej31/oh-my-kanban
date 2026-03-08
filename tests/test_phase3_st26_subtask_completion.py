@@ -12,12 +12,15 @@ from oh_my_kanban.session.state import SessionState
 
 _MOD = "oh_my_kanban.hooks.user_prompt"
 
+_TEST_PROJECT_UUID = "00000000-0000-0000-0000-000000000001"
+_TEST_WI_UUID = "00000000-0000-0000-0000-000000000021"
 
-def _make_state(focused_id: str = "wi-uuid-main") -> SessionState:
+
+def _make_state(focused_id: str = _TEST_WI_UUID) -> SessionState:
     state = SessionState(session_id="sess-st26-001")
     state.plane_context.work_item_ids = [focused_id]
     state.plane_context.focused_work_item_id = focused_id
-    state.plane_context.project_id = "proj-uuid"
+    state.plane_context.project_id = _TEST_PROJECT_UUID
     return state
 
 
@@ -25,7 +28,7 @@ def _make_cfg(api_key: str = "key"):
     cfg = MagicMock()
     cfg.api_key = api_key
     cfg.workspace_slug = "ws"
-    cfg.project_id = "proj-uuid"
+    cfg.project_id = _TEST_PROJECT_UUID
     cfg.base_url = "https://plane.example.com"
     return cfg
 
@@ -48,7 +51,7 @@ class TestCheckSubtaskCompletion:
     def test_skips_when_already_nudged(self):
         """이미 알림을 보냈으면 다시 보내지 않는다."""
         state = _make_state()
-        state.plane_context.subtask_completion_nudged_ids = ["wi-uuid-main"]
+        state.plane_context.subtask_completion_nudged_ids = [_TEST_WI_UUID]
         cfg = _make_cfg()
 
         with patch("httpx.Client") as mock_httpx:
@@ -134,7 +137,7 @@ class TestCheckSubtaskCompletion:
         mock_sys.assert_called_once()
         msg = mock_sys.call_args[0][0]
         assert "2개" in msg or "모두 완료" in msg
-        assert state.plane_context.subtask_completion_nudged_ids == ["wi-uuid-main"]
+        assert state.plane_context.subtask_completion_nudged_ids == [_TEST_WI_UUID]
 
     def test_sets_nudged_flag_to_prevent_repeat(self):
         """알림 후 nudged 플래그가 True로 설정돼 중복 알림 방지."""
@@ -149,7 +152,7 @@ class TestCheckSubtaskCompletion:
         ):
             _check_subtask_completion(state, cfg)
 
-        assert state.plane_context.subtask_completion_nudged_ids == ["wi-uuid-main"]
+        assert state.plane_context.subtask_completion_nudged_ids == [_TEST_WI_UUID]
 
     def test_fail_open_on_http_error(self):
         """HTTP 오류 시 예외를 전파하지 않는다."""

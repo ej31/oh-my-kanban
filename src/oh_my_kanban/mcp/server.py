@@ -26,7 +26,7 @@ except ImportError as e:
     ) from e
 
 from oh_my_kanban.config import load_config
-from oh_my_kanban.hooks.common import sanitize_comment
+from oh_my_kanban.hooks.common import sanitize_comment, validate_plane_url_params
 from oh_my_kanban.hooks.http_client import build_plane_headers, plane_http_client, plane_request, warn_auth_failure
 from oh_my_kanban.session.manager import list_sessions, load_session, save_session
 from oh_my_kanban.session.state import STATUS_ACTIVE, TimelineEvent, now_iso
@@ -345,12 +345,19 @@ def omk_add_comment(
     if not cfg.api_key or not cfg.workspace_slug:
         return {"error": "Plane API 키 또는 워크스페이스 슬러그가 설정되지 않았습니다."}
 
+    # URL 경로 파라미터 형식 검증 (경로 트래버설 / 인젝션 방지)
+    if not validate_plane_url_params(cfg.workspace_slug, project_id):
+        return {"error": "유효하지 않은 workspace_slug 또는 project_id"}
+
     base_url = cfg.base_url.rstrip("/")
 
     results: list[dict[str, Any]] = []
     try:
         with plane_http_client(cfg.api_key) as client:
             for wi_id in target_wi_ids:
+                if not validate_plane_url_params(cfg.workspace_slug, project_id, wi_id):
+                    results.append({"work_item_id": wi_id, "success": False, "error": "유효하지 않은 UUID 형식"})
+                    continue
                 url = (
                     f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
                     f"/projects/{project_id}/issues/{wi_id}/comments/"

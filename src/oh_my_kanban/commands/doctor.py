@@ -66,6 +66,8 @@ def _check_plane_api(cfg: Config) -> tuple[str, str]:
 
     import re
     base_url = re.sub(r"/api(?:/v1)?$", "", cfg.base_url.rstrip("/"))
+    if not base_url.startswith("http://") and not base_url.startswith("https://"):
+        return _FAIL, f"base_url 스키마가 유효하지 않습니다: {base_url!r}"
     from oh_my_kanban.hooks.http_client import build_plane_headers
     headers = build_plane_headers(cfg.api_key)
 
@@ -98,7 +100,7 @@ def _check_linear_api(cfg: Config) -> tuple[str, str]:
         return _SKIP, "httpx 미설치"
 
     try:
-        with httpx.Client(timeout=httpx.Timeout(5.0, connect=3.0)) as client:
+        with httpx.Client(timeout=httpx.Timeout(5.0, connect=3.0), follow_redirects=False) as client:
             resp = client.post(
                 "https://api.linear.app/graphql",
                 headers={

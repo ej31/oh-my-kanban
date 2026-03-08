@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import click
 
 from oh_my_kanban.context import CliContext
@@ -94,7 +95,7 @@ def intake_create(
 
     issue_data = WorkItemForIntakeRequest(
         name=name,
-        description_html=description,
+        description_html=f"<p>{html.escape(description)}</p>" if description else None,
         priority=priority,
     )
     data = CreateIntakeWorkItem(issue=issue_data)

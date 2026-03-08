@@ -223,14 +223,14 @@ def test_env_overrides_upload_level(
 
 
 def test_allowed_config_keys_includes_workflow_fields() -> None:
-    """_ALLOWED_CONFIG_KEYS에 워크플로우 설정 키가 포함되어 있어야 한다."""
-    from oh_my_kanban.config import _ALLOWED_CONFIG_KEYS
+    """ALLOWED_CONFIG_KEYS에 워크플로우 설정 키가 포함되어 있어야 한다."""
+    from oh_my_kanban.config import ALLOWED_CONFIG_KEYS
 
-    assert "task_mode" in _ALLOWED_CONFIG_KEYS
-    assert "upload_level" in _ALLOWED_CONFIG_KEYS
-    assert "auto_archive_days" in _ALLOWED_CONFIG_KEYS
-    assert "auto_complete_subtasks" in _ALLOWED_CONFIG_KEYS
-    assert "session_retention_days" in _ALLOWED_CONFIG_KEYS
+    assert "task_mode" in ALLOWED_CONFIG_KEYS
+    assert "upload_level" in ALLOWED_CONFIG_KEYS
+    assert "auto_archive_days" in ALLOWED_CONFIG_KEYS
+    assert "auto_complete_subtasks" in ALLOWED_CONFIG_KEYS
+    assert "session_retention_days" in ALLOWED_CONFIG_KEYS
 
 
 def test_toml_auto_complete_subtasks_native_bool_loaded(tmp_path: Path) -> None:

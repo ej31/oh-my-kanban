@@ -8,20 +8,26 @@ import re
 import click
 
 from oh_my_kanban.config import (
-    _ALLOWED_CONFIG_KEYS,
+    ALLOWED_CONFIG_KEYS,
     SOURCE_LABELS,
     CONFIG_FILE,
     Config,
+    Preset,
+    apply_preset,
+    escape_toml_string,
+    list_presets,
     list_profiles,
     load_config,
+    load_preset,
     save_config,
+    save_preset,
 )
 
 # plane.so 클라우드 API URL
 _CLOUD_API_URL = "https://api.plane.so"
 
 # save_config()의 허용 키와 동일한 화이트리스트 사용 (동기화 보장)
-_ALLOWED_KEYS = _ALLOWED_CONFIG_KEYS
+_ALLOWED_KEYS = ALLOWED_CONFIG_KEYS
 
 
 def _mask_email(email: str) -> str:
@@ -63,6 +69,11 @@ def config() -> None:
 
 def _run_plane_healthcheck(base_url: str, api_key: str) -> None:
     """Plane API 연결 헬스체크. 실패 시 경고만 출력한다."""
+    # SSRF 방지: http(s)://) 스키마만 허용
+    if not base_url.startswith("http://") and not base_url.startswith("https://"):
+        click.echo("  경고: base_url은 http:// 또는 https://로 시작해야 합니다. 헬스체크 건너뜀.", err=True)
+        return
+
     try:
         import httpx
     except ImportError:
@@ -106,7 +117,7 @@ def _run_linear_healthcheck(api_key: str) -> None:
         return
     url = "https://api.linear.app/graphql"
     try:
-        with httpx.Client(timeout=httpx.Timeout(5.0, connect=3.0)) as client:
+        with httpx.Client(timeout=httpx.Timeout(5.0, connect=3.0), follow_redirects=False) as client:
             resp = client.post(
                 url,
                 headers={"Authorization": api_key, "Content-Type": "application/json"},
@@ -205,6 +216,9 @@ def config_init() -> None:
         )
         # self-hosted는 /api/v1 경로를 포함한 API URL 구성
         server_url = server_url.rstrip("/")
+        # SSRF 방지: http(s):// 스키마만 허용 (저장 전 검증)
+        if not server_url.startswith("http://") and not server_url.startswith("https://"):
+            raise click.UsageError("서버 URL은 http:// 또는 https://로 시작해야 합니다.")
         # 이미 /api 가 포함되어 있으면 그대로, 아니면 그대로 사용 (SDK가 경로 처리)
         base_url = server_url
 
@@ -386,3 +400,91 @@ def profile_use(name: str) -> None:
     _save_config_safe({"active_profile": name}, profile="_meta")
     click.echo(f"기본 프로필이 '{name}'으로 변경되었습니다.")
     click.echo("다음 실행 시 '--profile' 옵션 또는 PLANE_PROFILE 환경변수로 적용하세요.")
+
+
+# ── Preset 서브그룹 ────────────────────────────────────────────────────────────
+
+
+@config.group("preset")
+def config_preset() -> None:
+    """프리셋 관리 (설정 묶음 저장/적용)."""
+
+
+@config_preset.command("list")
+def preset_list() -> None:
+    """빌트인 + 사용자 프리셋 목록을 출력한다."""
+    presets = list_presets()
+    if not presets:
+        click.echo("사용 가능한 프리셋이 없습니다.")
+        return
+
+    click.echo("=== 프리셋 목록 ===")
+    for p in presets:
+        desc = p.description or "(설명 없음)"
+        click.echo(f"  {p.name:15s}  {desc}")
+        click.echo(f"    task_mode={p.task_mode}  upload_level={p.upload_level}  "
+                    f"drift_sensitivity={p.drift_sensitivity}  drift_cooldown={p.drift_cooldown}")
+
+
+@config_preset.command("apply")
+@click.argument("name")
+@click.option("--profile", default="default", help="적용할 프로필")
+def preset_apply(name: str, profile: str) -> None:
+    """프리셋을 현재 프로필에 적용한다."""
+    preset = load_preset(name)
+    if preset is None:
+        available = [p.name for p in list_presets()]
+        raise click.UsageError(
+            f"프리셋 '{name}'을 찾을 수 없습니다.\n"
+            f"사용 가능: {', '.join(available) if available else '(없음)'}"
+        )
+
+    try:
+        apply_preset(preset, profile=profile)
+    except (OSError, ValueError) as e:
+        raise click.ClickException(f"프리셋 적용 실패: {e}") from e
+
+    click.echo(f"프리셋 '{name}' 적용 완료 (프로필: {profile})")
+    click.echo(f"  task_mode={preset.task_mode}  upload_level={preset.upload_level}")
+
+
+@config_preset.command("create")
+@click.argument("name")
+@click.option("--description", "-d", default="", help="프리셋 설명")
+@click.option("--profile", default="default", help="설정을 읽어올 프로필")
+def preset_create(name: str, description: str, profile: str) -> None:
+    """현재 설정에서 프리셋을 생성한다."""
+    cfg = load_config(profile)
+    preset = Preset(
+        name=name,
+        description=description,
+        task_mode=cfg.task_mode,
+        upload_level=cfg.upload_level,
+        drift_sensitivity=cfg.drift_sensitivity,
+        drift_cooldown=cfg.drift_cooldown,
+    )
+
+    try:
+        save_preset(preset)
+    except (OSError, ValueError) as e:
+        raise click.ClickException(f"프리셋 저장 실패: {e}") from e
+
+    click.echo(f"프리셋 '{name}' 생성 완료")
+    click.echo(f"  task_mode={preset.task_mode}  upload_level={preset.upload_level}")
+
+
+@config_preset.command("export")
+@click.argument("name")
+def preset_export(name: str) -> None:
+    """프리셋을 TOML 형식으로 출력한다."""
+    preset = load_preset(name)
+    if preset is None:
+        raise click.UsageError(f"프리셋 '{name}'을 찾을 수 없습니다.")
+
+    click.echo("[preset]")
+    click.echo(f'name = "{escape_toml_string(preset.name)}"')
+    click.echo(f'description = "{escape_toml_string(preset.description)}"')
+    click.echo(f'task_mode = "{escape_toml_string(preset.task_mode)}"')
+    click.echo(f'upload_level = "{escape_toml_string(preset.upload_level)}"')
+    click.echo(f"drift_sensitivity = {preset.drift_sensitivity}")
+    click.echo(f"drift_cooldown = {preset.drift_cooldown}")

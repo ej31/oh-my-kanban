@@ -265,9 +265,18 @@ class TestFetchComments:
 # ─── build_plane_context ──────────────────────────────────────────────────────
 
 
+_TEST_PROJECT_UUID = "00000000-0000-0000-0000-000000000001"
+_TEST_WI_UUIDS = [
+    "00000000-0000-0000-0000-000000000011",
+    "00000000-0000-0000-0000-000000000012",
+    "00000000-0000-0000-0000-000000000013",
+    "00000000-0000-0000-0000-000000000014",
+]
+
+
 class TestBuildPlaneContext:
     _BASE_PARAMS = dict(
-        project_id="proj-001",
+        project_id=_TEST_PROJECT_UUID,
         base_url="https://api.plane.so",
         api_key="test-key",
         workspace_slug="my-ws",
@@ -280,13 +289,13 @@ class TestBuildPlaneContext:
 
     def test_none_api_key_returns_empty(self):
         params = {**self._BASE_PARAMS, "api_key": None}
-        result, failed = build_plane_context(work_item_ids=["wi-1"], **params)
+        result, failed = build_plane_context(work_item_ids=_TEST_WI_UUIDS[:1], **params)
         assert result == ""
         assert failed == []
 
     def test_empty_api_key_returns_empty(self):
         params = {**self._BASE_PARAMS, "api_key": ""}
-        result, failed = build_plane_context(work_item_ids=["wi-1"], **params)
+        result, failed = build_plane_context(work_item_ids=_TEST_WI_UUIDS[:1], **params)
         assert result == ""
         assert failed == []
 
@@ -320,7 +329,7 @@ class TestBuildPlaneContext:
 
         with patch("oh_my_kanban.session.plane_context_builder.plane_http_client", return_value=mock_client_ctx):
             result, failed = build_plane_context(
-                work_item_ids=["wi-1", "wi-2", "wi-3", "wi-4"],
+                work_item_ids=_TEST_WI_UUIDS,
                 **self._BASE_PARAMS,
             )
 
@@ -358,7 +367,7 @@ class TestBuildPlaneContext:
 
         with patch("oh_my_kanban.session.plane_context_builder.plane_http_client", return_value=mock_client_ctx):
             result, failed = build_plane_context(
-                work_item_ids=["wi-1", "wi-2", "wi-3"],
+                work_item_ids=_TEST_WI_UUIDS[:3],
                 **self._BASE_PARAMS,
             )
 
@@ -383,7 +392,7 @@ class TestBuildPlaneContext:
 
         with patch("builtins.__import__", side_effect=mock_import):
             result, failed = build_plane_context(
-                work_item_ids=["wi-1"],
+                work_item_ids=_TEST_WI_UUIDS[:1],
                 **self._BASE_PARAMS,
             )
         assert result == ""

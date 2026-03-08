@@ -16,7 +16,7 @@ import sys
 from dataclasses import dataclass
 from typing import Any
 
-from oh_my_kanban.hooks.common import PLANE_API_TIMEOUT
+from oh_my_kanban.hooks.common import PLANE_API_TIMEOUT, validate_plane_url_params
 
 # ── 표준 라벨 정의 ────────────────────────────────────────────────────────────
 
@@ -127,6 +127,12 @@ def ensure_omk_labels(project_id: str, cfg: Any) -> None:
     if not cfg.api_key or not cfg.workspace_slug or not project_id:
         return
 
+    # URL 경로 파라미터 형식 검증 (경로 트래버설 / 인젝션 방지)
+    workspace_slug = cfg.workspace_slug
+    if not validate_plane_url_params(workspace_slug, project_id):
+        print("[omk] 유효하지 않은 workspace_slug 또는 project_id — 라벨 초기화 건너뜀", file=sys.stderr)
+        return
+
     try:
         import httpx
     except ImportError:
@@ -141,7 +147,7 @@ def ensure_omk_labels(project_id: str, cfg: Any) -> None:
     try:
         with httpx.Client(timeout=PLANE_API_TIMEOUT, follow_redirects=False) as client:
             existing_names = _fetch_existing_labels(
-                client, base_url, cfg.workspace_slug, project_id, headers
+                client, base_url, workspace_slug, project_id, headers
             )
 
             created_count = 0
@@ -150,7 +156,7 @@ def ensure_omk_labels(project_id: str, cfg: Any) -> None:
                     # 이미 존재 — 재생성하지 않음 (idempotent)
                     continue
                 success = _create_label(
-                    client, base_url, cfg.workspace_slug, project_id, headers, label
+                    client, base_url, workspace_slug, project_id, headers, label
                 )
                 if success:
                     created_count += 1
@@ -178,6 +184,11 @@ def get_label_id_by_name(
     if not cfg.api_key or not cfg.workspace_slug or not project_id:
         return None
 
+    # URL 경로 파라미터 형식 검증 (경로 트래버설 / 인젝션 방지)
+    workspace_slug = cfg.workspace_slug
+    if not validate_plane_url_params(workspace_slug, project_id):
+        return None
+
     try:
         import httpx
     except ImportError:
@@ -186,7 +197,7 @@ def get_label_id_by_name(
     base_url = cfg.base_url.rstrip("/")
     headers = {"X-API-Key": cfg.api_key}
     url = (
-        f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
+        f"{base_url}/api/v1/workspaces/{workspace_slug}"
         f"/projects/{project_id}/labels/"
     )
     try:

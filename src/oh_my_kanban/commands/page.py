@@ -38,7 +38,7 @@ def page_get(ctx: CliContext, page_id: str, workspace_scope: bool) -> None:
 
 @page.command("create")
 @click.option("--name", required=True, help="페이지 제목")
-@click.option("--description-html", default="<p></p>", show_default=True, help="HTML 형식의 페이지 내용")
+@click.option("--description-html", default="<p></p>", show_default=True, help="HTML 형식의 페이지 내용 (HTML이 그대로 전달되므로 신뢰할 수 없는 입력은 사용하지 마세요)")
 @click.option("--workspace", "workspace_scope", is_flag=True, default=False, help="워크스페이스 페이지로 생성")
 @click.pass_obj
 @handle_api_error

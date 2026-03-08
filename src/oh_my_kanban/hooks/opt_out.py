@@ -7,8 +7,9 @@ from __future__ import annotations
 
 import sys
 
-from oh_my_kanban.hooks.http_client import build_plane_headers, plane_http_client, plane_request
 from oh_my_kanban.config import load_config
+from oh_my_kanban.hooks.common import validate_plane_url_params
+from oh_my_kanban.hooks.http_client import build_plane_headers, plane_http_client, plane_request
 from oh_my_kanban.session.manager import load_session, save_session
 from oh_my_kanban.session.state import (
     STATUS_OPTED_OUT,
@@ -34,14 +35,22 @@ def _post_opt_out_comment(state: SessionState) -> None:
     if not wi_ids or not project_id:
         return
 
+    workspace_slug = cfg.workspace_slug
+    if not validate_plane_url_params(workspace_slug, project_id):
+        print("[omk] 유효하지 않은 workspace_slug 또는 project_id — opt-out 건너뜀", file=sys.stderr)
+        return
+
     base_url = cfg.base_url.rstrip("/")
     comment = "-- 사용자 요청에 의해 이 세션의 자동 추적이 중단되었습니다 --"
 
     try:
         with plane_http_client(cfg.api_key) as client:
             for wi_id in wi_ids:
+                if not validate_plane_url_params(workspace_slug, project_id, wi_id):
+                    print(f"[omk] 유효하지 않은 work_item_id 건너뜀: {wi_id!r}", file=sys.stderr)
+                    continue
                 url = (
-                    f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
+                    f"{base_url}/api/v1/workspaces/{workspace_slug}"
                     f"/projects/{project_id}/issues/{wi_id}/comments/"
                 )
                 try:
@@ -73,14 +82,22 @@ def _delete_work_items(state: SessionState) -> int:
     if not wi_ids or not project_id:
         return 0
 
+    workspace_slug = cfg.workspace_slug
+    if not validate_plane_url_params(workspace_slug, project_id):
+        print("[omk] 유효하지 않은 workspace_slug 또는 project_id — WI 삭제 건너뜀", file=sys.stderr)
+        return 0
+
     base_url = cfg.base_url.rstrip("/")
     deleted = 0
 
     try:
         with plane_http_client(cfg.api_key) as client:
             for wi_id in wi_ids:
+                if not validate_plane_url_params(workspace_slug, project_id, wi_id):
+                    print(f"[omk] 유효하지 않은 work_item_id 건너뜀: {wi_id!r}", file=sys.stderr)
+                    continue
                 url = (
-                    f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
+                    f"{base_url}/api/v1/workspaces/{workspace_slug}"
                     f"/projects/{project_id}/issues/{wi_id}/"
                 )
                 try:

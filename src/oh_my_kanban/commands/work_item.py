@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import click
 from datetime import date
 
@@ -200,7 +201,7 @@ def work_item_create(
     project_id = ctx.require_project()
 
     # 평문 설명을 HTML로 래핑
-    description_html = f"<p>{description}</p>" if description else None
+    description_html = f"<p>{html.escape(description)}</p>" if description else None
 
     data = CreateWorkItem(
         name=name,
@@ -252,7 +253,7 @@ def work_item_update(
 
     project_id = ctx.require_project()
 
-    description_html = f"<p>{description}</p>" if description else None
+    description_html = f"<p>{html.escape(description)}</p>" if description else None
 
     data = UpdateWorkItem(
         name=name,
@@ -352,7 +353,7 @@ def comment_create(ctx: CliContext, work_item_id: str, body: str) -> None:
     from plane.models.work_items import CreateWorkItemComment
 
     project_id = ctx.require_project()
-    data = CreateWorkItemComment(comment_html=f"<p>{body}</p>")
+    data = CreateWorkItemComment(comment_html=f"<p>{html.escape(body)}</p>")
     result = ctx.client.work_items.comments.create(
         ctx.workspace, project_id, work_item_id, data=data
     )
@@ -370,7 +371,7 @@ def comment_update(ctx: CliContext, work_item_id: str, comment_id: str, body: st
     from plane.models.work_items import UpdateWorkItemComment
 
     project_id = ctx.require_project()
-    data = UpdateWorkItemComment(comment_html=f"<p>{body}</p>")
+    data = UpdateWorkItemComment(comment_html=f"<p>{html.escape(body)}</p>")
     result = ctx.client.work_items.comments.update(
         ctx.workspace, project_id, work_item_id, comment_id, data=data
     )
