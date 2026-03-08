@@ -84,6 +84,35 @@ class TestRunGh:
             with pytest.raises(click.ClickException, match="완료되지 않았습니다"):
                 _run_gh("issue", "list")
 
+    def test_oserror_raises_click_exception(self) -> None:
+        """OSError 발생 시 gh 실행 실패 메시지가 나와야 한다."""
+        import click
+
+        with (
+            patch("oh_my_kanban.commands.github_stub.shutil.which", return_value="/usr/bin/gh"),
+            patch(
+                "oh_my_kanban.commands.github_stub.subprocess.run",
+                side_effect=OSError("Permission denied"),
+            ),
+        ):
+            with pytest.raises(click.ClickException, match="gh 실행 실패"):
+                _run_gh("issue", "list")
+
+    def test_generic_command_failure(self) -> None:
+        """일반 명령 실패 시 에러 메시지가 나와야 한다."""
+        import click
+
+        mock_result = MagicMock()
+        mock_result.returncode = 1
+        mock_result.stderr = "repository not found"
+
+        with (
+            patch("oh_my_kanban.commands.github_stub.shutil.which", return_value="/usr/bin/gh"),
+            patch("oh_my_kanban.commands.github_stub.subprocess.run", return_value=mock_result),
+        ):
+            with pytest.raises(click.ClickException, match="repository not found"):
+                _run_gh("issue", "list")
+
 
 # ── CLI 커맨드 통합 테스트 (subprocess mock) ──────────────────────────────────
 
@@ -125,8 +154,8 @@ class TestGitHubCLICommands:
             result = runner.invoke(cli, ["github", "issue", "view", "42", "--repo", "owner/repo"])
             assert result.exit_code == 0
 
-    def test_issue_view_negative_number_fails(self) -> None:
-        """음수 이슈 번호는 에러가 발생해야 한다."""
+    def test_issue_view_non_positive_number_fails(self) -> None:
+        """0 이하의 이슈 번호는 에러가 발생해야 한다."""
         runner = CliRunner()
         with (
             patch("oh_my_kanban.commands.github_stub.shutil.which", return_value="/usr/bin/gh"),
@@ -167,3 +196,26 @@ class TestGitHubCLICommands:
             result = runner.invoke(cli, ["github", "issue", "list"])
             assert result.exit_code != 0
             assert "cli.github.com" in result.output
+
+    def test_issue_create_command(self) -> None:
+        """omk github issue create 명령이 정상 실행되어야 한다."""
+        runner = CliRunner()
+        with (
+            patch("oh_my_kanban.commands.github_stub.shutil.which", return_value="/usr/bin/gh"),
+            patch(
+                "oh_my_kanban.commands.github_stub.subprocess.run",
+                return_value=self._mock_run("https://github.com/owner/repo/issues/1\n"),
+            ),
+        ):
+            result = runner.invoke(
+                cli,
+                ["github", "issue", "create", "--repo", "owner/repo", "--title", "Bug fix"],
+            )
+            assert result.exit_code == 0
+
+    def test_invalid_repo_format_fails(self) -> None:
+        """잘못된 레포지토리 형식은 에러가 발생해야 한다."""
+        runner = CliRunner()
+        with patch("oh_my_kanban.commands.github_stub.shutil.which", return_value="/usr/bin/gh"):
+            result = runner.invoke(cli, ["github", "issue", "list", "--repo", "../malicious/repo"])
+            assert result.exit_code != 0

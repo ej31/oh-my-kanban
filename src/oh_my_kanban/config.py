@@ -398,11 +398,8 @@ def save_preset(preset: Preset) -> None:
 
     preset_file = PRESETS_DIR / f"{preset.name}.toml"
     # 경로 트래버설 최종 방어 (load_preset과 동일한 수준)
-    try:
-        if not preset_file.resolve().is_relative_to(PRESETS_DIR.resolve()):
-            raise ValueError(f"프리셋 경로가 허용 디렉토리를 벗어남: {preset.name!r}")
-    except ValueError:
-        raise
+    if not preset_file.resolve().is_relative_to(PRESETS_DIR.resolve()):
+        raise ValueError(f"프리셋 경로가 허용 디렉토리를 벗어남: {preset.name!r}")
     lines = [
         "[preset]",
         f'name = "{escape_toml_string(preset.name)}"',

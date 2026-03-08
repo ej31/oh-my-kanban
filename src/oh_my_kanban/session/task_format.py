@@ -55,13 +55,14 @@ def build_task_title(summary: str, mode: str, *, is_subtask: bool = False) -> st
     return summary
 
 
-def build_task_description(summary: str, topics: list[str], mode: str) -> str:
+def build_task_description(summary: str, topics: list[str], mode: str, *, is_subtask: bool = False) -> str:
     """task_mode에 따라 태스크 설명을 생성한다.
 
     Args:
         summary: 태스크 요약 텍스트
         topics: 관련 토픽 목록
         mode: task_mode 설정값
+        is_subtask: 하위 태스크 여부
 
     Returns:
         태스크 설명 문자열
@@ -72,7 +73,10 @@ def build_task_description(summary: str, topics: list[str], mode: str) -> str:
     if normalized == TASK_MODE_FLAT:
         lines.append(f"**요약**: {summary}")
     elif normalized == TASK_MODE_MODULE_TASK_SUB:
-        lines.append(f"**모듈 태스크**: {summary}")
+        if is_subtask:
+            lines.append(f"**하위 태스크**: {summary}")
+        else:
+            lines.append(f"**모듈 태스크**: {summary}")
     else:
         lines.append(f"**목표**: {summary}")
 
