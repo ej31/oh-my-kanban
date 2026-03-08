@@ -60,3 +60,18 @@ def test_sanitize_multiple_patterns():
 
 def test_sanitize_empty_string():
     assert sanitize_comment("") == ""
+
+
+def test_sanitize_linear_api_key_various_lengths() -> None:
+    """Linear API 키 20-31자 범위가 모두 마스킹되는지 확인한다."""
+    # 20자 (최소)
+    short_key = "lin_api_" + "a" * 20
+    assert "[LINEAR_API_KEY]" in sanitize_comment(f"token={short_key}")
+    # 31자 (최대)
+    long_key = "lin_api_" + "a" * 31
+    assert "[LINEAR_API_KEY]" in sanitize_comment(f"token={long_key}")
+    # 19자 (범위 밖 - 마스킹 안됨, 또는 마스킹될 경우 그냥 통과)
+    boundary_key = "lin_api_" + "a" * 19
+    result = sanitize_comment(f"token={boundary_key}")
+    # 19자는 패턴({20,}) 미만이므로 마스킹되지 않아야 한다
+    assert "[LINEAR_API_KEY]" not in result

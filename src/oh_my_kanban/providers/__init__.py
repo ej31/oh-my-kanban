@@ -9,10 +9,9 @@ from oh_my_kanban.config import detect_project_toml
 if TYPE_CHECKING:
     from oh_my_kanban.config import Config
     from oh_my_kanban.provider import ProviderClient
-    from oh_my_kanban.session.state import SessionState
 
 
-def get_provider_name(cfg: "Config", state: "SessionState") -> str:
+def get_provider_name(cfg: "Config") -> str:
     """활성 provider 이름을 결정한다.
 
     우선순위:

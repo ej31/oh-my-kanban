@@ -195,7 +195,7 @@ def _handle_startup_or_resume(session_id: str, source: str) -> None:
 
         if cfg.task_mode in VALID_TASK_MODES and cfg.task_mode != "none":
             try:
-                _provider = get_provider_client(get_provider_name(cfg, state), cfg)
+                _provider = get_provider_client(get_provider_name(cfg), cfg)
                 apply_task_format(state, cfg, _provider, "session_start")
             except Exception as _e:
                 print(

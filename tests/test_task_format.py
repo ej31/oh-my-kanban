@@ -168,6 +168,7 @@ class _FakeProviderClient(ProviderClient):
         self._wi_id = wi_id
         self.call_count = 0
         self.last_title: str = ""
+        self.last_context: ProviderContext | None = None
 
     @property
     def name(self) -> str:
@@ -188,6 +189,7 @@ class _FakeProviderClient(ProviderClient):
     def create_work_item(self, context: ProviderContext, title: str, description: str = "") -> dict[str, Any]:
         self.call_count += 1
         self.last_title = title
+        self.last_context = context
         return {"id": self._wi_id}
 
     def switch_task(self, context: ProviderContext, new_task_title: str, reason: str = "") -> dict[str, Any]:
@@ -314,6 +316,8 @@ class TestApplyTaskFormatSessionStart:
 
         # create_work_item에 전달된 context의 project_id는 cfg 값
         assert client.call_count == 1
+        assert client.last_context is not None
+        assert client.last_context.project_id == "cfg-project-id"
 
     def test_state_project_id_used_when_cfg_empty(self) -> None:
         """cfg.project_id가 없고 state.plane_context.project_id가 있으면 생성된다."""
@@ -325,6 +329,8 @@ class TestApplyTaskFormatSessionStart:
             apply_task_format(state, cfg, client, trigger="session_start")
 
         assert client.call_count == 1
+        assert client.last_context is not None
+        assert client.last_context.project_id == "state-only-project-id"
 
 
 # ── TestApplyTaskFormatDriftDetected ──────────────────────────────────────────

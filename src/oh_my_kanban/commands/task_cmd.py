@@ -26,8 +26,7 @@ def task_list() -> None:
         click.echo(f"\n세션: {state.session_id}")
         click.echo(f"project: {ctx.project_id or '(없음)'}")
 
-        # auto_created_task_id는 향후 US-000에서 추가될 예정
-        auto_task_id = getattr(ctx, "auto_created_task_id", None)
+        auto_task_id = ctx.auto_created_task_id
         if auto_task_id:
             click.echo(f"Main Task (auto): {auto_task_id}")
 
@@ -54,8 +53,7 @@ def task_show() -> None:
     click.echo(f"세션: {state.session_id}")
     click.echo(f"project: {ctx.project_id or '(없음)'}")
 
-    # auto_created_task_id는 향후 US-000에서 추가될 예정
-    auto_task_id = getattr(ctx, "auto_created_task_id", None)
+    auto_task_id = ctx.auto_created_task_id
 
     if ctx.focused_work_item_id:
         click.echo(f"focused WI: {ctx.focused_work_item_id}")

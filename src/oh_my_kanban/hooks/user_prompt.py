@@ -364,12 +364,12 @@ def main() -> None:
                 # Sub Task WI 자동 생성 (main-sub 모드 + Main Task 존재 시)
                 try:
                     if (
-                        cfg.task_mode == "main-sub"
-                        and getattr(state.plane_context, "auto_created_task_id", None)
+                        cfg.task_mode in ("main-sub", "module-task-sub")
+                        and state.plane_context.auto_created_task_id
                     ):
                         from oh_my_kanban.session.task_format import apply_task_format
                         from oh_my_kanban.providers import get_provider_client, get_provider_name
-                        _provider = get_provider_client(get_provider_name(cfg, state), cfg)
+                        _provider = get_provider_client(get_provider_name(cfg), cfg)
                         apply_task_format(state, cfg, _provider, "drift_detected", prompt_text)
                 except Exception as _e:
                     print(
@@ -377,7 +377,7 @@ def main() -> None:
                         file=sys.stderr,
                     )
 
-        # 7. ST-20: 팀원 댓글 폴링 (2분 throttle + circuit breaker)
+        # 8. ST-20: 팀원 댓글 폴링 (2분 throttle + circuit breaker)
         try:
             if cfg.api_key:
                 _poll_comments(state, cfg)

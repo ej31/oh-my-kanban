@@ -23,7 +23,8 @@ if TYPE_CHECKING:
 TASK_MODE_MAIN_SUB = "main-sub"
 TASK_MODE_FLAT = "flat"
 TASK_MODE_MODULE_TASK_SUB = "module-task-sub"
-_VALID_TASK_MODES = {TASK_MODE_MAIN_SUB, TASK_MODE_FLAT, TASK_MODE_MODULE_TASK_SUB}
+TASK_MODE_NONE = "none"
+_VALID_TASK_MODES = {TASK_MODE_MAIN_SUB, TASK_MODE_FLAT, TASK_MODE_MODULE_TASK_SUB, TASK_MODE_NONE}
 
 # apply 엔진에서 사용하는 frozenset (none 포함, module-task-sub 포함)
 VALID_TASK_MODES = frozenset({"main-sub", "flat", "none", "module-task-sub"})
@@ -110,10 +111,11 @@ def build_task_description(summary: str, topics: list[str], mode: str, *, is_sub
 # ── apply 엔진 ────────────────────────────────────────────────────────────────
 
 
-def _sanitize_wi_title(text: str, max_len: int = 60) -> str:
-    """WI 제목에 사용하기 안전한 문자열로 정제한다."""
+def _sanitize_wi_title(text: str, max_len: int = 60, *, default: str = "") -> str:
+    """WI 제목에 사용하기 안전한 문자열로 정제한다. 결과가 비어있으면 default를 반환한다."""
     sanitized = _UNSAFE_TITLE_RE.sub(" ", text).strip()
-    return sanitized[:max_len].strip()
+    result = sanitized[:max_len].strip()
+    return result if result else default
 
 
 TaskFormatTrigger = Literal["session_start", "drift_detected"]
@@ -169,14 +171,25 @@ def apply_task_format(
     if task_mode == "none":
         return
 
-    # 3. project_id 확인 (cfg 우선, 없으면 세션의 plane_context 참조)
-    project_id = cfg.project_id or state.plane_context.project_id
-    if not project_id:
-        print(
-            "[omk] task_format: project_id가 설정되지 않아 WI 자동 생성을 건너뜁니다.",
-            file=sys.stderr,
-        )
-        return
+    # 3. provider별 대상 식별자 확인
+    project_id = ""
+    if provider_client.name == "plane":
+        project_id = cfg.project_id or state.plane_context.project_id
+        if not project_id:
+            print(
+                "[omk] task_format: project_id가 설정되지 않아 WI 자동 생성을 건너뜁니다.",
+                file=sys.stderr,
+            )
+            return
+    else:
+        # Linear 등 다른 provider는 provider 자체에서 target 검증
+        project_id = cfg.project_id or state.plane_context.project_id
+        if not project_id:
+            print(
+                "[omk] task_format: project_id가 설정되지 않아 WI 자동 생성을 건너뜁니다.",
+                file=sys.stderr,
+            )
+            return
 
     # 4. trigger별 처리
     if trigger == "session_start":
@@ -198,8 +211,9 @@ def _handle_session_start(
 
     # WI 제목 결정: scope.summary 또는 기본 제목
     title = _sanitize_wi_title(
-        state.scope.summary or f"[omk] 새 세션 {state.session_id[:8]}",
+        state.scope.summary or "",
         max_len=120,
+        default=f"[omk] 새 세션 {state.session_id[:8]}",
     )
 
     # provider_context 구성 (ProviderContext로 변환)
@@ -261,10 +275,9 @@ def _handle_drift_detected(
 
     # 서브태스크 제목 결정
     timestamp = now_iso()
-    title = (
-        _sanitize_wi_title(prompt_text)
-        if prompt_text and prompt_text.strip()
-        else f"[omk] 드리프트 작업 {timestamp}"
+    title = _sanitize_wi_title(
+        prompt_text if prompt_text and prompt_text.strip() else "",
+        default=f"[omk] 드리프트 작업 {timestamp}",
     )
 
     # provider_context 구성

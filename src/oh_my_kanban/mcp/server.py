@@ -424,13 +424,17 @@ def omk_get_task_format_status(session_id: str = "") -> dict[str, Any]:
 
     cfg = load_config()
     from oh_my_kanban.providers import get_provider_name as _get_provider_name
+    try:
+        provider_type = _get_provider_name(cfg)
+    except Exception as _e:
+        provider_type = f"unknown({type(_e).__name__})"
     ctx = state.plane_context
     return {
         "task_mode": cfg.task_mode,
         "work_item_ids": list(ctx.work_item_ids),
         "focused_work_item_id": ctx.focused_work_item_id,
         "auto_created_task_id": getattr(ctx, "auto_created_task_id", None),
-        "provider_type": _get_provider_name(cfg, state),
+        "provider_type": provider_type,
     }
 
 

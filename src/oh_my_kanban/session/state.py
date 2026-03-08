@@ -26,6 +26,14 @@ ACTIVE_SESSIONS_DISPLAY_MAX = 10
 TIMELINE_DISPLAY_MAX = 50
 
 
+def _safe_int(value: object, default: int = 0) -> int:
+    """값을 안전하게 int로 변환한다. 변환 불가 시 default 반환."""
+    try:
+        return int(value or 0)
+    except (ValueError, TypeError):
+        return default
+
+
 def now_iso() -> str:
     """현재 UTC 시각을 ISO 포맷 문자열로 반환한다."""
     return datetime.now(timezone.utc).isoformat()
@@ -168,9 +176,9 @@ class SessionState:
                 focused_work_item_id=plane_data.get("focused_work_item_id"),
                 last_comment_check=plane_data.get("last_comment_check"),
                 known_comment_ids=plane_data.get("known_comment_ids", []),
-                comment_poll_failures=int(plane_data.get("comment_poll_failures", 0) or 0),
+                comment_poll_failures=_safe_int(plane_data.get("comment_poll_failures", 0)),
                 last_subtask_check=plane_data.get("last_subtask_check"),
-                subtask_check_failures=int(plane_data.get("subtask_check_failures", 0) or 0),
+                subtask_check_failures=_safe_int(plane_data.get("subtask_check_failures", 0)),
                 subtask_completion_nudged_ids=plane_data.get("subtask_completion_nudged_ids", []),
                 auto_created_task_id=plane_data.get("auto_created_task_id"),
             ),
