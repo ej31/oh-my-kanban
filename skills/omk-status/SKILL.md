@@ -1,29 +1,41 @@
 ---
 name: omk-status
-description: oh-my-kanban 훅 설치 상태와 활성 세션 목록을 확인합니다.
+description: 현재 Claude Code 세션에 연결된 Plane Work Item 정보를 표시한다.
 ---
 
-# omk-status 스킬 실행 지침
+# omk status — 현재 세션 WI 상태 표시
 
-사용자가 /omk-status를 실행하면 아래를 수행하세요.
+현재 Claude Code 세션에 연결된 Plane Work Item 정보를 표시한다.
 
-## 상태 확인
+## 표시 정보
 
-다음 명령을 실행합니다:
-```bash
-omk hooks status
+1. **연결된 WI 목록** — `state.plane_context.work_item_ids`
+2. **집중 WI** — `state.plane_context.focused_work_item_id`
+3. **메인 태스크** — `state.plane_context.main_task_id`
+4. **외부 삭제된 WI** — `state.plane_context.stale_work_item_ids`
+5. **세션 통계** — 요청 횟수, 수정 파일 수
+
+## 현재 상태 조회 방법
+
+MCP tool을 사용한다:
+
+```python
+omk_get_session_status()
 ```
 
-출력 내용을 사용자에게 요약하여 보고합니다:
-- 전역/로컬 훅 설치 여부
-- 등록된 훅 이벤트 목록 (SessionStart, UserPromptSubmit, PostToolUse, SessionEnd)
-- 현재 활성 세션 수와 요약
+또는 세션 파일에서 직접 읽는다:
 
-## 추가 정보
-
-드리프트 통계를 보려면:
 ```bash
-omk hooks drift-report
+cat ~/.local/share/oh-my-kanban/sessions/<session_id>.json | python3 -m json.tool
 ```
 
-훅이 설치되어 있지 않으면 `/omk-setup` 스킬로 설치를 안내하세요.
+## PlaneContext 읽기
+
+세션 상태에서 다음을 확인한다:
+
+- `plane_context.project_id` — 프로젝트 UUID
+- `plane_context.work_item_ids` — 추적 중인 WI UUID 목록
+- `plane_context.focused_work_item_id` — 현재 집중 작업 WI
+- `plane_context.last_comment_check` — 마지막 댓글 폴링 시각
+
+WI가 연결되지 않은 경우: `/oh-my-kanban:focus <WI-ID>` 또는 `/oh-my-kanban:create-task`로 연결한다.
