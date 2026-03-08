@@ -91,8 +91,9 @@ export const messages = {
     claudeHooksInstalling: 'Installing hooks...',
     claudeHooksInstalled: 'Hooks installed',
     claudeHooksFailed: 'Hook installation failed — run manually: omk hooks install',
-    claudeMcpTitle: 'MCP Server Setup',
-    claudeMcpNote: 'Register oh-my-kanban as an MCP server in Claude Code.\nAdd to {path}:\n\n  {\n    "mcpServers": {\n      "oh-my-kanban": {\n        "command": "omk",\n        "args": ["mcp", "serve"]\n      }\n    }\n  }',
+    claudeMcpInstalling: 'Registering MCP server...',
+    claudeMcpInstalled: 'MCP server registered',
+    claudeMcpFailed: 'MCP server registration failed — run manually: omk mcp install',
 
     // plane project
     planeFetchingProjects: 'Fetching projects...',
@@ -196,8 +197,9 @@ export const messages = {
     claudeHooksInstalling: '훅 설치 중...',
     claudeHooksInstalled: '훅 설치 완료',
     claudeHooksFailed: '훅 설치 실패 — 수동 실행: omk hooks install',
-    claudeMcpTitle: 'MCP 서버 설정',
-    claudeMcpNote: 'oh-my-kanban을 Claude Code MCP 서버로 등록하세요.\n{path} 에 아래 내용을 추가하세요:\n\n  {\n    "mcpServers": {\n      "oh-my-kanban": {\n        "command": "omk",\n        "args": ["mcp", "serve"]\n      }\n    }\n  }',
+    claudeMcpInstalling: 'MCP 서버 등록 중...',
+    claudeMcpInstalled: 'MCP 서버 등록 완료',
+    claudeMcpFailed: 'MCP 서버 등록 실패 — 수동 실행: omk mcp install',
 
     // plane project
     planeFetchingProjects: '프로젝트 목록 조회 중...',

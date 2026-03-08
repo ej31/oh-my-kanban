@@ -35,11 +35,6 @@ export async function promptClaudeScope(python: string): Promise<void> {
     throw new RestartWizard();
   }
 
-  const settingsPath =
-    scope === 'project' ? projectScopePath
-    : scope === 'local' ? localScopePath
-    : userScopePath;
-
   // omk hooks install [--local] [--local-only] 실행
   const s = spinner();
   s.start(m.claudeHooksInstalling);
@@ -51,6 +46,7 @@ export async function promptClaudeScope(python: string): Promise<void> {
   const result = spawnSync(python, args, {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
+    timeout: 30_000,
   });
 
   if (result.status !== 0 || result.error) {
@@ -62,9 +58,26 @@ export async function promptClaudeScope(python: string): Promise<void> {
     s.stop(pc.green(`✓ ${m.claudeHooksInstalled}`));
   }
 
-  // MCP 서버 등록 안내
-  note(
-    padForNote(m.claudeMcpNote.replace('{path}', settingsPath)),
-    padTitle(m.claudeMcpTitle),
-  );
+  // MCP 서버 자동 등록
+  const s2 = spinner();
+  s2.start(m.claudeMcpInstalling);
+
+  const mcpArgs = ['-m', 'oh_my_kanban', 'mcp', 'install'];
+  if (scope === 'project') mcpArgs.push('--local');
+  if (scope === 'local') mcpArgs.push('--local-only');
+
+  const mcpResult = spawnSync(python, mcpArgs, {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+    timeout: 30_000,
+  });
+
+  if (mcpResult.status !== 0 || mcpResult.error) {
+    s2.stop(pc.red(`✗ ${m.claudeMcpFailed}`));
+    if (mcpResult.stderr?.trim()) {
+      console.log(pc.dim(mcpResult.stderr.trim()));
+    }
+  } else {
+    s2.stop(pc.green(`✓ ${m.claudeMcpInstalled}`));
+  }
 }
