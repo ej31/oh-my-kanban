@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import sys
-from pathlib import Path
 
 import click
 
@@ -134,6 +133,8 @@ def _uninstall_mcp(local: bool, local_only: bool = False) -> None:
 )
 def install(local: bool, local_only: bool) -> None:
     """Claude Code에 oh-my-kanban MCP 서버를 등록한다."""
+    if local and local_only:
+        raise click.UsageError("--local과 --local-only는 동시에 사용할 수 없습니다.")
     _install_mcp(local, local_only)
 
 
@@ -154,6 +155,8 @@ def install(local: bool, local_only: bool) -> None:
 )
 def uninstall(local: bool, local_only: bool) -> None:
     """Claude Code에서 oh-my-kanban MCP 서버를 제거한다."""
+    if local and local_only:
+        raise click.UsageError("--local과 --local-only는 동시에 사용할 수 없습니다.")
     _uninstall_mcp(local, local_only)
 
 

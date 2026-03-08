@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
+import click
 import pytest
 
 from oh_my_kanban.commands.mcp_cmd import (
@@ -13,6 +14,8 @@ from oh_my_kanban.commands.mcp_cmd import (
     MCP_SERVER_KEY,
     _install_mcp,
     _uninstall_mcp,
+    install,
+    uninstall,
 )
 
 
@@ -169,3 +172,94 @@ class TestUninstallMcp:
         ):
             # 예외 없이 정상 종료
             _uninstall_mcp(local=False)
+
+    def test_잘못된_json_파일_uninstall_ClickException(self, tmp_path: Path) -> None:
+        """uninstall 시 settings.json이 유효하지 않은 JSON이면 ClickException을 발생시킨다."""
+        settings_path = tmp_path / "settings.json"
+        settings_path.write_text("{invalid json", encoding="utf-8")
+
+        with (
+            patch(
+                "oh_my_kanban.commands.hooks._settings_path",
+                return_value=settings_path,
+            ),
+            pytest.raises(click.ClickException, match="파싱 실패"),
+        ):
+            _uninstall_mcp(local=False)
+
+
+class TestFlagForwarding:
+    """local/local_only 플래그 전달 검증."""
+
+    @pytest.mark.parametrize(
+        ("local", "local_only", "expected_local", "expected_local_only"),
+        [
+            (False, False, False, False),
+            (True, False, True, False),
+            (False, True, False, True),
+        ],
+        ids=["user-scope", "project-scope", "local-scope"],
+    )
+    def test_install_플래그_전달(
+        self,
+        tmp_path: Path,
+        local: bool,
+        local_only: bool,
+        expected_local: bool,
+        expected_local_only: bool,
+    ) -> None:
+        """_install_mcp에 local/local_only 플래그가 올바르게 전달된다."""
+        settings_path = tmp_path / "settings.json"
+
+        with patch(
+            "oh_my_kanban.commands.hooks._settings_path",
+            return_value=settings_path,
+        ) as mock_path:
+            _install_mcp(local=local, local_only=local_only)
+            mock_path.assert_called_once_with(expected_local, expected_local_only)
+
+        data = json.loads(settings_path.read_text(encoding="utf-8"))
+        assert data["mcpServers"][MCP_SERVER_KEY] == MCP_SERVER_CONFIG
+
+    @pytest.mark.parametrize(
+        ("local", "local_only"),
+        [
+            (False, False),
+            (True, False),
+            (False, True),
+        ],
+        ids=["user-scope", "project-scope", "local-scope"],
+    )
+    def test_uninstall_플래그_전달(
+        self,
+        tmp_path: Path,
+        local: bool,
+        local_only: bool,
+    ) -> None:
+        """_uninstall_mcp에 local/local_only 플래그가 올바르게 전달된다."""
+        settings_path = tmp_path / "settings.json"
+        existing = {"mcpServers": {MCP_SERVER_KEY: MCP_SERVER_CONFIG}}
+        settings_path.write_text(json.dumps(existing), encoding="utf-8")
+
+        with patch(
+            "oh_my_kanban.commands.hooks._settings_path",
+            return_value=settings_path,
+        ) as mock_path:
+            _uninstall_mcp(local=local, local_only=local_only)
+            mock_path.assert_called_once_with(local, local_only)
+
+
+class TestMutualExclusion:
+    """--local과 --local-only 상호 배타 검증."""
+
+    def test_install_둘_다_지정시_UsageError(self) -> None:
+        """install에서 --local과 --local-only를 동시에 지정하면 UsageError."""
+        with pytest.raises(click.UsageError, match="동시에 사용할 수 없습니다"):
+            ctx = click.Context(install)
+            ctx.invoke(install, local=True, local_only=True)
+
+    def test_uninstall_둘_다_지정시_UsageError(self) -> None:
+        """uninstall에서 --local과 --local-only를 동시에 지정하면 UsageError."""
+        with pytest.raises(click.UsageError, match="동시에 사용할 수 없습니다"):
+            ctx = click.Context(uninstall)
+            ctx.invoke(uninstall, local=True, local_only=True)
