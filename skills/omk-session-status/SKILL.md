@@ -3,6 +3,8 @@ name: omk-session-status
 description: Checks the current oh-my-kanban session tracking status. Displays the active session ID, goal, linked Plane Work Items, and progress statistics at a glance.
 ---
 
+# omk-session-status - Check Session Tracking Status
+
 Please check the current oh-my-kanban session tracking status.
 
 Run the following command:

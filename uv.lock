@@ -564,7 +564,7 @@ wheels = [
 
 [[package]]
 name = "oh-my-kanban"
-version = "0.1.3"
+version = "0.2.14"
 source = { editable = "." }
 dependencies = [
     { name = "click" },

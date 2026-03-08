@@ -3,6 +3,8 @@ name: omk-new-session
 description: Ends the current session and explicitly switches to a new work scope. Use this when previous work is complete and you are starting work with a completely different goal.
 ---
 
+# omk-new-session - Start a New Work Session
+
 Please end the current session and start a new work session.
 
 **Step 1: End the current session**

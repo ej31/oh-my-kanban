@@ -65,4 +65,4 @@ Update the session's `known_comment_ids` with the latest comment ID list.
 
 - Display a clear error message if comment retrieval fails
 - Comments posted by omk itself (starting with ## omk) should be visually distinguished with a different color/format
-- If multiple WIs are linked, show comments for all of them
+- If multiple WIs are linked, show comments for the focused WI

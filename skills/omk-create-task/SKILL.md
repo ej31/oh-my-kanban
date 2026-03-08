@@ -17,7 +17,7 @@ When the user requests "/oh-my-kanban:create-task", "/omk:ct" or phrases like "c
 
 Confirm the Task name and description with the user. If it can be inferred from conversation context, infer it and ask for confirmation:
 
-```
+```text
 New Task name: <user input or inferred>
 Description (optional): <user input>
 ```
@@ -33,7 +33,7 @@ Check the `task_mode` value in `~/.config/oh-my-kanban/config.toml`:
 Create the WI with the appropriate structure based on task_mode:
 
 **Mode A (main-sub):**
-```
+```text
 mcp__plane__create_work_item(
   project_id="<project_id>",
   name="<task_name>",
@@ -45,11 +45,11 @@ mcp__plane__create_work_item(
 
 **Mode B (module-task-sub):**
 First retrieve the Module list:
-```
+```text
 mcp__plane__list_modules(project_id="<project_id>")
 ```
 After selecting a Module, create the WI:
-```
+```text
 mcp__plane__create_work_item(
   project_id="<project_id>",
   name="<task_name>",
@@ -63,7 +63,7 @@ mcp__plane__add_work_items_to_module(module_id="<module_id>", work_item_ids=["<n
 ### 4. Add Session Start Comment
 
 Add a session start comment to the created WI:
-```
+```text
 mcp__plane__create_work_item_comment(
   work_item_id="<new_wi_id>",
   comment_html="## omk Session Start\n\n**Session ID**: `<session_id[:8]>...`\n**Start time**: <timestamp>\n**Goal**: <task_name>"
@@ -78,7 +78,7 @@ Reflect the created WI UUID in the session's plane_context:
 
 ### 6. Confirmation Notification
 
-```
+```text
 [omk] Task has been registered.
   WI: <identifier> - <task_name>
   URL: <plane_url>

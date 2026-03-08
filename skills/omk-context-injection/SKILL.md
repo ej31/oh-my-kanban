@@ -25,7 +25,7 @@ Check the linked WIs from the current session's PlaneContext:
 
 For each linked WI:
 
-```
+```text
 mcp__plane__retrieve_work_item(work_item_id="<wi_id>")
 mcp__plane__list_work_item_comments(work_item_id="<wi_id>")
 mcp__plane__list_work_items(project_id="<project_id>", parent="<wi_id>")
@@ -35,7 +35,7 @@ mcp__plane__list_work_items(project_id="<project_id>", parent="<wi_id>")
 
 Structure the collected information in the following format:
 
-```
+```text
 [omk: Plane Work Item Context]
 
 ### <identifier>: <wi_name>
@@ -62,7 +62,7 @@ Manual injection is needed when:
 
 ### 5. Confirm Injection Results
 
-```
+```text
 [omk] WI context has been injected.
   Task: <identifier>: <wi_name>
   Included: title, status, description, <n> comments, <n> sub-tasks

@@ -48,7 +48,11 @@ mcp__plane__create_work_item_comment(
 )
 ```
 
-### 4. Confirm Notification
+### 4. Present Draft to User for Confirmation
+
+Present the draft handoff memo to the user for confirmation before posting.
+
+### 5. Confirm Notification
 
 ```text
 [omk] Handoff memo has been recorded.
@@ -62,3 +66,4 @@ mcp__plane__create_work_item_comment(
 - Handoff memos must contain specific and actionable information.
 - It is helpful to include specific location information such as file paths, function names, and line numbers.
 - If recording fails, display a clear error message.
+- HTML-escape all user-sourced dynamic fields before posting comments

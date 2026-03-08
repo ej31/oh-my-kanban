@@ -16,7 +16,8 @@ omk doctor
 ```
 
 Example output:
-```
+
+```text
 Starting oh-my-kanban diagnostics...
 
   - [PASS] Config file: Configuration loaded (profile: default)
@@ -41,7 +42,7 @@ Check hook installation status (global/project/personal-local) and active sessio
 
 Combine the output from both commands and present the report in the following format:
 
-```
+```text
 ## omk-doctor Diagnostic Report
 
 | Item | Status | Details |

@@ -252,7 +252,8 @@ query($owner: String!, $number: Int!) {
   user(login: $owner) {
     projectV2(number: $number) {
       id
-      items(first: 200) {
+      items(first: 100) {
+        pageInfo { endCursor hasNextPage }
         nodes {
           id
           content {
@@ -266,6 +267,8 @@ query($owner: String!, $number: Int!) {
   }
 }' -f owner=OWNER -F number=PROJECT_NUMBER
 ```
+
+> Note: If the project has more than 100 items, use cursor pagination by passing `after: $cursor` and the `endCursor` value from `pageInfo`.
 
 Change single-select fields like Status:
 
@@ -325,7 +328,7 @@ Adjust labels, assignees, milestones:
 
 ```bash
 gh issue edit ISSUE_NUMBER -R OWNER/REPO --add-label "blocked"
-gh issue edit ISSUE_NUMBER -R OWNER/REPO --add-assignee " @me"
+gh issue edit ISSUE_NUMBER -R OWNER/REPO --add-assignee "@me"
 gh issue edit ISSUE_NUMBER -R OWNER/REPO --milestone "Sprint 12"
 ```
 

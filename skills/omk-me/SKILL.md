@@ -63,5 +63,6 @@ mcp__plane__get_me()
 ## Notes
 
 - If reading the session file fails, output "Unable to load session information"
-- Convert timestamps to local time (UTC+9) where possible
+- Convert timestamps to the user's local timezone where possible
+- If the local timezone cannot be determined, display timestamps in UTC and label them clearly
 - Construct the WI URL from `base_url`, `workspace_slug`, and `project_id` in the config

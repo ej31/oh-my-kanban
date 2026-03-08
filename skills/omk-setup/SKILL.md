@@ -30,7 +30,7 @@ omk hooks status
 2. **API key** - Issued from Plane Profile -> API Tokens
 3. **Workspace slug** - The workspace segment in the Plane URL
 4. **Project ID** - UUID of the current project
-   If `PLANE_PROJECT_ID` is not set, the project can also be detected from `.omk/project.toml` or `CLAUDE.md`, depending on repository setup.
+   If `PLANE_PROJECT_ID` is not set, omk will attempt to detect the project ID from `.omk/project.toml` or `CLAUDE.md` (checked in that order).
 
 ## Check current settings
 

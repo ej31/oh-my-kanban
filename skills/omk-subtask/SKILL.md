@@ -18,6 +18,7 @@ When the user requests "/oh-my-kanban:subtask", "/omk:st" or "add subtask", "cre
 Check the current parent WI from the session file:
 
 - `state.plane_context.focused_work_item_id` - use this as `parent_id`
+- `state.plane_context.project_id` - use this for `project_id`, state lookup, and label lookup
 
 If no WI is linked:
 

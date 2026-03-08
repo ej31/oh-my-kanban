@@ -35,9 +35,9 @@ If the user has not provided the decision details, infer them from the current c
 
 ```python
 # User input must be processed through sanitize_comment() or equivalent escaping before insertion
-mcp__plane__create_work_item_comment(
+omk_add_comment(
   work_item_id="<focused_wi_id>",
-  comment_html=(
+  comment=(
     "## Decision Record\n\n"
     "**Decision**: <sanitized_decision_summary>\n\n"
     "**Rationale**: <sanitized_rationale>\n\n"

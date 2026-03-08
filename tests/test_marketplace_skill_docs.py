@@ -12,13 +12,11 @@ MARKETPLACE_JSON = ROOT / "src" / "oh_my_kanban" / "plugin_data" / ".claude-plug
 PLUGIN_JSON = ROOT / "src" / "oh_my_kanban" / "plugin_data" / ".claude-plugin" / "plugin.json"
 KOREAN_RE = re.compile(r"[가-힣]")
 
-ROOT_TO_PACKAGED_SKILLS = [
-    "omk-doctor",
-    "omk-github-projects",
-    "omk-help",
-    "omk-setup",
-    "omk-status",
-]
+ROOT_TO_PACKAGED_SKILLS = sorted(
+    path.parent.name
+    for path in PACKAGED_SKILLS_DIR.glob("*/SKILL.md")
+    if (SKILLS_DIR / path.parent.name / "SKILL.md").exists()
+)
 
 
 def test_marketplace_skill_docs_are_english() -> None:

@@ -75,7 +75,8 @@ Records the current git branch information as a Work Item comment and sets a WI 
 
 ## Notes
 
-- If a git command fails, display an error and stop.
+- If `git branch --show-current` fails, display an error and stop.
+- If `git remote get-url origin` fails, continue without creating a WI link.
 - If no remote repository URL is available, skip adding the WI link and also omit the link line from the result message.
 - SSH/scp format remotes (`git@...`, `ssh://...`) are normalized to browser-accessible HTTPS URLs.
 - Branch names are URL-encoded before being used in links.

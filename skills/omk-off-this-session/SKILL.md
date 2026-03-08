@@ -3,6 +3,8 @@ name: omk-off-this-session
 description: Stops oh-my-kanban automatic tracking for the current Claude Code session. Already-created Plane Work Items are preserved.
 ---
 
+# omk-off-this-session - Disable Tracking for This Session
+
 Please stop oh-my-kanban automatic tracking for the current Claude Code session.
 
 Run the following command:

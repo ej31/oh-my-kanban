@@ -35,8 +35,8 @@ Handle snapshot requests by working directly with the local session JSON files.
 
 ```text
 [omk] Saved snapshots:
-  1. omk-snap-2026-03-08T14:30:00 - "Before OAuth refactor cleanup"
-  2. omk-snap-2026-03-08T12:00:00 - (no note)
+  1. {session_id}_20260308T143000.json - "Before OAuth refactor cleanup"
+  2. {session_id}_20260308T120000.json - (no note)
 ```
 
 ## Restore a Snapshot
