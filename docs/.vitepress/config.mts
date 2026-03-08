@@ -5,7 +5,7 @@ export default defineConfig({
   title: 'oh-my-kanban',
   description: 'Plane + Claude Code 자동 WI 연동 플러그인',
 
-  // 한국어 기본, 영어 지원
+  // 한국어/영어 문서 지원
   locales: {
     ko: {
       label: '한국어',

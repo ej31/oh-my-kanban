@@ -6,28 +6,34 @@ import os
 import re
 import stat
 import sys
-import urllib.parse
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 # 프로필 이름 허용 문자: 영문자, 숫자, 하이픈, 밑줄만 허용 (TOML 섹션 헤더 인젝션 방지)
 _PROFILE_NAME_RE = re.compile(r'^[a-zA-Z0-9_-]+$')
 
-# workspace_slug 허용 형식: 영문자, 숫자, 하이픈 (Plane slug 형식)
-_SLUG_RE = re.compile(r'^[a-zA-Z0-9_-]+$')
+# UUID 형식 검증 패턴 (project_id 등) — 외부 모듈에서도 import하여 사용
+UUID_RE = re.compile(r'^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$')
 
-# 허용 태스크 모드 / 업로드 레벨 / 형식 프리셋
-_VALID_TASK_MODES = frozenset({"main-sub", "module-task-sub"})
-_VALID_UPLOAD_LEVELS = frozenset({"metadata", "full"})
-_VALID_FORMAT_PRESETS = frozenset({"detailed", "normal", "eco"})
+# .omk 디렉토리 이름 상수 — 외부 모듈에서도 import하여 사용
+OMK_DIR_NAME = ".omk"
+
+# project_id 소스 레이블 (사람이 읽기 좋은 형식) — 외부 모듈에서도 import하여 사용
+SOURCE_LABELS: dict[str, str] = {
+    "env": "환경변수 (PLANE_PROJECT_ID)",
+    "omk_project_toml": ".omk/project.toml",
+    "claude_md": "CLAUDE.md",
+    "config_toml": "~/.config/oh-my-kanban/config.toml",
+    "": "(소스 불명)",
+}
 
 # 저장 허용 설정 키 화이트리스트 (임의 키 TOML 인젝션 방지)
 _ALLOWED_CONFIG_KEYS = frozenset({
     "base_url", "api_key", "workspace_slug", "project_id",
     "output", "linear_api_key", "linear_team_id",
-    "drift_sensitivity", "drift_cooldown",
-    "task_mode", "upload_level", "auto_archive_days",
-    "auto_complete_subtasks", "session_retention_days", "format_preset",
+    "drift_sensitivity", "drift_cooldown", "task_mode",
+    "upload_level", "auto_archive_days", "auto_complete_subtasks",
+    "session_retention_days",
 })
 
 if sys.version_info >= (3, 11):
@@ -60,13 +66,12 @@ class Config:
     linear_team_id: str = ""
     drift_sensitivity: float = 0.5
     drift_cooldown: int = 3
-    # WI 워크플로우 설정
-    task_mode: str = "main-sub"          # "main-sub" | "module-task-sub"
-    upload_level: str = "metadata"       # "metadata" | "full"
-    auto_archive_days: int = 7           # 0이면 비활성화
+    task_mode: str = "main-sub"
+    upload_level: str = "metadata"
+    auto_archive_days: int = 7
     auto_complete_subtasks: bool = True
     session_retention_days: int = 30
-    format_preset: str = "normal"        # "detailed" | "normal" | "eco"
+    project_id_source: str = ""  # 활성 project_id의 출처: "env", "omk_project_toml", "claude_md", "config_toml", ""
 
 
 def detect_project_id() -> str:
@@ -85,11 +90,37 @@ def detect_project_id() -> str:
     return ""
 
 
+def detect_project_toml() -> tuple[str, str]:
+    """cwd에서 상위로 올라가며 .omk/project.toml의 project_id를 찾는다.
+
+    Returns:
+        (project_id, provider) 튜플. 찾지 못하면 ("", "").
+    """
+    current = Path.cwd()
+    for parent in [current, *current.parents]:
+        project_toml = parent / ".omk" / "project.toml"
+        if project_toml.exists():
+            try:
+                with open(project_toml, "rb") as f:
+                    data = tomllib.load(f)
+                section = data.get("project", {})
+                if not isinstance(section, dict):
+                    continue
+                pid = section.get("project_id", "")
+                provider = section.get("provider", "plane")
+                if pid and UUID_RE.match(pid.lower()):
+                    return pid, provider
+            except (OSError, tomllib.TOMLDecodeError):
+                continue
+    return "", ""
+
+
 def load_config(profile: str = "default") -> Config:
     """설정을 로드한다. 우선순위: env vars > TOML 파일."""
     cfg = Config(profile=profile)
 
-    # 1. TOML 파일에서 기본값 로드
+    # 1. TOML 파일에서 기본값 로드 (project_id는 별도 변수에 보관)
+    _toml_project_id: str = ""
     if CONFIG_FILE.exists():
         try:
             with open(CONFIG_FILE, "rb") as f:
@@ -98,7 +129,8 @@ def load_config(profile: str = "default") -> Config:
             cfg.base_url = section.get("base_url", cfg.base_url)
             cfg.api_key = section.get("api_key", cfg.api_key)
             cfg.workspace_slug = section.get("workspace_slug", cfg.workspace_slug)
-            cfg.project_id = section.get("project_id", cfg.project_id)
+            # project_id는 최종 결정 로직에서 처리하므로 별도 변수에 저장
+            _toml_project_id = section.get("project_id", "")
             cfg.output = section.get("output", cfg.output)
             cfg.linear_api_key = section.get("linear_api_key", cfg.linear_api_key)
             cfg.linear_team_id = section.get("linear_team_id", cfg.linear_team_id)
@@ -107,92 +139,25 @@ def load_config(profile: str = "default") -> Config:
             if "drift_cooldown" in section:
                 cfg.drift_cooldown = max(0, int(section["drift_cooldown"]))
             if "task_mode" in section:
-                val = section["task_mode"]
-                if val in _VALID_TASK_MODES:
-                    cfg.task_mode = val
-                else:
-                    print(
-                        f"경고: task_mode='{val}'은 유효하지 않습니다. "
-                        f"허용 값: {', '.join(sorted(_VALID_TASK_MODES))}. 기본값 유지.",
-                        file=sys.stderr,
-                    )
+                cfg.task_mode = str(section["task_mode"])
             if "upload_level" in section:
-                val = section["upload_level"]
-                if val in _VALID_UPLOAD_LEVELS:
-                    cfg.upload_level = val
-                else:
-                    print(
-                        f"경고: upload_level='{val}'은 유효하지 않습니다. "
-                        f"허용 값: {', '.join(sorted(_VALID_UPLOAD_LEVELS))}. 기본값 유지.",
-                        file=sys.stderr,
-                    )
+                cfg.upload_level = str(section["upload_level"])
             if "auto_archive_days" in section:
-                try:
-                    cfg.auto_archive_days = max(0, int(section["auto_archive_days"]))
-                except (ValueError, TypeError):
-                    print(
-                        f"경고: auto_archive_days='{section['auto_archive_days']}'은 유효한 정수 값이 아닙니다. "
-                        f"기본값 {cfg.auto_archive_days} 사용.",
-                        file=sys.stderr,
-                    )
+                cfg.auto_archive_days = max(0, int(section["auto_archive_days"]))
             if "auto_complete_subtasks" in section:
-                val = section["auto_complete_subtasks"]
-                if isinstance(val, bool):
-                    cfg.auto_complete_subtasks = val
-                elif isinstance(val, int):
-                    cfg.auto_complete_subtasks = val != 0
-                else:
-                    normalized = str(val).strip().lower()
-                    truthy = {"true", "yes", "y", "on", "1"}
-                    falsy = {"false", "no", "n", "off", "0"}
-                    if normalized in truthy:
-                        cfg.auto_complete_subtasks = True
-                    elif normalized in falsy:
-                        cfg.auto_complete_subtasks = False
+                cfg.auto_complete_subtasks = bool(section["auto_complete_subtasks"])
             if "session_retention_days" in section:
-                try:
-                    cfg.session_retention_days = max(1, int(section["session_retention_days"]))
-                except (ValueError, TypeError):
-                    print(
-                        f"경고: session_retention_days='{section['session_retention_days']}'은 유효한 정수 값이 아닙니다. "
-                        f"기본값 {cfg.session_retention_days} 사용.",
-                        file=sys.stderr,
-                    )
-            if "format_preset" in section:
-                val = section["format_preset"]
-                if val in _VALID_FORMAT_PRESETS:
-                    cfg.format_preset = val
-                else:
-                    print(
-                        f"경고: format_preset='{val}'은 유효하지 않습니다. "
-                        f"허용 값: {', '.join(sorted(_VALID_FORMAT_PRESETS))}. 기본값 유지.",
-                        file=sys.stderr,
-                    )
+                cfg.session_retention_days = max(1, int(section["session_retention_days"]))
         except (OSError, tomllib.TOMLDecodeError) as e:
             print(f"경고: 설정 파일 파싱 오류 ({CONFIG_FILE}): {e}", file=sys.stderr)
 
-    # 2. 환경변수 오버라이드
+    # 2. 환경변수 오버라이드 (빈 문자열은 무시하여 config 값 보호, project_id 제외)
     if env_val := os.environ.get("PLANE_BASE_URL"):
-        parsed = urllib.parse.urlparse(env_val)
-        if parsed.scheme in ("https", "http") and parsed.hostname:
-            cfg.base_url = env_val
-        else:
-            print(
-                f"경고: PLANE_BASE_URL='{env_val}'이 유효하지 않습니다. "
-                "https:// 또는 http:// 스킴과 호스트가 필요합니다. 기본값 유지.",
-                file=sys.stderr,
-            )
-    cfg.api_key = os.environ.get("PLANE_API_KEY", cfg.api_key)
+        cfg.base_url = env_val
+    if env_val := os.environ.get("PLANE_API_KEY"):
+        cfg.api_key = env_val
     if env_val := os.environ.get("PLANE_WORKSPACE_SLUG"):
-        if _SLUG_RE.match(env_val):
-            cfg.workspace_slug = env_val
-        else:
-            print(
-                f"경고: PLANE_WORKSPACE_SLUG='{env_val}'은 유효하지 않습니다. "
-                "영문자, 숫자, 하이픈, 밑줄만 허용됩니다. 기본값 유지.",
-                file=sys.stderr,
-            )
-    cfg.project_id = os.environ.get("PLANE_PROJECT_ID", cfg.project_id)
+        cfg.workspace_slug = env_val
     if env_val := os.environ.get("LINEAR_API_KEY"):
         cfg.linear_api_key = env_val
     if env_val := os.environ.get("LINEAR_TEAM_ID"):
@@ -207,6 +172,10 @@ def load_config(profile: str = "default") -> Config:
                 f"기본값 {cfg.drift_sensitivity} 사용.",
                 file=sys.stderr,
             )
+    if env_val := os.environ.get("OMK_TASK_MODE"):
+        cfg.task_mode = env_val
+    if env_val := os.environ.get("OMK_UPLOAD_LEVEL"):
+        cfg.upload_level = env_val
     if env_val := os.environ.get("OMK_DRIFT_COOLDOWN"):
         try:
             # 음수 방지 (0 이상 정수)
@@ -217,44 +186,42 @@ def load_config(profile: str = "default") -> Config:
                 f"기본값 {cfg.drift_cooldown} 사용.",
                 file=sys.stderr,
             )
-    if env_val := os.environ.get("OMK_TASK_MODE"):
-        if env_val in _VALID_TASK_MODES:
-            cfg.task_mode = env_val
-        else:
-            print(
-                f"경고: OMK_TASK_MODE='{env_val}'은 유효하지 않습니다. "
-                f"허용 값: {', '.join(sorted(_VALID_TASK_MODES))}. 기본값 유지.",
-                file=sys.stderr,
-            )
-    if env_val := os.environ.get("OMK_UPLOAD_LEVEL"):
-        if env_val in _VALID_UPLOAD_LEVELS:
-            cfg.upload_level = env_val
-        else:
-            print(
-                f"경고: OMK_UPLOAD_LEVEL='{env_val}'은 유효하지 않습니다. "
-                f"허용 값: {', '.join(sorted(_VALID_UPLOAD_LEVELS))}. 기본값 유지.",
-                file=sys.stderr,
-            )
-    if env_val := os.environ.get("OMK_FORMAT_PRESET"):
-        if env_val in _VALID_FORMAT_PRESETS:
-            cfg.format_preset = env_val
-        else:
-            print(
-                f"경고: OMK_FORMAT_PRESET='{env_val}'은 유효하지 않습니다. "
-                f"허용 값: {', '.join(sorted(_VALID_FORMAT_PRESETS))}. 기본값 유지.",
-                file=sys.stderr,
-            )
 
-    # 3. CLAUDE.md에서 project_id 자동 감지 (env/config에 없을 때)
-    if not cfg.project_id:
-        cfg.project_id = detect_project_id()
+    # 3. project_id 최종 결정: env > .omk/project.toml > CLAUDE.md > config.toml
+    if env_project_id := os.environ.get("PLANE_PROJECT_ID"):
+        cfg.project_id = env_project_id
+        cfg.project_id_source = "env"
+    else:
+        omk_pid, _omk_provider = detect_project_toml()
+        if omk_pid:
+            cfg.project_id = omk_pid
+            cfg.project_id_source = "omk_project_toml"
+        else:
+            claude_pid = detect_project_id()
+            if claude_pid:
+                cfg.project_id = claude_pid
+                cfg.project_id_source = "claude_md"
+            elif _toml_project_id:
+                cfg.project_id = _toml_project_id
+                cfg.project_id_source = "config_toml"
+                print(
+                    "경고: config.toml의 project_id는 향후 제거 예정입니다. "
+                    "'omk project bind'로 프로젝트별 설정을 권장합니다.",
+                    file=sys.stderr,
+                )
 
     return cfg
 
 
-def _escape_toml_string(v: str) -> str:
-    """TOML 기본 문자열에 포함될 값의 특수문자를 이스케이프한다."""
-    return v.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n").replace("\r", "\\r")
+def escape_toml_string(v: str) -> str:
+    """TOML 기본 문자열에 포함될 값의 특수문자를 이스케이프한다 (TOML v1.0 사양 준수)."""
+    result = v.replace("\\", "\\\\").replace('"', '\\"')
+    result = result.replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+    # U+0000-U+0008, U+000B-U+000C, U+000E-U+001F, U+007F 제어 문자 이스케이프
+    return "".join(
+        c if (ord(c) >= 0x20 and ord(c) != 0x7F) or c == "\t" else f"\\u{ord(c):04X}"
+        for c in result
+    )
 
 
 def save_config(data: dict, profile: str = "default") -> None:
@@ -284,22 +251,11 @@ def save_config(data: dict, profile: str = "default") -> None:
     for prof, values in existing.items():
         if not _PROFILE_NAME_RE.match(prof):
             raise ValueError(
-                f"Invalid profile name '{prof}':"
-                " only letters, digits, hyphens, and underscores are allowed."
+                f"Invalid profile name '{prof}': only letters, digits, hyphens, and underscores are allowed."
             )
         lines.append(f"[{prof}]")
         for k, v in values.items():
-            if not re.match(r'^[a-zA-Z0-9_-]+$', str(k)):
-                raise ValueError(f"Invalid config key: {k!r}")
-            # TOML 네이티브 타입 사용 (bool/int/float)
-            if isinstance(v, bool):
-                lines.append(f'{k} = {"true" if v else "false"}')
-            elif isinstance(v, int):
-                lines.append(f'{k} = {v}')
-            elif isinstance(v, float):
-                lines.append(f'{k} = {v}')
-            else:
-                lines.append(f'{k} = "{_escape_toml_string(str(v))}"')
+            lines.append(f'{k} = "{escape_toml_string(str(v))}"')
         lines.append("")
 
     CONFIG_FILE.write_text("\n".join(lines), encoding="utf-8")

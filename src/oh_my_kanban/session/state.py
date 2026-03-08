@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
+from typing import Optional
 
 # ── 세션 상태 상수 ──────────────────────────────────────────────────────────
 STATUS_ACTIVE = "active"
@@ -48,22 +49,15 @@ class PlaneContext:
 
     project_id: str = ""
     work_item_ids: list[str] = field(default_factory=list)
-    module_id: str | None = None
-    # --- 신규 필드 ---
-    main_task_id: str | None = None          # 메인 태스크 WI UUID
-    focused_work_item_id: str | None = None  # 현재 집중 WI UUID
-    last_comment_check: str | None = None    # 마지막 댓글 폴링 ISO 타임스탬프
-    known_comment_ids: list[str] = field(default_factory=list)   # 이미 본 댓글 ID 목록
-    stale_work_item_ids: list[str] = field(default_factory=list) # 외부 삭제된 WI ID 목록
-    # 연속 폴링 실패 횟수 (circuit breaker)
+    module_id: Optional[str] = None
+    stale_work_item_ids: list[str] = field(default_factory=list)
+    focused_work_item_id: Optional[str] = None
+    last_comment_check: Optional[str] = None
+    known_comment_ids: list[str] = field(default_factory=list)
     comment_poll_failures: int = 0
-    # sub-task 전체 완료 알림 발송 WI 목록 (중복 방지)
-    subtask_completion_nudged_ids: list[str] = field(default_factory=list)
-    # sub-task 완료 체크의 최근 실행 시각/연속 실패 횟수
-    last_subtask_check: str | None = None
+    last_subtask_check: Optional[str] = None
     subtask_check_failures: int = 0
-    # 핫스팟 알림 발송 파일 목록 (중복 방지)
-    hotspot_alerted_files: list[str] = field(default_factory=list)
+    subtask_completion_nudged_ids: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -74,9 +68,9 @@ class TimelineEvent:
     # scope_init | prompt | drift_detected | scope_expanded | opted_out | compact_restored
     type: str
     summary: str
-    drift_score: float | None = None
+    drift_score: Optional[float] = None
     # drift_detected 이벤트의 레벨 (none|minor|significant|major). 파싱 없이 직접 참조
-    drift_level: str | None = None
+    drift_level: Optional[str] = None
 
 
 @dataclass
@@ -99,7 +93,6 @@ class SessionStats:
     scope_expansions: int = 0
     cooldown_remaining: int = 0
     files_touched: list[str] = field(default_factory=list)
-    commit_hashes: list[str] = field(default_factory=list)  # 이 세션에서 생성된 커밋 해시 목록
 
 
 @dataclass
@@ -112,22 +105,13 @@ class SessionConfig:
 
 
 @dataclass
-class ErrorThrottle:
-    """에러 알림 throttle 상태."""
-
-    category: str = ""          # 마지막 에러 카테고리
-    last_error_at: str | None = None  # 마지막 에러 ISO 타임스탬프
-    error_count: int = 0
-    cooldown_seconds: int = 300  # 5분 쿨다운
-
-
-@dataclass
 class SessionState:
     """세션 전체 상태. 로컬 JSON으로 저장."""
 
     session_id: str
     status: str = STATUS_ACTIVE  # STATUS_ACTIVE | STATUS_COMPLETED | STATUS_OPTED_OUT
     opted_out: bool = False
+    tasks_deleted: bool = False
     created_at: str = field(default_factory=now_iso)
     updated_at: str = field(default_factory=now_iso)
     scope: ScopeState = field(default_factory=ScopeState)
@@ -135,8 +119,6 @@ class SessionState:
     timeline: list[TimelineEvent] = field(default_factory=list)
     stats: SessionStats = field(default_factory=SessionStats)
     config: SessionConfig = field(default_factory=SessionConfig)
-    error_throttle: ErrorThrottle | None = None
-    handoff_note: str = ""  # 다음 세션을 위한 핸드오프 메모
 
     def touch(self) -> None:
         """updated_at 갱신. 저장 직전에 명시적으로 호출한다."""
@@ -151,7 +133,7 @@ class SessionState:
         return json.dumps(self.to_dict(), ensure_ascii=False, indent=2)
 
     @classmethod
-    def from_dict(cls, data: dict) -> SessionState:
+    def from_dict(cls, data: dict) -> "SessionState":
         """dict에서 SessionState를 복원한다."""
         scope_data = data.get("scope", {})
         plane_data = data.get("plane_context", {})
@@ -159,18 +141,11 @@ class SessionState:
         config_data = data.get("config", {})
         timeline_data = data.get("timeline", [])
 
-        throttle_data = data.get("error_throttle")
-        error_throttle = ErrorThrottle(
-            category=throttle_data.get("category", ""),
-            last_error_at=throttle_data.get("last_error_at"),
-            error_count=throttle_data.get("error_count", 0),
-            cooldown_seconds=throttle_data.get("cooldown_seconds", 300),
-        ) if throttle_data else None
-
         return cls(
             session_id=data["session_id"],
             status=data.get("status", STATUS_ACTIVE),
             opted_out=data.get("opted_out", False),
+            tasks_deleted=data.get("tasks_deleted", False),
             created_at=data.get("created_at", now_iso()),
             updated_at=data.get("updated_at", now_iso()),
             scope=ScopeState(
@@ -186,16 +161,7 @@ class SessionState:
                 project_id=plane_data.get("project_id", ""),
                 work_item_ids=plane_data.get("work_item_ids", []),
                 module_id=plane_data.get("module_id"),
-                main_task_id=plane_data.get("main_task_id"),
-                focused_work_item_id=plane_data.get("focused_work_item_id"),
-                last_comment_check=plane_data.get("last_comment_check"),
-                known_comment_ids=plane_data.get("known_comment_ids", []),
                 stale_work_item_ids=plane_data.get("stale_work_item_ids", []),
-                comment_poll_failures=plane_data.get("comment_poll_failures", 0),
-                subtask_completion_nudged_ids=plane_data.get("subtask_completion_nudged_ids", []),
-                last_subtask_check=plane_data.get("last_subtask_check"),
-                subtask_check_failures=plane_data.get("subtask_check_failures", 0),
-                hotspot_alerted_files=plane_data.get("hotspot_alerted_files", []),
             ),
             timeline=[
                 TimelineEvent(
@@ -215,13 +181,10 @@ class SessionState:
                 scope_expansions=stats_data.get("scope_expansions", 0),
                 cooldown_remaining=stats_data.get("cooldown_remaining", 0),
                 files_touched=stats_data.get("files_touched", []),
-                commit_hashes=stats_data.get("commit_hashes", []),
             ),
             config=SessionConfig(
                 sensitivity=config_data.get("sensitivity", 0.5),
                 cooldown=config_data.get("cooldown", 3),
                 auto_expand=config_data.get("auto_expand", True),
             ),
-            error_throttle=error_throttle,
-            handoff_note=data.get("handoff_note", ""),
         )

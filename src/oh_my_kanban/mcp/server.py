@@ -12,6 +12,7 @@ Claude Code가 세션 상태를 능동적으로 조회·수정할 수 있도록
 from __future__ import annotations
 
 import re
+import sys
 from typing import Any
 
 # mcp 패키지 import — 선택적 의존성이므로 ImportError를 그대로 전파한다.
@@ -25,7 +26,8 @@ except ImportError as e:
     ) from e
 
 from oh_my_kanban.config import load_config
-from oh_my_kanban.hooks.common import PLANE_API_TIMEOUT, sanitize_comment
+from oh_my_kanban.hooks.common import sanitize_comment
+from oh_my_kanban.hooks.http_client import build_plane_headers, plane_http_client, plane_request, warn_auth_failure
 from oh_my_kanban.session.manager import list_sessions, load_session, save_session
 from oh_my_kanban.session.state import STATUS_ACTIVE, TimelineEvent, now_iso
 
@@ -47,16 +49,6 @@ def _find_active_session_id() -> str | None:
         reverse=True,
     )
     return active[0].session_id if active else None
-
-
-def _scope_payload(scope: Any) -> dict[str, Any]:
-    """ScopeState를 MCP 응답 dict로 직렬화한다."""
-    return {
-        "summary": scope.summary,
-        "topics": scope.topics,
-        "expanded_topics": scope.expanded_topics,
-        "keywords": scope.keywords,
-    }
 
 
 # ── MCP Tools ────────────────────────────────────────────────────────────────
@@ -158,13 +150,14 @@ def omk_link_work_item(work_item_id: str, session_id: str = "") -> dict[str, Any
         }
 
     state.plane_context.work_item_ids = [*state.plane_context.work_item_ids, wi_id]
-    state.timeline.append(
+    state.timeline = [
+        *state.timeline,
         TimelineEvent(
             timestamp=now_iso(),
             type="prompt",
             summary=f"Work Item 연결: {wi_id}",
-        )
-    )
+        ),
+    ]
     save_session(state)
 
     return {
@@ -226,25 +219,27 @@ def omk_update_scope(
         changed.append("keywords")
 
     if not changed:
-        return {
-            "success": True,
-            "message": "변경할 내용이 없습니다.",
-            "scope": _scope_payload(state.scope),
-        }
+        return {"success": True, "message": "변경할 내용이 없습니다.", "scope": state.scope.__dict__}
 
-    state.timeline.append(
+    state.timeline = [
+        *state.timeline,
         TimelineEvent(
             timestamp=now_iso(),
             type="scope_expanded",
             summary=f"범위 수동 업데이트: {', '.join(changed)}",
-        )
-    )
+        ),
+    ]
     save_session(state)
 
     return {
         "success": True,
         "message": f"scope 업데이트 완료: {', '.join(changed)}",
-        "scope": _scope_payload(state.scope),
+        "scope": {
+            "summary": state.scope.summary,
+            "topics": state.scope.topics,
+            "expanded_topics": state.scope.expanded_topics,
+            "keywords": state.scope.keywords,
+        },
     }
 
 
@@ -326,18 +321,16 @@ def omk_add_comment(
     plane = state.plane_context
     project_id = plane.project_id
 
-    if work_item_id.strip():
-        wi_stripped = work_item_id.strip()
-        if not _UUID_RE.match(wi_stripped):
-            return {"error": f"유효하지 않은 UUID 형식입니다: {wi_stripped!r}"}
-        target_wi_ids = [wi_stripped]
+    wi_id_input = work_item_id.strip()
+    if wi_id_input:
+        if not _UUID_RE.match(wi_id_input):
+            return {"error": f"유효하지 않은 UUID 형식입니다: {wi_id_input!r}"}
+        target_wi_ids = [wi_id_input]
     else:
         target_wi_ids = plane.work_item_ids
 
     if not target_wi_ids:
-        return {
-            "error": "세션에 연결된 Work Item이 없습니다. omk_link_work_item으로 먼저 연결하세요."
-        }
+        return {"error": "세션에 연결된 Work Item이 없습니다. omk_link_work_item으로 먼저 연결하세요."}
 
     if not project_id:
         return {"error": "세션에 project_id가 설정되지 않았습니다. omk config set으로 설정하세요."}
@@ -353,51 +346,40 @@ def omk_add_comment(
         return {"error": "Plane API 키 또는 워크스페이스 슬러그가 설정되지 않았습니다."}
 
     base_url = cfg.base_url.rstrip("/")
-    headers = {
-        "X-API-Key": cfg.api_key,
-        "Content-Type": "application/json",
-    }
-
-    # 민감 정보 제거 후 게시
-    sanitized_comment = sanitize_comment(comment.strip())
 
     results: list[dict[str, Any]] = []
-    with httpx.Client(timeout=PLANE_API_TIMEOUT, follow_redirects=False) as client:
-        for wi_id in target_wi_ids:
-            url = (
-                f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
-                f"/projects/{project_id}/issues/{wi_id}/comments/"
-            )
-            try:
-                resp = client.post(
-                    url, headers=headers, json={"comment_html": sanitized_comment}
+    try:
+        with plane_http_client(cfg.api_key) as client:
+            for wi_id in target_wi_ids:
+                url = (
+                    f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
+                    f"/projects/{project_id}/issues/{wi_id}/comments/"
                 )
-                if resp.status_code in (200, 201):
-                    results.append({"work_item_id": wi_id, "success": True})
-                else:
-                    results.append({
-                        "work_item_id": wi_id,
-                        "success": False,
-                        "error": f"HTTP {resp.status_code}",
-                    })
-            except httpx.TimeoutException:
-                results.append({
-                    "work_item_id": wi_id,
-                    "success": False,
-                    "error": f"요청 시간 초과 ({PLANE_API_TIMEOUT}초)",
-                })
-            except httpx.NetworkError as e:
-                results.append({
-                    "work_item_id": wi_id,
-                    "success": False,
-                    "error": f"네트워크 오류: {e}",
-                })
-            except httpx.HTTPError as e:
-                results.append({
-                    "work_item_id": wi_id,
-                    "success": False,
-                    "error": f"HTTP 클라이언트 오류: {type(e).__name__}: {e}",
-                })
+                try:
+                    resp = plane_request(
+                        client, "POST", url,
+                        json={"comment_html": sanitize_comment(comment.strip())},
+                        context=f"댓글 추가 wi_id={wi_id}",
+                    )
+                    if resp.status_code in (200, 201):
+                        results.append({"work_item_id": wi_id, "success": True})
+                    else:
+                        error_info: dict[str, Any] = {
+                            "work_item_id": wi_id,
+                            "success": False,
+                            "error": f"HTTP {resp.status_code}",
+                        }
+                        if resp.status_code in (401, 403):
+                            error_info["error_code"] = "AUTH_FAILURE"
+                        results.append(error_info)
+                except httpx.TimeoutException:
+                    results.append({"work_item_id": wi_id, "success": False, "error": "요청 시간 초과 (10초)"})
+                except httpx.NetworkError as e:
+                    results.append({"work_item_id": wi_id, "success": False, "error": f"네트워크 오류: {e}"})
+                except Exception as e:
+                    results.append({"work_item_id": wi_id, "success": False, "error": f"예외: {type(e).__name__}: {e}"})
+    except Exception as e:
+        return {"error": f"Plane 클라이언트 생성 실패: {type(e).__name__}: {e}"}
 
     success_count = sum(1 for r in results if r.get("success"))
     return {

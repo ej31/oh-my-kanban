@@ -121,6 +121,10 @@ def _register_commands() -> None:
     cli.add_command(linear, name="linear")
     cli.add_command(linear, name="ln")  # alias
 
+    # ── Project 커맨드 그룹 ───────────────────────────────────────────
+    from oh_my_kanban.commands.project_cmd import project_cmd
+    cli.add_command(project_cmd, name="project")
+
     # ── Hooks 커맨드 그룹 ─────────────────────────────────────────────
     from oh_my_kanban.commands.hooks import hooks
     cli.add_command(hooks)
@@ -128,6 +132,10 @@ def _register_commands() -> None:
     # ── MCP 커맨드 그룹 ───────────────────────────────────────────────
     from oh_my_kanban.commands.mcp_cmd import mcp_group
     cli.add_command(mcp_group, name="mcp")
+
+    # ── Doctor 커맨드 ───────────────────────────────────────────────
+    from oh_my_kanban.commands.doctor import doctor
+    cli.add_command(doctor)
 
 
 _register_commands()

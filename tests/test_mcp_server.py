@@ -487,13 +487,13 @@ class TestOmkAddComment:
         mock_client = MagicMock()
         mock_client.__enter__ = MagicMock(return_value=mock_client)
         mock_client.__exit__ = MagicMock(return_value=False)
-        mock_client.post.return_value = mock_resp
 
         with (
             patch("oh_my_kanban.mcp.server._find_active_session_id", return_value="s001"),
             patch("oh_my_kanban.mcp.server.load_session", return_value=state),
             patch("oh_my_kanban.mcp.server.load_config", return_value=cfg),
-            patch("httpx.Client", return_value=mock_client),
+            patch("oh_my_kanban.mcp.server.plane_http_client", return_value=mock_client),
+            patch("oh_my_kanban.mcp.server.plane_request", return_value=mock_resp),
         ):
             result = omk_add_comment(comment="중요한 결정")
 
@@ -510,13 +510,13 @@ class TestOmkAddComment:
         mock_client = MagicMock()
         mock_client.__enter__ = MagicMock(return_value=mock_client)
         mock_client.__exit__ = MagicMock(return_value=False)
-        mock_client.post.return_value = mock_resp
 
         with (
             patch("oh_my_kanban.mcp.server._find_active_session_id", return_value="s001"),
             patch("oh_my_kanban.mcp.server.load_session", return_value=state),
             patch("oh_my_kanban.mcp.server.load_config", return_value=cfg),
-            patch("httpx.Client", return_value=mock_client),
+            patch("oh_my_kanban.mcp.server.plane_http_client", return_value=mock_client),
+            patch("oh_my_kanban.mcp.server.plane_request", return_value=mock_resp),
         ):
             result = omk_add_comment(comment="댓글")
 
@@ -533,13 +533,13 @@ class TestOmkAddComment:
         mock_client = MagicMock()
         mock_client.__enter__ = MagicMock(return_value=mock_client)
         mock_client.__exit__ = MagicMock(return_value=False)
-        mock_client.post.side_effect = _httpx.TimeoutException("timeout")
 
         with (
             patch("oh_my_kanban.mcp.server._find_active_session_id", return_value="s001"),
             patch("oh_my_kanban.mcp.server.load_session", return_value=state),
             patch("oh_my_kanban.mcp.server.load_config", return_value=cfg),
-            patch("httpx.Client", return_value=mock_client),
+            patch("oh_my_kanban.mcp.server.plane_http_client", return_value=mock_client),
+            patch("oh_my_kanban.mcp.server.plane_request", side_effect=_httpx.TimeoutException("timeout")),
         ):
             result = omk_add_comment(comment="댓글")
 
@@ -573,13 +573,13 @@ class TestOmkAddComment:
         mock_client = MagicMock()
         mock_client.__enter__ = MagicMock(return_value=mock_client)
         mock_client.__exit__ = MagicMock(return_value=False)
-        mock_client.post.return_value = mock_resp
 
         with (
             patch("oh_my_kanban.mcp.server._find_active_session_id", return_value="s001"),
             patch("oh_my_kanban.mcp.server.load_session", return_value=state),
             patch("oh_my_kanban.mcp.server.load_config", return_value=cfg),
-            patch("httpx.Client", return_value=mock_client),
+            patch("oh_my_kanban.mcp.server.plane_http_client", return_value=mock_client),
+            patch("oh_my_kanban.mcp.server.plane_request", return_value=mock_resp),
         ):
             result = omk_add_comment(comment="댓글", work_item_id=VALID_UUID)
 

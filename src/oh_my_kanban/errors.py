@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import functools
+import socket
+import ssl
 import sys
 from typing import Callable, TypeVar
 
 import click
+import requests
 
 F = TypeVar("F", bound=Callable)
 
@@ -79,6 +82,18 @@ def handle_api_error(func: F) -> F:
             raise
         except click.UsageError:
             raise
+        except requests.exceptions.ConnectionError:
+            click.echo("오류: 서버 연결 실패. Plane 서버 상태 및 네트워크를 확인하세요", err=True)
+            sys.exit(69)
+        except requests.exceptions.Timeout:
+            click.echo("오류: 요청 시간이 초과되었습니다. 네트워크 상태를 확인하세요", err=True)
+            sys.exit(69)
+        except ssl.SSLError:
+            click.echo("오류: TLS 인증서 검증 실패. 서버 URL 및 인증서를 확인하세요", err=True)
+            sys.exit(69)
+        except socket.gaierror:
+            click.echo("오류: DNS 해석 실패. 서버 URL을 확인하세요", err=True)
+            sys.exit(69)
         except Exception as e:
             # plane.errors 임포트는 런타임에 (순환 임포트 방지)
             try:
