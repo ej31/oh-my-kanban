@@ -11,6 +11,7 @@ from typing import Any, Optional
 
 import httpx
 
+from oh_my_kanban.config import UUID_RE as _UUID_RE
 from oh_my_kanban.session.manager import load_session
 from oh_my_kanban.session.state import SessionState
 
@@ -132,6 +133,36 @@ def record_health_warning(warning: dict[str, Any]) -> None:
         print(f"[omk] health_warnings 기록 실패: {type(e).__name__}", file=sys.stderr)
 
 
+# ── Plane URL 파라미터 검증 ────────────────────────────────────────────────────
+
+
+# workspace_slug 허용 문자 패턴 (URL 경로 인젝션 방지)
+_WORKSPACE_SLUG_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_-]*$")
+
+
+def validate_plane_url_params(
+    workspace_slug: str,
+    project_id: str,
+    wi_id: str | None = None,
+) -> bool:
+    """Plane API URL 경로 파라미터의 형식을 검증한다.
+
+    workspace_slug, project_id, wi_id(선택)가 안전한 형식인지 확인한다.
+    경로 트래버설 및 URL 인젝션을 방지한다.
+
+    Returns:
+        True: 모든 파라미터가 유효
+        False: 하나 이상의 파라미터가 유효하지 않음
+    """
+    if not _WORKSPACE_SLUG_RE.match(workspace_slug):
+        return False
+    if not _UUID_RE.match(project_id.lower()):
+        return False
+    if wi_id is not None and not _UUID_RE.match(wi_id.lower()):
+        return False
+    return True
+
+
 # ── 댓글 보안 필터 ────────────────────────────────────────────────────────────
 
 # 민감 정보 패턴 (API 키, 토큰, 비밀번호 등)
@@ -140,6 +171,7 @@ _SENSITIVE_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"ghp_[A-Za-z0-9]{36}"), "[GITHUB_PAT]"),
     (re.compile(r"sk-[A-Za-z0-9]{48,}"), "[API_KEY]"),
     (re.compile(r"xoxb-[A-Za-z0-9\-]+"), "[SLACK_TOKEN]"),
+    (re.compile(r"lin_api_[A-Za-z0-9]{32,}"), "[LINEAR_API_KEY]"),
     (re.compile(r"Bearer\s+[A-Za-z0-9\-_.~+/]+=*", re.IGNORECASE), "Bearer [REDACTED]"),
     (re.compile(r"(?i)(?:password|passwd|pwd)\s*[:=]\s*\S+"), "[PASSWORD_REDACTED]"),
 ]

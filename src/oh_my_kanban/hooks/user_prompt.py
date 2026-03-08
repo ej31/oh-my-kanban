@@ -18,6 +18,7 @@ from oh_my_kanban.hooks.common import (
     get_session_id,
     output_context,  # noqa: F401 — 테스트에서 패치 대상으로 사용
     output_system_message,
+    validate_plane_url_params,
     read_hook_input,
 )
 from oh_my_kanban.session.manager import load_session, save_session
@@ -67,6 +68,10 @@ def _poll_comments(state, cfg) -> None:
     if not project_id or not cfg.api_key or not cfg.workspace_slug:
         return
 
+    workspace_slug = cfg.workspace_slug
+    if not validate_plane_url_params(workspace_slug, project_id, focused_id):
+        return
+
     try:
         import httpx
     except ImportError:
@@ -75,7 +80,7 @@ def _poll_comments(state, cfg) -> None:
     base_url = cfg.base_url.rstrip("/")
     headers = {"X-API-Key": cfg.api_key}
     url = (
-        f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
+        f"{base_url}/api/v1/workspaces/{workspace_slug}"
         f"/projects/{project_id}/issues/{focused_id}/comments/"
     )
     try:
@@ -157,6 +162,10 @@ def _check_subtask_completion(state, cfg) -> None:
     if not project_id or not cfg.api_key or not cfg.workspace_slug:
         return
 
+    workspace_slug = cfg.workspace_slug
+    if not validate_plane_url_params(workspace_slug, project_id, focused_id):
+        return
+
     try:
         import httpx
     except ImportError:
@@ -166,7 +175,7 @@ def _check_subtask_completion(state, cfg) -> None:
     headers = {"X-API-Key": cfg.api_key}
     # 현재 WI의 하위 이슈(sub-tasks) 조회
     url = (
-        f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
+        f"{base_url}/api/v1/workspaces/{workspace_slug}"
         f"/projects/{project_id}/issues/{focused_id}/sub-issues/"
     )
     try:

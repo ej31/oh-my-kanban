@@ -39,8 +39,10 @@ export default defineConfig({
               text: '고급',
               items: [
                 { text: 'Task Format 가이드', link: '/ko/task-format' },
-                { text: '기록 모드', link: '/ko/recording-modes' },
-                { text: 'Preset 시스템', link: '/ko/presets' },
+                { text: '기록 모드', link: '/ko/recording-mode' },
+                { text: 'Preset 시스템', link: '/ko/preset' },
+                { text: '스냅샷', link: '/ko/snapshot' },
+                { text: '태스크 전환', link: '/ko/task-switching' },
               ],
             },
           ],
@@ -80,6 +82,15 @@ export default defineConfig({
                 { text: 'CLI Commands', link: '/en/cli-reference' },
                 { text: 'Skills', link: '/en/skills' },
                 { text: 'Configuration Reference', link: '/en/configuration' },
+              ],
+            },
+            {
+              text: 'Advanced',
+              items: [
+                { text: 'Recording Mode', link: '/en/recording-mode' },
+                { text: 'Presets', link: '/en/preset' },
+                { text: 'Snapshots', link: '/en/snapshot' },
+                { text: 'Task Switching', link: '/en/task-switching' },
               ],
             },
           ],

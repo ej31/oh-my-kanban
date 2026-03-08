@@ -7,6 +7,7 @@ exit code 0: 항상 (fail-open)
 
 from __future__ import annotations
 
+import html
 import sys
 
 from oh_my_kanban.config import load_config
@@ -16,6 +17,7 @@ from oh_my_kanban.hooks.common import (
     read_hook_input,
     record_health_warning,
     sanitize_comment,
+    validate_plane_url_params,
 )
 from oh_my_kanban.hooks.http_client import build_plane_headers, plane_http_client, plane_request
 from oh_my_kanban.session.manager import load_session, save_session
@@ -25,10 +27,18 @@ from oh_my_kanban.session.state import (
     STATUS_COMPLETED,
     STATUS_OPTED_OUT,
     SUMMARY_DISPLAY_MAX,
+    TIMELINE_DISPLAY_MAX,
     SessionState,
     TimelineEvent,
     now_iso,
 )
+
+# ── 업로드 레벨 상수 ──────────────────────────────────────────────────────────
+UPLOAD_LEVEL_NONE = "none"
+
+UPLOAD_LEVEL_METADATA = "metadata"
+UPLOAD_LEVEL_FULL = "full"
+_VALID_UPLOAD_LEVELS = {UPLOAD_LEVEL_NONE, UPLOAD_LEVEL_METADATA, UPLOAD_LEVEL_FULL}
 
 
 def _build_summary_comment(state: SessionState) -> str:
@@ -39,7 +49,7 @@ def _build_summary_comment(state: SessionState) -> str:
     lines = [
         "## omk 세션 종료",
         "",
-        f"**목표**: {scope.summary[:SUMMARY_DISPLAY_MAX] if scope.summary else '미설정'}",
+        f"**목표**: {html.escape(scope.summary[:SUMMARY_DISPLAY_MAX]) if scope.summary else '미설정'}",
         "",
         "**통계**",
         f"- 요청 횟수: {stats.total_prompts}회",
@@ -52,27 +62,47 @@ def _build_summary_comment(state: SessionState) -> str:
         lines.append("")
         lines.append("**수정된 파일**")
         for f in stats.files_touched[:FILES_DISPLAY_MAX]:
-            lines.append(f"- `{f}`")
+            lines.append(f"- `{html.escape(f)}`")
         if len(stats.files_touched) > FILES_DISPLAY_MAX:
             lines.append(f"- ...외 {len(stats.files_touched) - FILES_DISPLAY_MAX}개")
 
     if scope.topics:
         lines.append("")
-        lines.append(f"**주요 토픽**: {', '.join(scope.topics)}")
+        lines.append(f"**주요 토픽**: {', '.join(html.escape(t) for t in scope.topics)}")
 
     lines.append("")
     lines.append(f"*세션 ID: {state.session_id[:SESSION_ID_DISPLAY_LEN]}...*")
     return "\n".join(lines)
 
 
-def _post_plane_comment(state: SessionState, comment: str) -> bool:
+def _build_full_comment(state: SessionState) -> str:
+    """타임라인 이벤트를 포함한 상세 댓글을 생성한다 (full 모드용)."""
+    # 메타데이터 요약 섹션 포함
+    lines = _build_summary_comment(state).splitlines()
+
+    # 타임라인 이벤트 섹션 추가 (HTML 특수문자 이스케이프로 XSS 방지)
+    if state.timeline:
+        lines.append("")
+        lines.append("**타임라인**")
+        for event in state.timeline[:TIMELINE_DISPLAY_MAX]:
+            ts_short = event.timestamp[:19] if len(event.timestamp) >= 19 else event.timestamp
+            safe_summary = html.escape(event.summary)
+            lines.append(f"- `{ts_short}` [{html.escape(event.type)}] {safe_summary}")
+        if len(state.timeline) > TIMELINE_DISPLAY_MAX:
+            lines.append(f"- ...외 {len(state.timeline) - TIMELINE_DISPLAY_MAX}개 이벤트")
+
+    return "\n".join(lines)
+
+
+def _post_plane_comment(state: SessionState, comment: str, cfg=None) -> bool:
     """Plane Work Item에 댓글을 추가한다. 성공 여부를 반환한다."""
     try:
         import httpx
     except ImportError:
         return False
 
-    cfg = load_config()
+    if cfg is None:
+        cfg = load_config()
     if not cfg.api_key or not cfg.workspace_slug:
         return False
 
@@ -82,6 +112,12 @@ def _post_plane_comment(state: SessionState, comment: str) -> bool:
     if not wi_ids or not project_id:
         return False
 
+    # URL 경로 삽입 전 형식 검증 (경로 트래버설 / 인젝션 방지)
+    workspace_slug = cfg.workspace_slug
+    if not workspace_slug or not validate_plane_url_params(workspace_slug, project_id):
+        print("[omk] 유효하지 않은 workspace_slug 또는 project_id — Plane 댓글 건너뜀", file=sys.stderr)
+        return False
+
     base_url = cfg.base_url.rstrip("/")
 
     success_count = 0
@@ -89,8 +125,13 @@ def _post_plane_comment(state: SessionState, comment: str) -> bool:
     try:
         with plane_http_client(cfg.api_key) as client:
             for wi_id in wi_ids:
+                # wi_id UUID 형식 검증 (URL 경로 인젝션 방지)
+                if not validate_plane_url_params(workspace_slug, project_id, wi_id):
+                    print(f"[omk] 유효하지 않은 work_item_id 건너뜀: {wi_id!r}", file=sys.stderr)
+                    failure_count += 1
+                    continue
                 url = (
-                    f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
+                    f"{base_url}/api/v1/workspaces/{workspace_slug}"
                     f"/projects/{project_id}/issues/{wi_id}/comments/"
                 )
                 try:
@@ -159,10 +200,23 @@ def main() -> None:
             )
         )
 
-        # Plane Work Item 댓글 추가 (설정이 있는 경우)
-        if state.plane_context.work_item_ids:
-            comment = _build_summary_comment(state)
-            _post_plane_comment(state, comment)
+        # upload_level에 따라 댓글 업로드 방식 결정
+        cfg = load_config()
+        upload_level = cfg.upload_level
+        if upload_level not in _VALID_UPLOAD_LEVELS:
+            print(
+                f"[omk] 알 수 없는 upload_level '{upload_level}', none으로 대체합니다 (안전 기본값).",
+                file=sys.stderr,
+            )
+            upload_level = UPLOAD_LEVEL_NONE
+
+        # Plane Work Item 댓글 추가 (none이 아닌 경우에만)
+        if upload_level != UPLOAD_LEVEL_NONE and state.plane_context.work_item_ids:
+            if upload_level == UPLOAD_LEVEL_FULL:
+                comment = _build_full_comment(state)
+            else:
+                comment = _build_summary_comment(state)
+            _post_plane_comment(state, comment, cfg)
 
         save_session(state)
 

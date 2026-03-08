@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import click
 from plane.models.initiatives import CreateInitiative, UpdateInitiative
 
@@ -82,7 +83,7 @@ def initiative_create(
     """새 이니셔티브 생성."""
     data = CreateInitiative(
         name=name,
-        description_html=description,
+        description_html=f"<p>{html.escape(description)}</p>" if description else None,
         start_date=start_date,
         end_date=end_date,
         state=state,
@@ -115,7 +116,7 @@ def initiative_update(
     """이니셔티브 수정."""
     data = UpdateInitiative(
         name=name,
-        description_html=description,
+        description_html=f"<p>{html.escape(description)}</p>" if description else None,
         start_date=start_date,
         end_date=end_date,
         state=state,

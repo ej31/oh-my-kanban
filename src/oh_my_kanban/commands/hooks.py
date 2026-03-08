@@ -299,20 +299,26 @@ def _prompt_upload_level() -> str:
     click.echo("")
     click.echo("  [Step 4] 세션 데이터 업로드 수준")
     click.echo("    1. 메타데이터만 (추천) — 통계, 파일 목록, 범위만 기록 (프라이버시 보호)")
-    click.echo("    2. 전체 기록 — 현재 미지원 (메타데이터 모드로 동작)")
+    click.echo("    2. 전체 기록 — 타임라인 이벤트 포함 상세 댓글 업로드")
+    click.echo("    3. 업로드 안 함 — 댓글 API 호출 없이 로컬 저장만")
     choice = click.prompt(
         "  선택",
-        type=click.Choice(["1", "2"]),
+        type=click.Choice(["1", "2", "3"]),
         default="1",
         show_default=True,
     )
-    if choice == "1":
-        level = "metadata"
+    if choice == "2":
+        level = "full"
+        click.echo(f"  → upload_level = {level}")
+        return level
+    if choice == "3":
+        level = "none"
         click.echo(f"  → upload_level = {level}")
         return level
 
-    click.echo("  → upload_level = metadata  (전체 기록은 현재 미지원, metadata로 저장)")
-    return "metadata"
+    level = "metadata"
+    click.echo(f"  → upload_level = {level}")
+    return level
 
 
 def _install_hooks(local: bool, local_only: bool = False, non_interactive: bool = False) -> None:
@@ -637,3 +643,150 @@ def drift_report() -> None:
     click.echo("    - significant/major 드리프트 정확도 80% 이상")
     click.echo("")
     click.echo(f"  현재 상태: {'✓' if session_ok else '✗'} 세션 수 ({len(sessions)}/20)")
+
+
+# ── Snapshot 서브그룹 ──────────────────────────────────────────────────────────
+
+
+@hooks.group("snapshot")
+def snapshot_group() -> None:
+    """세션 스냅샷 관리 (저장/목록/복원)."""
+
+
+@snapshot_group.command("save")
+@click.option("--session-id", "session_id", default=None, help="세션 ID (기본: 최근 활성 세션)")
+def snapshot_save(session_id: Optional[str]) -> None:
+    """현재 활성 세션을 스냅샷으로 저장한다."""
+    from oh_my_kanban.session.manager import list_sessions as _list_sessions
+    from oh_my_kanban.session.manager import load_session as _load_session
+    from oh_my_kanban.session.snapshot import save_snapshot
+
+    target_id = session_id
+    if not target_id:
+        active = sorted(
+            [s for s in _list_sessions() if s.status == STATUS_ACTIVE],
+            key=lambda x: x.updated_at,
+            reverse=True,
+        )
+        if not active:
+            raise click.ClickException("활성 세션이 없습니다.")
+        target_id = active[0].session_id
+        click.echo(f"대상 세션: {target_id[:SESSION_ID_DISPLAY_LEN]}...")
+
+    state = _load_session(target_id)
+    if state is None:
+        raise click.ClickException(f"세션을 찾을 수 없습니다: {target_id}")
+
+    try:
+        snap_path = save_snapshot(state)
+        click.echo(f"스냅샷 저장 완료: {snap_path.name}")
+    except OSError as e:
+        raise click.ClickException(f"스냅샷 저장 실패: {e}") from e
+
+
+@snapshot_group.command("list")
+def snapshot_list() -> None:
+    """저장된 스냅샷 목록을 출력한다."""
+    from oh_my_kanban.session.snapshot import list_snapshots
+
+    snapshots = list_snapshots()
+    if not snapshots:
+        click.echo("저장된 스냅샷이 없습니다.")
+        return
+
+    click.echo("=== 스냅샷 목록 ===")
+    for meta in snapshots:
+        summary = meta.scope_summary[:SUMMARY_SHORT_MAX] if meta.scope_summary else "목표 미설정"
+        click.echo(
+            f"  {meta.snapshot_id}  "
+            f"세션: {meta.session_id[:SESSION_ID_DISPLAY_LEN]}...  "
+            f"{summary}"
+        )
+
+
+@snapshot_group.command("restore")
+@click.argument("snapshot_id")
+@click.option("--force", is_flag=True, help="활성 세션이 있어도 강제 복원")
+def snapshot_restore(snapshot_id: str, force: bool) -> None:
+    """스냅샷을 복원한다. 활성 세션이 있으면 경고한다."""
+    from oh_my_kanban.session.manager import list_sessions as _list_sessions
+    from oh_my_kanban.session.manager import save_session as _save_session
+    from oh_my_kanban.session.snapshot import load_snapshot
+
+    # 활성 세션 경고
+    if not force:
+        active = [s for s in _list_sessions() if s.status == STATUS_ACTIVE]
+        if active:
+            click.echo(
+                f"경고: 활성 세션이 {len(active)}개 있습니다. "
+                f"--force 옵션으로 강제 복원할 수 있습니다."
+            )
+            return
+
+    try:
+        state = load_snapshot(snapshot_id)
+    except ValueError as e:
+        raise click.ClickException(str(e)) from e
+
+    if state is None:
+        raise click.ClickException(f"스냅샷을 찾을 수 없습니다: {snapshot_id}")
+
+    _save_session(state)
+    click.echo(f"스냅샷 복원 완료: {state.session_id[:SESSION_ID_DISPLAY_LEN]}...")
+
+
+# ── Switch-task 커맨드 ─────────────────────────────────────────────────────────
+
+
+@hooks.command("switch-task")
+@click.option("--new", "new_title", default=None, help="새 태스크 제목 (없으면 태스크 생성 안 함)")
+@click.option("--reason", default="", help="전환 이유")
+@click.option("--session-id", "session_id", default=None, help="세션 ID (기본: 최근 활성 세션)")
+def switch_task(new_title: Optional[str], reason: str, session_id: Optional[str]) -> None:
+    """기존 작업을 보류하고 새 작업으로 전환한다."""
+    from oh_my_kanban.session.manager import list_sessions as _list_sessions
+    from oh_my_kanban.session.manager import load_session as _load_session
+    from oh_my_kanban.session.manager import save_session as _save_session
+    from oh_my_kanban.session.state import TimelineEvent as _TimelineEvent
+    from oh_my_kanban.session.state import now_iso as _now_iso
+
+    target_id = session_id
+    if not target_id:
+        active = sorted(
+            [s for s in _list_sessions() if s.status == STATUS_ACTIVE],
+            key=lambda x: x.updated_at,
+            reverse=True,
+        )
+        if not active:
+            raise click.ClickException("활성 세션이 없습니다.")
+        target_id = active[0].session_id
+        click.echo(f"대상 세션: {target_id[:SESSION_ID_DISPLAY_LEN]}...")
+
+    state = _load_session(target_id)
+    if state is None:
+        raise click.ClickException(f"세션을 찾을 수 없습니다: {target_id}")
+
+    # 기존 work_item_ids → stale로 이동
+    old_ids = list(state.plane_context.work_item_ids)
+    state.plane_context.stale_work_item_ids = [*state.plane_context.stale_work_item_ids, *old_ids]
+    state.plane_context.work_item_ids = []
+
+    # 타임라인 이벤트 추가
+    summary_parts = ["태스크 전환"]
+    if new_title:
+        summary_parts.append(f"새 태스크: {new_title}")
+    if reason:
+        summary_parts.append(f"이유: {reason}")
+    state.timeline.append(
+        _TimelineEvent(
+            timestamp=_now_iso(),
+            type="task_switch",
+            summary=" | ".join(summary_parts),
+        )
+    )
+
+    _save_session(state)
+    click.echo(f"태스크 전환 완료 (보류된 WI: {len(old_ids)}개)")
+    if new_title:
+        click.echo(f"새 태스크 제목: {new_title}")
+        click.echo("참고: 새 WI 생성은 다음 세션 훅 실행 시 자동으로 처리됩니다.")

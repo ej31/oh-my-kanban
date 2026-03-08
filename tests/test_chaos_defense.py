@@ -779,12 +779,15 @@ class TestStaleReferenceAndLinearRetry:
         mock_client.__enter__ = MagicMock(return_value=mock_client)
         mock_client.__exit__ = MagicMock(return_value=False)
 
+        _wi_1 = "00000000-0000-0000-0000-000000000011"
+        _wi_2 = "00000000-0000-0000-0000-000000000012"
+        _proj = "00000000-0000-0000-0000-000000000001"
         with patch("oh_my_kanban.session.plane_context_builder.plane_http_client") as mock_phc:
             mock_phc.return_value = mock_client
             _, failed = build_plane_context(
-                ["wi-1", "wi-2"], "proj-id", "https://api.plane.so", "key", "ws"
+                [_wi_1, _wi_2], _proj, "https://api.plane.so", "key", "ws"
             )
-        assert "wi-2" in failed
+        assert _wi_2 in failed
 
     def test_stale_work_item_ids_in_state(self) -> None:
         """PlaneContext에 stale_work_item_ids 필드가 존재한다."""

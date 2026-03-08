@@ -55,7 +55,7 @@ def _make_session(
     session_id: str = "sess-0001",
     status: str = STATUS_ACTIVE,
     work_item_ids: list[str] | None = None,
-    project_id: str = "proj-0001",
+    project_id: str = "00000000-0000-0000-0000-000000000001",
     summary: str = "테스트 세션",
     topics: list[str] | None = None,
     keywords: list[str] | None = None,
@@ -455,7 +455,7 @@ class TestOmkAddComment:
 
     def test_WI_없는_세션_error_반환(self):
         """세션에 연결된 Work Item이 없으면 error를 반환해야 한다."""
-        state = _make_session(work_item_ids=[], project_id="proj-001")
+        state = _make_session(work_item_ids=[], project_id="00000000-0000-0000-0000-000000000001")
 
         with (
             patch("oh_my_kanban.mcp.server._find_active_session_id", return_value="s001"),
@@ -479,7 +479,7 @@ class TestOmkAddComment:
 
     def test_httpx_성공_success_True(self):
         """httpx POST가 201을 반환하면 success=True여야 한다."""
-        state = _make_session(work_item_ids=[VALID_UUID], project_id="proj-001")
+        state = _make_session(work_item_ids=[VALID_UUID], project_id="00000000-0000-0000-0000-000000000001")
         cfg = self._make_cfg()
 
         mock_resp = MagicMock()
@@ -502,7 +502,7 @@ class TestOmkAddComment:
 
     def test_httpx_HTTP_오류_results에_error_포함(self):
         """httpx가 4xx/5xx를 반환하면 results에 error 정보가 포함되어야 한다."""
-        state = _make_session(work_item_ids=[VALID_UUID], project_id="proj-001")
+        state = _make_session(work_item_ids=[VALID_UUID], project_id="00000000-0000-0000-0000-000000000001")
         cfg = self._make_cfg()
 
         mock_resp = MagicMock()
@@ -527,7 +527,7 @@ class TestOmkAddComment:
         """httpx TimeoutException 발생 시 results에 타임아웃 error가 포함되어야 한다."""
         import httpx as _httpx
 
-        state = _make_session(work_item_ids=[VALID_UUID], project_id="proj-001")
+        state = _make_session(work_item_ids=[VALID_UUID], project_id="00000000-0000-0000-0000-000000000001")
         cfg = self._make_cfg()
 
         mock_client = MagicMock()
@@ -549,7 +549,7 @@ class TestOmkAddComment:
     def test_api_키_없으면_error_반환(self):
         """API 키가 없으면 error를 반환해야 한다."""
         from oh_my_kanban.config import Config
-        state = _make_session(work_item_ids=[VALID_UUID], project_id="proj-001")
+        state = _make_session(work_item_ids=[VALID_UUID], project_id="00000000-0000-0000-0000-000000000001")
         cfg = Config()
         cfg.api_key = ""
         cfg.workspace_slug = "ws"
@@ -565,7 +565,7 @@ class TestOmkAddComment:
 
     def test_특정_work_item_id_지정시_해당_WI에만_댓글(self):
         """work_item_id를 명시하면 해당 WI에만 댓글을 추가해야 한다."""
-        state = _make_session(work_item_ids=[VALID_UUID, VALID_UUID_2], project_id="proj-001")
+        state = _make_session(work_item_ids=[VALID_UUID, VALID_UUID_2], project_id="00000000-0000-0000-0000-000000000001")
         cfg = self._make_cfg()
 
         mock_resp = MagicMock()

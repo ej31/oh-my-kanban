@@ -15,6 +15,7 @@ import re
 import sys
 from typing import Any
 
+from oh_my_kanban.hooks.common import validate_plane_url_params
 from oh_my_kanban.hooks.http_client import build_plane_headers, plane_http_client, warn_auth_failure
 
 # ── 출력 크기 상수 ────────────────────────────────────────────────────────────
@@ -200,6 +201,11 @@ def build_plane_context(
     if not all([work_item_ids, project_id, base_url, api_key, workspace_slug]):
         return "", []
 
+    # URL 경로 파라미터 형식 검증 (경로 트래버설 / 인젝션 방지)
+    if not validate_plane_url_params(workspace_slug, project_id):
+        print("[omk] 유효하지 않은 workspace_slug 또는 project_id — 컨텍스트 빌드 건너뜀", file=sys.stderr)
+        return "", []
+
     try:
         import httpx
     except ImportError:
@@ -214,6 +220,10 @@ def build_plane_context(
     try:
         with plane_http_client(api_key) as client:
             for wi_id in work_item_ids[:3]:  # 최대 3개 WI만 조회 (토큰 절약)
+                if not validate_plane_url_params(workspace_slug, project_id, wi_id):
+                    print(f"[omk] 유효하지 않은 work_item_id 건너뜀: {wi_id!r}", file=sys.stderr)
+                    failed_ids.append(wi_id)
+                    continue
                 wi_data = _fetch_work_item(
                     client, base_url, workspace_slug, project_id, wi_id, headers
                 )

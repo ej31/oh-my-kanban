@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import click
 from plane.models.stickies import CreateSticky, UpdateSticky
 
@@ -73,7 +74,7 @@ def sticky_create(
     """새 스티키 생성."""
     data = CreateSticky(
         name=name,
-        description_html=description,
+        description_html=f"<p>{html.escape(description)}</p>" if description else None,
         color=color,
         background_color=background_color,
     )
@@ -100,7 +101,7 @@ def sticky_update(
     """스티키 수정."""
     data = UpdateSticky(
         name=name,
-        description_html=description,
+        description_html=f"<p>{html.escape(description)}</p>" if description else None,
         color=color,
         background_color=background_color,
     )

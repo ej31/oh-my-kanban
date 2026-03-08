@@ -15,15 +15,19 @@ from oh_my_kanban.hooks.user_prompt import (
 from oh_my_kanban.session.state import PlaneContext, SessionState, now_iso
 
 
+_TEST_PROJECT_UUID = "00000000-0000-0000-0000-000000000001"
+_TEST_WI_UUID = "00000000-0000-0000-0000-000000000011"
+
+
 def _make_state(
-    focused_id: str = "wi-uuid-001",
+    focused_id: str = _TEST_WI_UUID,
     last_check: str | None = None,
     known_ids: list[str] | None = None,
     failures: int = 0,
 ) -> SessionState:
     state = SessionState(session_id="sess-poll-001")
     state.plane_context.focused_work_item_id = focused_id
-    state.plane_context.project_id = "proj-uuid"
+    state.plane_context.project_id = _TEST_PROJECT_UUID
     state.plane_context.work_item_ids = [focused_id]
     if last_check:
         state.plane_context.last_comment_check = last_check
@@ -37,7 +41,7 @@ def _make_cfg(api_key: str = "key"):
     cfg = MagicMock()
     cfg.api_key = api_key
     cfg.workspace_slug = "ws"
-    cfg.project_id = "proj-uuid"
+    cfg.project_id = _TEST_PROJECT_UUID
     cfg.base_url = "https://plane.example.com"
     return cfg
 

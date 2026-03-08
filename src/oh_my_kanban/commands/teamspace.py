@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import click
 from plane.models.teamspaces import CreateTeamspace, UpdateTeamspace
 
@@ -73,7 +74,7 @@ def teamspace_create(
     """새 팀스페이스 생성."""
     data = CreateTeamspace(
         name=name,
-        description_html=description,
+        description_html=f"<p>{html.escape(description)}</p>" if description else None,
         lead=lead,
     )
     result = ctx.client.teamspaces.create(ctx.workspace, data)
@@ -97,7 +98,7 @@ def teamspace_update(
     """팀스페이스 수정."""
     data = UpdateTeamspace(
         name=name,
-        description_html=description,
+        description_html=f"<p>{html.escape(description)}</p>" if description else None,
         lead=lead,
     )
     result = ctx.client.teamspaces.update(ctx.workspace, teamspace_id, data)
