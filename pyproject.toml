@@ -62,6 +62,8 @@ oh_my_kanban = [
     "plugin_data/skills/omk-setup/SKILL.md",
     "plugin_data/skills/omk-status/SKILL.md",
     "plugin_data/skills/omk-off/SKILL.md",
+    "plugin_data/skills/omk-help/SKILL.md",    # glob으로 이미 포함됨 — 배포 번들 명시적 매니페스트
+    "plugin_data/skills/omk-doctor/SKILL.md",  # glob으로 이미 포함됨 — 배포 번들 명시적 매니페스트
 ]
 
 [project.optional-dependencies]
