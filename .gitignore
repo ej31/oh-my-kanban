@@ -32,8 +32,9 @@ env/
 .omc/
 .omx/
 
-# Claude Code 로컬 설정 (omk hooks install이 자동 관리)
-.claude/settings.json
+# Claude Code 로컬 설정 및 에이전트 데이터
+.claude/
+.agents/
 
 # 테스트 캐시
 .pytest_cache/
