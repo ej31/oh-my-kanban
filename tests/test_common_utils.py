@@ -1,24 +1,34 @@
 """common.py 공유 유틸리티 유닛 테스트."""
 
+import random
+import string
+
 from oh_my_kanban.hooks.common import sanitize_comment
+
+
+def _random_alnum(n: int) -> str:
+    """테스트용 랜덤 영숫자 문자열을 생성한다."""
+    return "".join(random.choices(string.ascii_letters + string.digits, k=n))
 
 
 # sanitize_comment 테스트
 
 def test_sanitize_plane_api_key():
-    text = "key: plane_api_081e8676160f42db9e17eef2eb12c0b2"
+    fake_key = "plane_api_" + _random_alnum(32).lower()[:32]
+    # plane_api_ 패턴은 hex만 매칭하므로 hex로 생성
+    fake_key = "plane_api_" + "".join(random.choices("0123456789abcdef", k=32))
+    text = f"key: {fake_key}"
     result = sanitize_comment(text)
     assert "[PLANE_API_KEY]" in result
-    assert "plane_api_081e8676160f42db9e17eef2eb12c0b2" not in result
+    assert fake_key not in result
 
 
 def test_sanitize_github_pat():
-    # 더미 PAT (36자 영숫자) — 실제 토큰이 아님
-    fake_pat = "ghp_" + "A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8"
+    fake_pat = "ghp_" + _random_alnum(36)
     text = f"token: {fake_pat}"
     result = sanitize_comment(text)
     assert "[GITHUB_PAT]" in result
-    assert "ghp_" not in result
+    assert fake_pat not in result
 
 
 def test_sanitize_bearer_token():
@@ -41,7 +51,8 @@ def test_sanitize_normal_text_unchanged():
 
 
 def test_sanitize_multiple_patterns():
-    text = "plane_api_081e8676160f42db9e17eef2eb12c0b2 and password=secret"
+    fake_key = "plane_api_" + "".join(random.choices("0123456789abcdef", k=32))
+    text = f"{fake_key} and password=secret"
     result = sanitize_comment(text)
     assert "[PLANE_API_KEY]" in result
     assert "[PASSWORD_REDACTED]" in result
