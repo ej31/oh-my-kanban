@@ -27,12 +27,12 @@ Confirm there is no active session, then begin your new work.
 
 **Step 3: Create a new Plane Work Item (optional)**
 
-Create a Work Item in Plane that matches the new work scope. When the next Claude Code session starts, oh-my-kanban will automatically detect the new session and attempt to link it to the Work Item.
+Create a Work Item in Plane that matches the new work scope. When the next Claude Code session starts, oh-my-kanban will automatically detect the new session and attempt to link it to a matching Work Item (if one exists).
 
 After execution:
 - The previous session stops being tracked
 - The new session is automatically created when the next Claude Code conversation starts
-- The new session will be linked to the new Plane Work Item
+- The new session will be linked to the new Plane Work Item (if created)
 
 If you want the full SessionEnd summary comment, end the Claude Code conversation normally before starting a new one.
 

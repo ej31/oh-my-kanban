@@ -22,7 +22,9 @@ New Task name: <user input or inferred>
 Description (optional): <user input>
 ```
 
-### 2. Check task_mode in Config
+### 2. Check task_mode in Config (Planned — not yet wired into creation flow)
+
+> **Note**: `task_mode` support is currently standalone (`src/oh_my_kanban/session/task_format.py`) and not yet integrated into the WI creation flow. The steps below describe the planned behavior.
 
 Check the `task_mode` value in `~/.config/oh-my-kanban/config.toml`:
 - `main-sub`: Create as MainTask structure (standalone WI, omk:type:main label)
@@ -30,7 +32,7 @@ Check the `task_mode` value in `~/.config/oh-my-kanban/config.toml`:
 
 ### 3. Create WI
 
-Create the WI with the appropriate structure based on task_mode:
+Create the WI. Currently, a simple standalone WI is created regardless of task_mode. The mode-specific structures below are planned for future integration:
 
 **Mode A (main-sub):**
 ```text

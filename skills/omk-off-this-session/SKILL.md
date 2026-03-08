@@ -21,6 +21,7 @@ After execution:
 - Plane sync will be skipped when the session ends (SessionEnd)
 
 To specify a particular session:
+
 ```bash
 omk hooks status          # Check the session ID
 omk hooks opt-out --session-id <SESSION_ID>
