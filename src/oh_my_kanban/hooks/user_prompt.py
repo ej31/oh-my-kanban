@@ -389,7 +389,7 @@ def main() -> None:
                 file=sys.stderr,
             )
 
-        # 8. 타임라인에 prompt 이벤트 추가
+        # 9. 타임라인에 prompt 이벤트 추가
         state.timeline.append(
             TimelineEvent(
                 timestamp=now_iso(),
