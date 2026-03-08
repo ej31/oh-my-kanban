@@ -45,7 +45,8 @@ def _poll_comments(state, cfg) -> None:
     - 새 댓글 발견 시 output_system_message로 사용자에게 알림
     """
     plane_ctx = state.plane_context
-    focused_id = plane_ctx.focused_work_item_id
+    # auto_created_task_id가 있으면 Main Task를 폴링 대상으로 우선 사용
+    focused_id = getattr(plane_ctx, "auto_created_task_id", None) or plane_ctx.focused_work_item_id
     if not focused_id:
         return
 
@@ -140,7 +141,8 @@ def _check_subtask_completion(state, cfg) -> None:
     - API 실패 시 fail-open
     """
     plane_ctx = state.plane_context
-    focused_id = plane_ctx.focused_work_item_id
+    # auto_created_task_id가 있으면 Main Task를 폴링 대상으로 우선 사용
+    focused_id = getattr(plane_ctx, "auto_created_task_id", None) or plane_ctx.focused_work_item_id
     if not focused_id:
         return
     if focused_id in plane_ctx.subtask_completion_nudged_ids:
@@ -272,7 +274,10 @@ def main() -> None:
             save_session(state)
             sys.exit(0)
 
-        # 5. 드리프트 감지 (세션 sensitivity 값 전달)
+        # 5. 설정 로드 (드리프트 처리 및 폴링에서 공통 사용)
+        cfg = load_config()
+
+        # 6. 드리프트 감지 (세션 sensitivity 값 전달)
         drift = compute_drift_score(
             state.scope,
             prompt_text,
@@ -284,7 +289,7 @@ def main() -> None:
         if drift.level in ("significant", "major"):
             drift.suppressed = should_suppress_warning(prompt_text)
 
-        # 6. 드리프트 레벨별 처리
+        # 7. 드리프트 레벨별 처리
         if drift.level == "none":
             pass  # 정상
         elif drift.level == "minor":
@@ -356,9 +361,24 @@ def main() -> None:
                 )
                 output_system_message(user_msg, "UserPromptSubmit", claude_protocol)
 
+                # Sub Task WI 자동 생성 (main-sub 모드 + Main Task 존재 시)
+                try:
+                    if (
+                        cfg.task_mode == "main-sub"
+                        and getattr(state.plane_context, "auto_created_task_id", None)
+                    ):
+                        from oh_my_kanban.session.task_format import apply_task_format
+                        from oh_my_kanban.providers import get_provider_client, get_provider_name
+                        _provider = get_provider_client(get_provider_name(cfg, state), cfg)
+                        apply_task_format(state, cfg, _provider, "drift_detected", prompt_text)
+                except Exception as _e:
+                    print(
+                        f"[omk] Sub Task WI 생성 실패 (fail-open): {type(_e).__name__}",
+                        file=sys.stderr,
+                    )
+
         # 7. ST-20: 팀원 댓글 폴링 (2분 throttle + circuit breaker)
         try:
-            cfg = load_config()
             if cfg.api_key:
                 _poll_comments(state, cfg)
                 # ST-26: sub-task 전체 완료 → 완료 처리 유도

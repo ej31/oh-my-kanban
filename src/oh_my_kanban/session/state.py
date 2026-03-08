@@ -59,6 +59,8 @@ class PlaneContext:
     last_subtask_check: Optional[str] = None
     subtask_check_failures: int = 0
     subtask_completion_nudged_ids: list[str] = field(default_factory=list)
+    # task_format 엔진이 세션 시작 시 자동 생성한 메인 WI ID (불변)
+    auto_created_task_id: Optional[str] = None
 
 
 @dataclass
@@ -166,10 +168,11 @@ class SessionState:
                 focused_work_item_id=plane_data.get("focused_work_item_id"),
                 last_comment_check=plane_data.get("last_comment_check"),
                 known_comment_ids=plane_data.get("known_comment_ids", []),
-                comment_poll_failures=plane_data.get("comment_poll_failures", 0),
+                comment_poll_failures=int(plane_data.get("comment_poll_failures", 0) or 0),
                 last_subtask_check=plane_data.get("last_subtask_check"),
-                subtask_check_failures=plane_data.get("subtask_check_failures", 0),
+                subtask_check_failures=int(plane_data.get("subtask_check_failures", 0) or 0),
                 subtask_completion_nudged_ids=plane_data.get("subtask_completion_nudged_ids", []),
+                auto_created_task_id=plane_data.get("auto_created_task_id"),
             ),
             timeline=[
                 TimelineEvent(

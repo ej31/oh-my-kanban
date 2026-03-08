@@ -81,7 +81,6 @@ def _handle_compact(session_id: str) -> None:
             # stale IDs를 항상 갱신 — 이전 실패가 복구되면 빈 리스트로 클리어
             state.plane_context.stale_work_item_ids = stale_ids
             if stale_ids:
-                state.plane_context.stale_work_item_ids = stale_ids
                 context_lines.append(
                     f"\n[경고] 다음 Work Item을 조회할 수 없습니다 (삭제/이동 가능): {', '.join(stale_ids)}"
                 )
@@ -156,9 +155,9 @@ def _handle_startup_or_resume(session_id: str, source: str) -> None:
     if _is_project_disabled():
         return
 
-    state = load_session(session_id)
+    existing_state = load_session(session_id)
 
-    if state is None:
+    if existing_state is None:
         # 신규 세션
         state = create_session(session_id)
         state.timeline.append(
@@ -170,6 +169,7 @@ def _handle_startup_or_resume(session_id: str, source: str) -> None:
         )
     else:
         # 기존 세션 재개
+        state = existing_state
         state.timeline.append(
             TimelineEvent(
                 timestamp=now_iso(),
@@ -187,6 +187,21 @@ def _handle_startup_or_resume(session_id: str, source: str) -> None:
     if state.stats.total_prompts == 0:
         state.config.sensitivity = cfg.drift_sensitivity
         state.config.cooldown = cfg.drift_cooldown
+
+    # Task format 적용 — 신규 세션 시작 시 Main Task WI 자동 생성
+    if existing_state is None:
+        from oh_my_kanban.session.task_format import VALID_TASK_MODES, apply_task_format
+        from oh_my_kanban.providers import get_provider_client, get_provider_name
+
+        if cfg.task_mode in VALID_TASK_MODES and cfg.task_mode != "none":
+            try:
+                _provider = get_provider_client(get_provider_name(cfg, state), cfg)
+                apply_task_format(state, cfg, _provider, "session_start")
+            except Exception as _e:
+                print(
+                    f"[omk] Task WI 생성 실패 (fail-open): {type(_e).__name__}",
+                    file=sys.stderr,
+                )
 
     save_session(state)
 

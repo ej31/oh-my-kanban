@@ -137,5 +137,9 @@ def _register_commands() -> None:
     from oh_my_kanban.commands.doctor import doctor
     cli.add_command(doctor)
 
+    # ── Task 커맨드 그룹 ─────────────────────────────────────────────
+    from oh_my_kanban.commands.task_cmd import task_cmd
+    cli.add_command(task_cmd, name="task")
+
 
 _register_commands()

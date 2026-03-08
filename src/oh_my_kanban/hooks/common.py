@@ -168,6 +168,7 @@ def validate_plane_url_params(
 # 민감 정보 패턴 (API 키, 토큰, 비밀번호 등)
 _SENSITIVE_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"plane_api_[a-f0-9]{32}"), "[PLANE_API_KEY]"),
+    (re.compile(r"lin_api_[A-Za-z0-9]{20,}"), "[LINEAR_API_KEY]"),
     (re.compile(r"ghp_[A-Za-z0-9]{36}"), "[GITHUB_PAT]"),
     (re.compile(r"sk-[A-Za-z0-9]{48,}"), "[API_KEY]"),
     (re.compile(r"xoxb-[A-Za-z0-9\-]+"), "[SLACK_TOKEN]"),

@@ -51,6 +51,17 @@ def _find_active_session_id() -> str | None:
     return active[0].session_id if active else None
 
 
+def _load_target_session(session_id: str) -> tuple[Any, dict[str, Any] | None]:
+    """세션을 로드하고 실패 시 에러 dict를 반환한다."""
+    target_id = session_id.strip() or _find_active_session_id()
+    if not target_id:
+        return None, {"error": "활성 세션이 없습니다."}
+    state = load_session(target_id)
+    if state is None:
+        return None, {"error": f"세션을 찾을 수 없습니다: {target_id!r}"}
+    return state, None
+
+
 # ── MCP Tools ────────────────────────────────────────────────────────────────
 
 
@@ -386,13 +397,40 @@ def omk_add_comment(
                 except Exception as e:
                     results.append({"work_item_id": wi_id, "success": False, "error": f"예외: {type(e).__name__}: {e}"})
     except Exception as e:
-        return {"error": f"Plane 클라이언트 생성 실패: {type(e).__name__}: {e}"}
+        return {"error": f"Plane 클라이언트 생성 실패: {type(e).__name__}"}
 
     success_count = sum(1 for r in results if r.get("success"))
     return {
         "success": success_count > 0,
         "message": f"{success_count}/{len(results)}개 Work Item에 댓글 추가 완료",
         "results": results,
+    }
+
+
+@mcp.tool()
+def omk_get_task_format_status(session_id: str = "") -> dict[str, Any]:
+    """현재 세션의 task_mode와 연결된 Work Item 목록을 반환한다.
+
+    Args:
+        session_id: 조회할 세션 ID (비어있으면 활성 세션 자동 선택)
+
+    Returns:
+        task_mode, work_item_ids, focused_work_item_id, auto_created_task_id,
+        provider_type를 포함한 dict. 세션이 없으면 error 키 포함.
+    """
+    state, error = _load_target_session(session_id)
+    if error:
+        return error
+
+    cfg = load_config()
+    from oh_my_kanban.providers import get_provider_name as _get_provider_name
+    ctx = state.plane_context
+    return {
+        "task_mode": cfg.task_mode,
+        "work_item_ids": list(ctx.work_item_ids),
+        "focused_work_item_id": ctx.focused_work_item_id,
+        "auto_created_task_id": getattr(ctx, "auto_created_task_id", None),
+        "provider_type": _get_provider_name(cfg, state),
     }
 
 
