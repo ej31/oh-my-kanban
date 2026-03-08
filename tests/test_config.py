@@ -168,7 +168,7 @@ def test_toml_auto_archive_days_loaded(tmp_path: Path) -> None:
     """TOML에 auto_archive_days가 있을 때 load_config()가 해당 값을 반환한다."""
     config_file = _write_config(
         tmp_path,
-        '[default]\nauto_archive_days = "14"\n',
+        '[default]\nauto_archive_days = 14\n',
     )
 
     with patch("oh_my_kanban.config.CONFIG_FILE", config_file):
@@ -181,7 +181,7 @@ def test_toml_session_retention_days_minimum(tmp_path: Path) -> None:
     """session_retention_days 최솟값은 1이어야 한다 (0 입력 시 1로 보정)."""
     config_file = _write_config(
         tmp_path,
-        '[default]\nsession_retention_days = "0"\n',
+        '[default]\nsession_retention_days = 0\n',
     )
 
     with patch("oh_my_kanban.config.CONFIG_FILE", config_file):
@@ -231,3 +231,16 @@ def test_allowed_config_keys_includes_workflow_fields() -> None:
     assert "auto_archive_days" in _ALLOWED_CONFIG_KEYS
     assert "auto_complete_subtasks" in _ALLOWED_CONFIG_KEYS
     assert "session_retention_days" in _ALLOWED_CONFIG_KEYS
+
+
+def test_toml_auto_complete_subtasks_native_bool_loaded(tmp_path: Path) -> None:
+    """TOML bool 스칼라가 auto_complete_subtasks에 반영되어야 한다."""
+    config_file = _write_config(
+        tmp_path,
+        "[default]\nauto_complete_subtasks = true\n",
+    )
+
+    with patch("oh_my_kanban.config.CONFIG_FILE", config_file):
+        cfg = load_config()
+
+    assert cfg.auto_complete_subtasks is True

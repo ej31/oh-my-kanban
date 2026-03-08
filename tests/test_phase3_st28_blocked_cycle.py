@@ -61,7 +61,7 @@ class TestBlockedWiAlert:
         cfg = _make_cfg()
 
         with (
-            patch("httpx.Client") as mock_httpx,
+            patch("httpx.Client"),
             patch(f"{_MOD}.output_system_message") as mock_sys,
         ):
             _check_blocked_and_cycle_deadline(state, cfg)

@@ -73,9 +73,8 @@ class TestSessionResumeHandoff:
             from oh_my_kanban.hooks.session_start import main
             main()
 
-        # 모든 systemMessage 호출에서 메모 내용 확인
-        all_msgs = " ".join(str(c[0][0]) for c in mock_sys_msg.call_args_list)
-        assert "redis" in all_msgs or note[:30] in all_msgs
+        messages = [str(c[0][0]) for c in mock_sys_msg.call_args_list]
+        assert any(note[:30] in msg for msg in messages)
 
     def test_no_handoff_message_when_note_empty(self):
         """handoff_note가 없으면 핸드오프 관련 systemMessage를 출력하지 않는다."""

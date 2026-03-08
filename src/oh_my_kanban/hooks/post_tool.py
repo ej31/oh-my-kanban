@@ -111,11 +111,12 @@ def _post_commit_comment(state, commit_hash: str, commit_command: str) -> None:
         state.stats.commit_hashes = [*state.stats.commit_hashes, commit_hash]
 
     # Claude에게 커밋 기록 완료 additionalContext 주입
-    wi_id_short = target_ids[0][:8] if target_ids else ""
-    output_context(
-        "PostToolUse",
-        f"[omk] 커밋 {hash_short}을 Work Item({wi_id_short}...)에 자동 기록했습니다.",
-    )
+    if any_success:
+        wi_id_short = target_ids[0][:8] if target_ids else ""
+        output_context(
+            "PostToolUse",
+            f"[omk] 커밋 {hash_short}을 Work Item({wi_id_short}...)에 자동 기록했습니다.",
+        )
 
 
 def _suggest_wi_link_from_commit(state, commit_command: str) -> None:
@@ -138,7 +139,7 @@ def _suggest_wi_link_from_commit(state, commit_command: str) -> None:
         "PostToolUse",
         f"[omk] 커밋 메시지에서 Work Item 식별자를 감지했습니다: {ids_str}\n"
         f"세션이 Work Item에 연결되지 않은 상태입니다.\n"
-        f"/oh-my-kanban:focus {unique_ids[0]} 를 사용하여 세션을 연결할 수 있습니다.",
+        "/oh-my-kanban:focus 를 사용하여 세션을 연결할 수 있습니다.",
     )
 
 
@@ -245,7 +246,7 @@ def main() -> None:
             save_session(state)
 
         # ST-24: WI에 커밋 댓글 추가 (잠금 밖에서 수행, fail-open)
-        if is_git_commit and state.plane_context.work_item_ids:
+        if commit_hash and state.plane_context.work_item_ids:
             try:
                 _post_commit_comment(state, commit_hash, commit_command)
                 # commit_hashes 갱신을 세션 파일에 반영 (잠금 밖에서 원자적 저장)

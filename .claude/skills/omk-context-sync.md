@@ -11,6 +11,7 @@
 ### 1. 현재 PlaneContext 읽기
 
 현재 세션의 PlaneContext에서 연결된 WI를 확인한다:
+
 - `state.plane_context.focused_work_item_id` — 집중 WI (우선)
 - `state.plane_context.work_item_ids` — 전체 연결 WI 목록
 - `state.plane_context.project_id` — 프로젝트 ID
@@ -19,18 +20,19 @@ WI가 없으면 사용자에게 `/oh-my-kanban:focus`로 연결을 요청한다.
 
 ### 2. WI 최신 상태 조회
 
-```
+```python
 mcp__plane__retrieve_work_item(work_item_id="<focused_work_item_id>")
 ```
 
 조회 결과에서 추출:
+
 - WI 이름, 상태, 우선순위
 - 담당자, 마감일
 - 라벨 목록
 
 ### 3. 최근 댓글 조회
 
-```
+```python
 mcp__plane__list_work_item_comments(work_item_id="<focused_work_item_id>")
 ```
 
@@ -38,13 +40,13 @@ mcp__plane__list_work_item_comments(work_item_id="<focused_work_item_id>")
 
 ### 4. Sub-task 목록 조회
 
-```
+```python
 mcp__plane__list_work_items(project_id="<project_id>", parent="<focused_work_item_id>")
 ```
 
 ### 5. 동기화 결과 요약 출력
 
-```
+```text
 [omk] WI 동기화 완료
   📋 <identifier>: <wi_name>
   상태: <state_name> | 우선순위: <priority>
@@ -73,5 +75,6 @@ mcp__plane__list_work_items(project_id="<project_id>", parent="<focused_work_ite
 ## 주의사항
 
 - API 실패 시 사용자에게 명확한 에러와 함께 `/oh-my-kanban:doctor` 실행을 안내한다
-- 동기화는 읽기 전용 — 세션 상태를 변경하지 않는다
+- 동기화는 Plane WI 자체를 수정하지 않는다. 다만 세션의
+  `last_comment_check`와 `known_comment_ids`는 갱신할 수 있다
 - 새 댓글이 없으면 "새로운 댓글 없음"을 명시한다

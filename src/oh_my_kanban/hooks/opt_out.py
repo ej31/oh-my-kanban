@@ -45,7 +45,8 @@ def _post_opt_out_comment(state: SessionState) -> None:
         )
         try:
             with httpx.Client(timeout=PLANE_API_TIMEOUT, follow_redirects=False) as client:
-                client.post(url, headers=headers, json={"comment_html": comment})
+                response = client.post(url, headers=headers, json={"comment_html": comment})
+                response.raise_for_status()
         except Exception as e:
             print(
                 f"[omk] opt-out 댓글 추가 실패 (wi_id={wi_id!r}): {type(e).__name__}: {e}",

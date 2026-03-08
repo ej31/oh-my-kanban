@@ -226,7 +226,8 @@ def _build_wi_context(
                     st_state = st_state_raw.get("name", "")
                 elif isinstance(st_state_raw, str):
                     st_state = st_state_raw
-            completed = "✓" if "complete" in st_state.lower() or "done" in st_state.lower() else "○"
+            normalized_state = st_state.strip().lower()
+            completed = "✓" if normalized_state in {"complete", "completed", "done"} else "○"
             lines.append(f"  {completed} {st_name}")
         if len(sub_tasks) > _SUBTASKS_DISPLAY_MAX:
             lines.append(f"  ...외 {len(sub_tasks) - _SUBTASKS_DISPLAY_MAX}개")
@@ -329,16 +330,15 @@ def build_plane_context(
         )
         return ""
 
+    # 삭제된 WI가 있으면 컨텍스트에 경고 추가
+    if deleted_wi_ids:
+        deleted_ids_str = ', '.join(d[:8] + '...' for d in deleted_wi_ids)
+        deleted_note = f"[omk 경고] 다음 WI가 외부에서 삭제됐습니다: {deleted_ids_str}"
+        parts.append(deleted_note)
+
     if not parts:
         return ""
 
     full_context = "\n\n".join(parts)
-
-    # 삭제된 WI가 있으면 컨텍스트에 경고 추가
-    if deleted_wi_ids:
-        deleted_ids_str = ', '.join(d[:8] + '...' for d in deleted_wi_ids)
-        deleted_note = f"\n[omk 경고] 다음 WI가 외부에서 삭제됐습니다: {deleted_ids_str}"
-        parts.append(deleted_note)
-        full_context = "\n\n".join(parts)
 
     return _truncate(full_context, _CONTEXT_MAX_CHARS)

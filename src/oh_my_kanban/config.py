@@ -127,14 +127,28 @@ def load_config(profile: str = "default") -> Config:
                         file=sys.stderr,
                     )
             if "auto_archive_days" in section:
-                cfg.auto_archive_days = max(0, int(section["auto_archive_days"]))
+                try:
+                    cfg.auto_archive_days = max(0, int(section["auto_archive_days"]))
+                except (ValueError, TypeError):
+                    print(
+                        f"경고: auto_archive_days='{section['auto_archive_days']}'은 유효한 정수 값이 아닙니다. "
+                        f"기본값 {cfg.auto_archive_days} 사용.",
+                        file=sys.stderr,
+                    )
             if "auto_complete_subtasks" in section:
                 val = section["auto_complete_subtasks"]
                 cfg.auto_complete_subtasks = (
                     val if isinstance(val, bool) else str(val).lower() == "true"
                 )
             if "session_retention_days" in section:
-                cfg.session_retention_days = max(1, int(section["session_retention_days"]))
+                try:
+                    cfg.session_retention_days = max(1, int(section["session_retention_days"]))
+                except (ValueError, TypeError):
+                    print(
+                        f"경고: session_retention_days='{section['session_retention_days']}'은 유효한 정수 값이 아닙니다. "
+                        f"기본값 {cfg.session_retention_days} 사용.",
+                        file=sys.stderr,
+                    )
             if "format_preset" in section:
                 val = section["format_preset"]
                 if val in _VALID_FORMAT_PRESETS:

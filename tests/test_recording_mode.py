@@ -27,7 +27,7 @@ def test_upload_level_full_constant():
 # ── main() upload_level 처리 ────────────────────────────────────────────────────
 
 
-def _make_state(upload_level_val: str = "metadata", opted_out: bool = False):
+def _make_state(*, opted_out: bool = False):
     """테스트용 SessionState 모의 객체를 생성한다."""
     from oh_my_kanban.session.state import SessionState
     state = SessionState(session_id="sess-test-001")
@@ -94,7 +94,7 @@ def test_upload_level_metadata_no_warning(capsys):
     assert "upload_level=full" not in captured.err
 
 
-def test_upload_level_full_still_completes_normally(capsys):
+def test_upload_level_full_still_completes_normally():
     """upload_level=full 이어도 세션 완료 처리는 정상 수행된다."""
     from oh_my_kanban.hooks.session_end import main
 

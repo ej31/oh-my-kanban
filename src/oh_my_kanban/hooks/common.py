@@ -167,15 +167,33 @@ def sanitize_comment(text: str) -> str:
 
 def update_hud(wi_identifier: str, wi_name: str, wi_status: str) -> None:
     """터미널 타이틀과 tmux 윈도우 이름을 현재 WI 정보로 업데이트한다."""
-    truncated = wi_name[:HUD_TASK_NAME_MAX]
+    safe_name = (
+        wi_name.replace("\x1b", "")
+        .replace("\x07", "")
+        .replace("\n", " ")
+        .replace("\r", " ")
+    )
+    safe_identifier = (
+        wi_identifier.replace("\x1b", "")
+        .replace("\x07", "")
+        .replace("\n", " ")
+        .replace("\r", " ")
+    )
+    safe_status = (
+        wi_status.replace("\x1b", "")
+        .replace("\x07", "")
+        .replace("\n", " ")
+        .replace("\r", " ")
+    )
+    truncated = safe_name[:HUD_TASK_NAME_MAX]
     # ANSI 이스케이프로 터미널 타이틀 업데이트
-    sys.stderr.write(f"\033]0;omk:{wi_identifier} {truncated} [{wi_status}]\007")
+    sys.stderr.write(f"\033]0;omk:{safe_identifier} {truncated} [{safe_status}]\007")
     sys.stderr.flush()
     # TMUX 환경이면 윈도우 이름도 변경
     if os.environ.get("TMUX"):
         try:
             subprocess.run(
-                ["tmux", "rename-window", f"omk:{wi_identifier}"],
+                ["tmux", "rename-window", f"omk:{safe_identifier}"],
                 check=False,
                 capture_output=True,
             )
@@ -198,7 +216,7 @@ def reset_hud() -> None:
             pass  # tmux 실행 실패 시 무시
 
 
-def create_plane_http_client(cfg: Any) -> Any | None:  # noqa: ANN401
+def create_plane_http_client(_cfg: Any) -> Any | None:  # noqa: ANN401
     """Plane API용 httpx 클라이언트를 생성한다. httpx 미설치 시 None 반환."""
     try:
         import httpx  # noqa: PLC0415
@@ -297,16 +315,15 @@ def handle_orphan_wi(
         w for w in state.plane_context.work_item_ids if w != wi_id
     ]
 
-    # focused_work_item_id가 삭제된 WI이면 초기화
+    remaining = list(state.plane_context.work_item_ids)
+
+    # focused_work_item_id가 삭제된 WI이면 남은 WI로 이동
     if state.plane_context.focused_work_item_id == wi_id:
-        state.plane_context.focused_work_item_id = None
+        state.plane_context.focused_work_item_id = remaining[0] if remaining else None
 
     # main_task_id가 삭제된 WI이면 초기화
     if state.plane_context.main_task_id == wi_id:
         state.plane_context.main_task_id = None
-
-    # 전체 WI가 삭제됐는지 일부만 삭제됐는지 구분
-    remaining = list(state.plane_context.work_item_ids)
 
     if not remaining:
         # 모든 WI가 삭제된 경우

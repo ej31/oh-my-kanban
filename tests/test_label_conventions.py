@@ -84,6 +84,11 @@ def test_ensure_omk_labels_creates_missing(capsys):
 
     # 3개 라벨 생성 시도
     assert mock_client.post.call_count == len(OMK_LABELS)
+    posted_names = {
+        call.kwargs["json"]["name"]
+        for call in mock_client.post.call_args_list
+    }
+    assert posted_names == {label.name for label in OMK_LABELS}
 
 
 def test_ensure_omk_labels_idempotent(capsys):

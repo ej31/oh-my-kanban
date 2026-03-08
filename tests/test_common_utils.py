@@ -1,4 +1,5 @@
 """common.py 공유 유틸리티 유닛 테스트."""
+from dataclasses import FrozenInstanceError
 import sys
 import json
 from unittest.mock import patch, MagicMock
@@ -19,7 +20,7 @@ def test_hook_diagnostic_fields():
 
 def test_hook_diagnostic_frozen():
     d = HookDiagnostic(category="auth_failure", message="인증 실패")
-    with pytest.raises(Exception):  # frozen=True이므로 수정 불가
+    with pytest.raises(FrozenInstanceError):  # frozen=True이므로 수정 불가
         d.category = "other"
 
 # SuccessNudge 테스트
@@ -71,10 +72,11 @@ def test_build_wi_identifier():
 
 # sanitize_comment 테스트
 def test_sanitize_hex_string():
-    text = "key: abcdef1234567890abcdef1234567890"  # 32자 hex
+    hex_blob = "".join(["abcd", "ef12", "3456", "7890", "abcd", "ef12", "3456", "7890"])
+    text = f"key: {hex_blob}"  # 32자 hex
     result = sanitize_comment(text)
     assert "[REDACTED]" in result
-    assert "abcdef1234567890abcdef1234567890" not in result
+    assert hex_blob not in result
 
 def test_sanitize_short_hex_not_redacted():
     text = "id: abc123def456"  # 14자, 짧으므로 그대로 유지
@@ -87,15 +89,13 @@ def test_sanitize_normal_text():
 
 # update_hud / reset_hud 테스트
 def test_update_hud_no_tmux(capsys):
-    with patch.dict("os.environ", {}, clear=False):
-        # TMUX 없는 환경에서 에러 없이 동작
-        if "TMUX" in __import__("os").environ:
-            import os
-            del os.environ["TMUX"]
+    import os as _os
+    env_without_tmux = {k: v for k, v in _os.environ.items() if k != "TMUX"}
+    with patch.dict("os.environ", env_without_tmux, clear=True):
         update_hud("OMK-1", "테스트", "In Progress")
-    # stderr에 ANSI 이스케이프가 출력됨
+    # stderr에 ANSI 이스케이프 시퀀스가 출력됨
     captured = capsys.readouterr()
-    assert "OMK-1" in captured.err or len(captured.err) > 0
+    assert "OMK-1" in captured.err
 
 def test_reset_hud_no_error():
     # 에러 없이 동작하는지만 확인

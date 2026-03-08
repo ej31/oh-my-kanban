@@ -193,7 +193,7 @@ def main() -> None:
         )
 
         # Plane Work Item 댓글 추가 (설정이 있는 경우)
-        if state.plane_context.work_item_ids:
+        if state.plane_context.work_item_ids and cfg.api_key and cfg.workspace_slug:
             # ST-25: format_preset에 따라 댓글 생략 가능
             format_preset = getattr(cfg, "format_preset", "normal")
             if format_preset != "eco":

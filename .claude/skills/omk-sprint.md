@@ -5,23 +5,29 @@
 ## 실행 단계
 
 1. **활성 Cycle 조회**
-   ```python
-   mcp__plane__list_cycles(project_id=<현재 project_id>)
-   ```
-   status가 "current" 또는 end_date가 미래인 Cycle을 찾는다.
 
-2. **Cycle 내 Work Items 조회**
-   ```python
-   mcp__plane__list_cycle_work_items(project_id=<현재 project_id>, cycle_id=<active_cycle_id>)
-   ```
+```python
+mcp__plane__list_cycles(project_id=<현재 project_id>)
+```
 
-3. **상태별 분류**
+status가 "current" 또는 end_date가 미래인 Cycle을 찾는다.
+
+1. **Cycle 내 Work Items 조회**
+
+```python
+mcp__plane__list_cycle_work_items(
+  project_id=<현재 project_id>,
+  cycle_id=<active_cycle_id>
+)
+```
+
+1. **상태별 분류**
    - 미완료 (group: started, unstarted, backlog)
    - 완료 (group: completed, cancelled)
 
-4. **결과 출력** (아래 형식):
+1. **결과 출력** (아래 형식):
 
-```
+```text
 [omk] Sprint: {cycle_name}
   기간: {start_date} ~ {end_date} (D-{days_left})
   진행률: {done_count}/{total_count} ({percent}%)
@@ -37,7 +43,7 @@
 ```python
 # 세션 상태에서 project_id 조회
 import json, pathlib
-session_files = list(pathlib.Path.home().glob(".claude/oh-my-kanban/sessions/*.json"))
+session_files = list(pathlib.Path.home().glob(".config/oh-my-kanban/sessions/*.json"))
 # 가장 최근 파일의 plane_context.project_id 사용
 ```
 

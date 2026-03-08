@@ -58,7 +58,8 @@ class TestSuggestWiLinkFromCommit:
 
         mock_ctx.assert_called_once()
         ctx_msg = mock_ctx.call_args[0][1]
-        assert "OMK-42" in ctx_msg or "OMK-43" in ctx_msg
+        assert "OMK-42" in ctx_msg
+        assert "OMK-43" in ctx_msg
 
     def test_caps_at_three_identifiers(self):
         """4개 이상의 식별자는 3개까지만 표시."""
@@ -69,8 +70,10 @@ class TestSuggestWiLinkFromCommit:
             _suggest_wi_link_from_commit(state, cmd)
 
         ctx_msg = mock_ctx.call_args[0][1]
-        # 최대 3개까지만 표시되므로 OMK-4는 없을 수 있음
         assert "OMK-1" in ctx_msg
+        assert "OMK-2" in ctx_msg
+        assert "OMK-3" in ctx_msg
+        assert "OMK-4" not in ctx_msg
 
     def test_deduplicates_identifiers(self):
         """중복 식별자는 한 번만 표시."""
@@ -80,8 +83,7 @@ class TestSuggestWiLinkFromCommit:
             _suggest_wi_link_from_commit(state, "git commit -m 'fix: OMK-42 OMK-42'")
 
         ctx_msg = mock_ctx.call_args[0][1]
-        # OMK-42가 한 번만 언급됨 (카운트로 확인)
-        assert ctx_msg.count("OMK-42") >= 1
+        assert ctx_msg.count("OMK-42") == 1
 
     def test_suggestion_includes_focus_command(self):
         """제안 메시지에 /oh-my-kanban:focus 힌트 포함."""

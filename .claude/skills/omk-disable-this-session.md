@@ -22,14 +22,15 @@ omk hooks opt-out
 이 명령은 다음을 수행한다:
 - `state.opted_out = True` 설정
 - `state.status = "opted_out"` 설정
-- WI가 연결된 경우 구조화 댓글 추가 (WI 삭제는 하지 않음)
+- WI가 연결된 경우 구조화 댓글 1회를 추가 (WI 삭제는 하지 않음)
 - HUD 초기화
 
-### 3. WI 댓글 추가 (WI가 있는 경우)
+### 3. WI 댓글 형식 참고 (설명용 예시)
 
-연결된 WI에 추적 중단 댓글을 추가한다:
+실제 구조화 댓글은 Step 2의 `omk hooks opt-out` 처리 안에서 한 번만 기록된다.
+아래는 중복 실행용 절차가 아니라, 어떤 형식의 댓글이 남는지 설명하는 예시다.
 
-```
+```text
 mcp__plane__create_work_item_comment(
   work_item_id="<focused_work_item_id>",
   comment_html="<h2>omk 추적 중단</h2>
@@ -45,7 +46,7 @@ mcp__plane__create_work_item_comment(
 
 ### 4. 사용자에게 확인 알림
 
-```
+```text
 [omk] 이 세션의 Task 추적이 비활성화되었습니다.
   이 세션에서는 더 이상 WI 생성/업데이트가 발생하지 않습니다.
   이미 생성된 Plane Work Item은 유지됩니다.

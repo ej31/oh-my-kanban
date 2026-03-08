@@ -11,11 +11,13 @@
 ### 1. 현재 WI 확인
 
 현재 세션의 PlaneContext에서 연결된 WI를 확인한다:
+
 - `state.plane_context.focused_work_item_id` — 집중 WI (우선)
 - `state.plane_context.work_item_ids[0]` — 첫 번째 연결 WI (폴백)
 
 WI가 없으면:
-```
+
+```text
 연결된 Task가 없습니다. /oh-my-kanban:focus로 Task에 연결하거나
 /oh-my-kanban:create-task로 새 Task를 생성하세요.
 ```
@@ -23,7 +25,8 @@ WI가 없으면:
 ### 2. 메모 내용 확인
 
 사용자가 제공한 텍스트를 메모로 사용한다. 제공하지 않은 경우 요청한다:
-```
+
+```text
 어떤 내용을 기록할까요?
 ```
 
@@ -32,11 +35,13 @@ WI가 없으면:
 메모 유형에 따라 적절한 형식을 사용한다:
 
 **일반 메모:**
+
 ```html
 <p>[{timestamp}] {memo_text}</p>
 ```
 
 **결정 사항:**
+
 ```html
 <h3>결정 사항</h3>
 <ul>
@@ -47,6 +52,7 @@ WI가 없으면:
 ```
 
 **진행 상황 업데이트:**
+
 ```html
 <h3>진행 상황</h3>
 <p>{status_update}</p>
@@ -54,7 +60,7 @@ WI가 없으면:
 
 ### 4. 댓글 추가
 
-```
+```python
 mcp__plane__create_work_item_comment(
   work_item_id="<focused_work_item_id>",
   comment_html="<formatted_comment>"
@@ -63,7 +69,7 @@ mcp__plane__create_work_item_comment(
 
 ### 5. 완료 확인
 
-```
+```text
 [omk] 메모가 기록되었습니다.
   WI: <identifier> — <wi_name>
   내용: <memo_summary>

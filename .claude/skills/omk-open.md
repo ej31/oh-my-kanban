@@ -11,18 +11,20 @@
 ### 1. 현재 WI 확인
 
 현재 세션의 PlaneContext에서 연결된 WI를 확인한다:
+
 - `state.plane_context.focused_work_item_id` — 집중 WI (우선)
 - `state.plane_context.work_item_ids` — 연결된 WI 목록
 
 WI가 없으면:
-```
+
+```text
 연결된 Task가 없습니다. /oh-my-kanban:focus로 Task에 연결하거나
 /oh-my-kanban:create-task로 새 Task를 생성하세요.
 ```
 
 ### 2. WI 상세 조회
 
-```
+```python
 mcp__plane__retrieve_work_item(work_item_id="<focused_work_item_id>")
 ```
 
@@ -31,18 +33,20 @@ mcp__plane__retrieve_work_item(work_item_id="<focused_work_item_id>")
 ### 3. URL 생성
 
 Plane URL 패턴:
-```
+
+```text
 {base_url}/{workspace_slug}/projects/{project_id}/issues/{sequence_id}/
 ```
 
 설정에서 값을 읽는다:
+
 - `base_url`: `~/.config/oh-my-kanban/config.toml`의 `base_url`
 - `workspace_slug`: 설정의 `workspace_slug`
 - `project_id`: `state.plane_context.project_id`
 
 ### 4. URL 출력
 
-```
+```text
 [omk] 현재 Task
   WI: <identifier> — <wi_name>
   상태: <state_name>
@@ -54,7 +58,8 @@ Plane URL 패턴:
 ### 5. 멀티 WI 처리
 
 여러 WI가 연결된 경우 모두 표시한다:
-```
+
+```text
 [omk] 연결된 Tasks
   1. <identifier1> — <name1>: <url1>
   2. <identifier2> — <name2>: <url2>

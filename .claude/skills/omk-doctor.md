@@ -7,8 +7,14 @@ oh-my-kanban의 설정, Plane API 인증, 네트워크 연결을 진단한다.
 ### 1. API 키 진단
 
 ```bash
-# 설정 파일 확인
-cat ~/.config/oh-my-kanban/config.toml
+# 설정 파일 존재/권한 확인
+ls -l ~/.config/oh-my-kanban/config.toml
+
+# 민감정보를 제외하고 주요 설정만 확인
+grep -E '^(workspace_slug|project_id)\s*=' ~/.config/oh-my-kanban/config.toml
+
+# API 키 존재 여부만 확인
+grep -q '^\s*api_key\s*=' ~/.config/oh-my-kanban/config.toml && echo "api_key configured"
 ```
 
 - `api_key`가 비어있으면 → `omk setup`으로 재설정
@@ -22,7 +28,7 @@ grep workspace_slug ~/.config/oh-my-kanban/config.toml
 ```
 
 - 비어있으면 → `omk setup`으로 재설정
-- Plane URL에서 슬러그 확인: `https://app.plane.so/<workspace_slug>/`
+- Plane URL에서 슬러그 확인: `<your_plane_url>/<workspace_slug>/`
 
 ### 3. API 응답 진단
 
@@ -51,7 +57,7 @@ curl -s -o /dev/null -w "%{http_code}" \
 
 ```bash
 # 최근 세션 파일 확인
-ls -la ~/.local/share/oh-my-kanban/sessions/ | tail -5
+ls -lt ~/.local/share/oh-my-kanban/sessions/ | head -5
 ```
 
 ## PlaneContext에서 정보 읽기

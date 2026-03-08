@@ -98,13 +98,14 @@ class TestHandoffMemoInjection:
             patch("oh_my_kanban.hooks.session_end.load_config", return_value=cfg),
             patch("oh_my_kanban.hooks.session_end.save_session"),
             patch("oh_my_kanban.hooks.session_end.reset_hud"),
-            patch("oh_my_kanban.hooks.session_end._post_plane_comment", return_value=False),
+            patch("oh_my_kanban.hooks.session_end._post_plane_comment", return_value=False) as mock_post,
             patch("oh_my_kanban.hooks.session_end.output_context") as mock_ctx,
         ):
             from oh_my_kanban.hooks.session_end import main
             main()
 
         mock_ctx.assert_not_called()
+        mock_post.assert_not_called()
 
 
 class TestFormatPresetEcoSkipsComment:

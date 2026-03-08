@@ -8,6 +8,7 @@
    - `focused_work_item_id` 또는 `work_item_ids[0]` 사용
 
 2. **WI 댓글 조회**
+
    ```python
    mcp__plane__list_work_item_comments(
        project_id=<현재 project_id>,
@@ -20,7 +21,7 @@
 
 4. **결과 출력** (아래 형식):
 
-```
+```text
 [omk] Work Item 기여 이력: {wi_identifier} — {wi_name}
 
   [2026-03-07 09:15 UTC] 세션 시작 (sess-abc123...)

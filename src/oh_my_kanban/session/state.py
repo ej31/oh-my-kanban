@@ -57,8 +57,11 @@ class PlaneContext:
     stale_work_item_ids: list[str] = field(default_factory=list) # 외부 삭제된 WI ID 목록
     # 연속 폴링 실패 횟수 (circuit breaker)
     comment_poll_failures: int = 0
-    # sub-task 전체 완료 알림 발송 여부 (중복 방지)
-    subtask_completion_nudged: bool = False
+    # sub-task 전체 완료 알림 발송 WI 목록 (중복 방지)
+    subtask_completion_nudged_ids: list[str] = field(default_factory=list)
+    # sub-task 완료 체크의 최근 실행 시각/연속 실패 횟수
+    last_subtask_check: str | None = None
+    subtask_check_failures: int = 0
     # 핫스팟 알림 발송 파일 목록 (중복 방지)
     hotspot_alerted_files: list[str] = field(default_factory=list)
 
@@ -189,7 +192,9 @@ class SessionState:
                 known_comment_ids=plane_data.get("known_comment_ids", []),
                 stale_work_item_ids=plane_data.get("stale_work_item_ids", []),
                 comment_poll_failures=plane_data.get("comment_poll_failures", 0),
-                subtask_completion_nudged=plane_data.get("subtask_completion_nudged", False),
+                subtask_completion_nudged_ids=plane_data.get("subtask_completion_nudged_ids", []),
+                last_subtask_check=plane_data.get("last_subtask_check"),
+                subtask_check_failures=plane_data.get("subtask_check_failures", 0),
                 hotspot_alerted_files=plane_data.get("hotspot_alerted_files", []),
             ),
             timeline=[

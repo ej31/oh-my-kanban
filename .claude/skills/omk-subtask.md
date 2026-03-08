@@ -11,13 +11,15 @@
 ### 1. 현재 WI 확인
 
 세션 파일에서 현재 메인 WI를 확인한다:
+
 - `state.plane_context.focused_work_item_id` — 집중 WI (parent로 사용)
 - `state.plane_context.main_task_id` — 메인 태스크 (없으면 focused 사용)
 
 연결된 WI가 없으면:
-```
+
+```text
 [omk] 현재 세션에 연결된 Task가 없습니다.
-  /omk focus 또는 /omk create-task로 먼저 Task를 연결하세요.
+  /oh-my-kanban:focus 또는 /oh-my-kanban:create-task로 먼저 Task를 연결하세요.
 ```
 
 ### 2. Sub-task 정보 수집
@@ -26,7 +28,7 @@
 
 ### 3. Sub-task 생성
 
-```
+```python
 mcp__plane__create_work_item(
   project_id="<project_id>",
   name="<subtask_name>",
@@ -37,14 +39,15 @@ mcp__plane__create_work_item(
 ```
 
 상태(State) ID와 라벨 ID는 하드코딩하지 않고 동적 조회한다:
-```
+
+```python
 mcp__plane__list_states(project_id="<project_id>")
 mcp__plane__list_labels(project_id="<project_id>")
 ```
 
 ### 4. 확인 알림
 
-```
+```text
 [omk] Sub-task가 생성되었습니다.
   WI: <identifier> — <subtask_name>
   상위: <parent_identifier> — <parent_name>

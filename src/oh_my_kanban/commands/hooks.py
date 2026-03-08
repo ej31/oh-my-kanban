@@ -306,9 +306,13 @@ def _prompt_upload_level() -> str:
         default="1",
         show_default=True,
     )
-    level = "metadata" if choice == "1" else "full"
-    click.echo(f"  → upload_level = {level}")
-    return level
+    if choice == "1":
+        level = "metadata"
+        click.echo(f"  → upload_level = {level}")
+        return level
+
+    click.echo("  → upload_level = metadata  (전체 기록은 현재 미지원, metadata로 저장)")
+    return "metadata"
 
 
 def _install_hooks(local: bool, local_only: bool = False, non_interactive: bool = False) -> None:
@@ -363,6 +367,13 @@ def _install_hooks(local: bool, local_only: bool = False, non_interactive: bool 
     merged = _merge_hooks(existing.get("hooks", {}), omk_config)
     settings = {**existing, "hooks": merged}
 
+    # Task 관리 방식 + 업로드 수준 설정 (인터랙티브 모드에서만)
+    task_mode = "main-sub"
+    upload_level = "metadata"
+    if not non_interactive:
+        task_mode = _prompt_task_mode()
+        upload_level = _prompt_upload_level()
+
     _write_settings_atomic(settings_path, settings)
 
     # .gitignore에 .claude/settings.json 자동 추가 (Bootstrap lock 재발 방지)
@@ -373,10 +384,7 @@ def _install_hooks(local: bool, local_only: bool = False, non_interactive: bool 
     # 플러그인 파일을 캐시 디렉토리에 복사
     _install_plugin_files()
 
-    # Task 관리 방식 + 업로드 수준 설정 (인터랙티브 모드에서만)
     if not non_interactive:
-        task_mode = _prompt_task_mode()
-        upload_level = _prompt_upload_level()
         try:
             from oh_my_kanban.config import save_config
             save_config({"task_mode": task_mode, "upload_level": upload_level})

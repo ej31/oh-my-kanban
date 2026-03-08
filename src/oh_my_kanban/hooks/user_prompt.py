@@ -32,6 +32,8 @@ from oh_my_kanban.session.state import TimelineEvent, now_iso
 # ST-20: 댓글 폴링 상수
 _COMMENT_POLL_INTERVAL_SEC = 120   # 2분 throttle
 _COMMENT_POLL_MAX_FAILURES = 3     # 연속 실패 circuit breaker 임계값
+_SUBTASK_CHECK_INTERVAL_SEC = 120
+_SUBTASK_CHECK_MAX_FAILURES = 3
 
 
 def _poll_comments(state, cfg) -> None:
@@ -81,6 +83,7 @@ def _poll_comments(state, cfg) -> None:
             resp = client.get(url, headers=headers)
         if resp.status_code != 200:
             plane_ctx.comment_poll_failures += 1
+            plane_ctx.last_comment_check = now_dt.isoformat()
             return
 
         data = resp.json()
@@ -115,6 +118,7 @@ def _poll_comments(state, cfg) -> None:
 
     except Exception as e:
         plane_ctx.comment_poll_failures += 1
+        plane_ctx.last_comment_check = now_dt.isoformat()
         print(
             "[omk] 댓글 폴링 실패"
             f" ({plane_ctx.comment_poll_failures}/{_COMMENT_POLL_MAX_FAILURES}): "
@@ -126,17 +130,28 @@ def _poll_comments(state, cfg) -> None:
 def _check_subtask_completion(state, cfg) -> None:
     """현재 WI의 모든 sub-task가 완료됐으면 사용자에게 알린다 (ST-26).
 
-    - subtask_completion_nudged가 True이면 중복 알림 방지
+    - subtask_completion_nudged_ids에 focused WI가 있으면 중복 알림 방지
     - sub-task 없으면 알리지 않음
     - API 실패 시 fail-open
     """
     plane_ctx = state.plane_context
-    if plane_ctx.subtask_completion_nudged:
-        return
-
     focused_id = plane_ctx.focused_work_item_id
     if not focused_id:
         return
+    if focused_id in plane_ctx.subtask_completion_nudged_ids:
+        return
+    if plane_ctx.subtask_check_failures >= _SUBTASK_CHECK_MAX_FAILURES:
+        return
+
+    now_dt = datetime.now(timezone.utc)
+    if plane_ctx.last_subtask_check:
+        try:
+            last_dt = datetime.fromisoformat(plane_ctx.last_subtask_check)
+            elapsed = (now_dt - last_dt).total_seconds()
+            if elapsed < _SUBTASK_CHECK_INTERVAL_SEC:
+                return
+        except (ValueError, TypeError):
+            pass
 
     project_id = plane_ctx.project_id or cfg.project_id
     if not project_id or not cfg.api_key or not cfg.workspace_slug:
@@ -158,6 +173,8 @@ def _check_subtask_completion(state, cfg) -> None:
         with httpx.Client(timeout=PLANE_API_TIMEOUT, follow_redirects=False) as client:
             resp = client.get(url, headers=headers)
         if resp.status_code != 200:
+            plane_ctx.last_subtask_check = now_dt.isoformat()
+            plane_ctx.subtask_check_failures += 1
             return
 
         data = resp.json()
@@ -180,9 +197,16 @@ def _check_subtask_completion(state, cfg) -> None:
             f"[omk] 연결된 Work Item의 하위 Task {count}개가 모두 완료되었습니다!\n"
             f"  /oh-my-kanban:done 으로 메인 Task를 완료 처리할 수 있습니다."
         )
-        plane_ctx.subtask_completion_nudged = True
+        plane_ctx.subtask_completion_nudged_ids = [
+            *plane_ctx.subtask_completion_nudged_ids,
+            focused_id,
+        ]
+        plane_ctx.last_subtask_check = now_dt.isoformat()
+        plane_ctx.subtask_check_failures = 0
 
     except Exception as e:
+        plane_ctx.last_subtask_check = now_dt.isoformat()
+        plane_ctx.subtask_check_failures += 1
         print(
             f"[omk] sub-task 완료 체크 실패 (fail-open): {type(e).__name__}: {e}",
             file=sys.stderr,
@@ -278,9 +302,9 @@ def main() -> None:
                             timestamp=now_iso(),
                             type="scope_expanded",
                             summary=(
-                        f"스코프 확장 (suppressed {drift.level},"
-                        f" score={drift.score:.3f})"
-                    ),
+                                f"스코프 확장 (suppressed {drift.level},"
+                                f" score={drift.score:.3f})"
+                            ),
                             drift_score=drift.score,
                             drift_level=drift.level,
                         )

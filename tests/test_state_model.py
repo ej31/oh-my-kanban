@@ -66,6 +66,7 @@ def test_from_dict_new_fields():
     }
     state = SessionState.from_dict(data)
     assert state.plane_context.main_task_id == "mt-1"
+    assert state.plane_context.focused_work_item_id == "wi-1"
     assert state.plane_context.known_comment_ids == ["c-1"]
     assert state.plane_context.stale_work_item_ids == ["wi-dead"]
 

@@ -219,7 +219,12 @@ def omk_update_scope(
         return {
             "success": True,
             "message": "변경할 내용이 없습니다.",
-            "scope": state.scope.__dict__,
+            "scope": {
+                "summary": state.scope.summary,
+                "topics": state.scope.topics,
+                "expanded_topics": state.scope.expanded_topics,
+                "keywords": state.scope.keywords,
+            },
         }
 
     state.timeline.append(
@@ -371,7 +376,7 @@ def omk_add_comment(
             results.append({
                 "work_item_id": wi_id,
                 "success": False,
-                "error": "요청 시간 초과 (10초)",
+                "error": f"요청 시간 초과 ({PLANE_API_TIMEOUT}초)",
             })
         except httpx.NetworkError as e:
             results.append({

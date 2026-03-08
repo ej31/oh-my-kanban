@@ -36,19 +36,19 @@ def _make_http_mock(status_code: int = 200, body: dict | None = None):
     mock_resp = MagicMock()
     mock_resp.status_code = status_code
     mock_resp.json.return_value = body
+    mock_cm = MagicMock()
     mock_client = MagicMock()
     mock_client.get.return_value = mock_resp
-    mock_cm = MagicMock()
     mock_cm.__enter__ = MagicMock(return_value=mock_client)
     mock_cm.__exit__ = MagicMock(return_value=False)
-    return mock_client, mock_cm
+    return mock_cm
 
 
 class TestCheckSubtaskCompletion:
     def test_skips_when_already_nudged(self):
         """이미 알림을 보냈으면 다시 보내지 않는다."""
         state = _make_state()
-        state.plane_context.subtask_completion_nudged = True
+        state.plane_context.subtask_completion_nudged_ids = ["wi-uuid-main"]
         cfg = _make_cfg()
 
         with patch("httpx.Client") as mock_httpx:
@@ -81,7 +81,7 @@ class TestCheckSubtaskCompletion:
         """sub-task가 없으면 알림 없음."""
         state = _make_state()
         cfg = _make_cfg()
-        _, mock_cm = _make_http_mock(body={"results": []})
+        mock_cm = _make_http_mock(body={"results": []})
 
         with (
             patch("httpx.Client", return_value=mock_cm),
@@ -90,7 +90,7 @@ class TestCheckSubtaskCompletion:
             _check_subtask_completion(state, cfg)
 
         mock_sys.assert_not_called()
-        assert state.plane_context.subtask_completion_nudged is False
+        assert state.plane_context.subtask_completion_nudged_ids == []
 
     def test_no_nudge_when_subtask_incomplete(self):
         """미완료 sub-task가 있으면 알림 없음."""
@@ -102,7 +102,7 @@ class TestCheckSubtaskCompletion:
                 {"id": "sub-2", "state_detail": {"group": "started"}},  # 미완료
             ]
         }
-        _, mock_cm = _make_http_mock(body=body)
+        mock_cm = _make_http_mock(body=body)
 
         with (
             patch("httpx.Client", return_value=mock_cm),
@@ -111,7 +111,7 @@ class TestCheckSubtaskCompletion:
             _check_subtask_completion(state, cfg)
 
         mock_sys.assert_not_called()
-        assert state.plane_context.subtask_completion_nudged is False
+        assert state.plane_context.subtask_completion_nudged_ids == []
 
     def test_nudges_when_all_subtasks_complete(self):
         """모든 sub-task가 완료이면 사용자에게 알림."""
@@ -123,7 +123,7 @@ class TestCheckSubtaskCompletion:
                 {"id": "sub-2", "state_detail": {"group": "cancelled"}},
             ]
         }
-        _, mock_cm = _make_http_mock(body=body)
+        mock_cm = _make_http_mock(body=body)
 
         with (
             patch("httpx.Client", return_value=mock_cm),
@@ -134,14 +134,14 @@ class TestCheckSubtaskCompletion:
         mock_sys.assert_called_once()
         msg = mock_sys.call_args[0][0]
         assert "2개" in msg or "모두 완료" in msg
-        assert state.plane_context.subtask_completion_nudged is True
+        assert state.plane_context.subtask_completion_nudged_ids == ["wi-uuid-main"]
 
     def test_sets_nudged_flag_to_prevent_repeat(self):
         """알림 후 nudged 플래그가 True로 설정돼 중복 알림 방지."""
         state = _make_state()
         cfg = _make_cfg()
         body = {"results": [{"id": "sub-1", "state_detail": {"group": "completed"}}]}
-        _, mock_cm = _make_http_mock(body=body)
+        mock_cm = _make_http_mock(body=body)
 
         with (
             patch("httpx.Client", return_value=mock_cm),
@@ -149,7 +149,7 @@ class TestCheckSubtaskCompletion:
         ):
             _check_subtask_completion(state, cfg)
 
-        assert state.plane_context.subtask_completion_nudged is True
+        assert state.plane_context.subtask_completion_nudged_ids == ["wi-uuid-main"]
 
     def test_fail_open_on_http_error(self):
         """HTTP 오류 시 예외를 전파하지 않는다."""
@@ -168,7 +168,7 @@ class TestCheckSubtaskCompletion:
         """200 이외 응답 시 알림 없음."""
         state = _make_state()
         cfg = _make_cfg()
-        _, mock_cm = _make_http_mock(status_code=404, body={})
+        mock_cm = _make_http_mock(status_code=404, body={})
 
         with (
             patch("httpx.Client", return_value=mock_cm),

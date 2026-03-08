@@ -11,15 +11,17 @@
 ### 1. 현재 WI 확인
 
 세션의 focused_work_item_id를 확인한다. 없으면:
-```
+
+```text
 [omk] 현재 세션에 연결된 Task가 없습니다.
-  /omk focus로 먼저 Task를 연결하세요.
+  /oh-my-kanban:focus로 먼저 Task를 연결하세요.
 ```
 
 ### 2. 완료 상태 조회
 
 프로젝트의 "완료" 상태 ID를 동적으로 조회한다:
-```
+
+```text
 mcp__plane__list_states(project_id="<project_id>")
 ```
 
@@ -27,27 +29,38 @@ mcp__plane__list_states(project_id="<project_id>")
 1. `group="completed"` 중 첫 번째
 2. 이름이 "완료", "Done", "Completed"인 상태
 
-### 3. 완료 처리
+### 3. 사용자 확인
 
+상태를 바꾸기 전에 먼저 사용자에게 확인한다.
+
+```text
+[omk] <identifier>를 완료 처리할까요?
+  yes/confirm 응답이 있을 때만 상태를 변경합니다.
 ```
+
+사용자가 명시적으로 확인한 경우에만 다음 단계를 진행한다.
+
+### 4. 완료 처리
+
+```text
 mcp__plane__update_work_item(
   work_item_id="<focused_wi_id>",
   state_id="<completed_state_id>"
 )
 ```
 
-### 4. 완료 댓글 추가
+### 5. 완료 댓글 추가
 
-```
+```text
 mcp__plane__create_work_item_comment(
   work_item_id="<focused_wi_id>",
   comment_html="## omk 세션 완료\n\n**세션 ID**: `<session_id[:8]>...`\n**완료 시각**: <timestamp>\n**요약**: <scope_summary>"
 )
 ```
 
-### 5. 확인 알림
+### 6. 확인 알림
 
-```
+```text
 [omk] Task를 완료 처리했습니다.
   WI: <identifier> — <wi_name>
   상태: <previous_state> → 완료

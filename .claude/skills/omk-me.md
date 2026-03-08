@@ -14,7 +14,8 @@
 
 ### 2. 세션 정보 표시
 
-```
+
+```text
 [omk] 현재 세션 정보
   세션 ID: <session_id[:8]>...
   시작 시각: <created_at (KST 변환)>
@@ -40,15 +41,17 @@
 ```
 
 연결된 WI가 없으면:
-```
+
+```text
   📋 연결된 Task: 없음
-     /omk focus로 Task를 연결하거나 /omk create-task로 새로 생성하세요.
+     /oh-my-kanban:focus로 Task를 연결하거나 /oh-my-kanban:create-task로 새로 생성하세요.
 ```
 
 ### 3. 현재 사용자 정보 (선택)
 
 Plane API를 통해 현재 인증된 사용자 정보를 조회한다:
-```
+
+```python
 mcp__plane__get_me()
 ```
 

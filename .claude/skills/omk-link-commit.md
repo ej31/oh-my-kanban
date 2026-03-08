@@ -4,7 +4,7 @@
 
 ## 사용 예시
 
-```
+```bash
 omk link-commit a1b2c3d
 omk link-commit a1b2c3d7f9e2b4c6d8e0f1a2b3c4d5e6f7a8b9c0
 ```
@@ -12,22 +12,31 @@ omk link-commit a1b2c3d7f9e2b4c6d8e0f1a2b3c4d5e6f7a8b9c0
 ## 실행 단계
 
 1. **현재 WI 확인**
-   - `focused_work_item_id` 없으면 오류: "Work Item이 연결되지 않았습니다. /oh-my-kanban:focus 먼저 실행하세요."
+   - `focused_work_item_id` 없으면 오류:
+     "Work Item이 연결되지 않았습니다.
+     /oh-my-kanban:focus 먼저 실행하세요."
 
 2. **커밋 정보 조회 (선택)**
    - `git show --oneline -s <커밋해시>` 로 커밋 메시지 조회 (실패해도 계속)
 
 3. **WI에 댓글 추가**
+
    ```python
    mcp__plane__create_work_item_comment(
        project_id=<현재 project_id>,
        work_item_id=<focused_work_item_id>,
-       comment_html="<h3>커밋 기록</h3><p><strong>커밋</strong>: <code>{hash_short}</code><br><strong>메시지</strong>: {commit_msg}<br><em>omk에 의해 수동 기록됨</em></p>"
+       comment_html=(
+           "<h3>커밋 기록</h3>"
+           "<p><strong>커밋</strong>: <code>{hash_short}</code><br>"
+           "<strong>메시지</strong>: {commit_msg}<br>"
+           "<em>omk에 의해 수동 기록됨</em></p>"
+       )
    )
    ```
 
 4. **결과 출력**:
-```
+
+```text
 [omk] 커밋 {hash_short}을 {wi_identifier}에 기록했습니다.
 ```
 

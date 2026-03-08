@@ -13,7 +13,7 @@
 사용자가 WI 식별자(예: OMK-5, YCF-123)를 제공했는지 확인한다.
 제공하지 않은 경우, 활성 WI 목록을 보여주고 선택을 유도한다:
 
-```
+```python
 mcp__plane__list_work_items(project_id="<project_id>", state="진행 중")
 ```
 
@@ -21,13 +21,13 @@ mcp__plane__list_work_items(project_id="<project_id>", state="진행 중")
 
 사용자가 제공한 식별자로 WI를 조회한다:
 
-```
+```python
 mcp__plane__retrieve_work_item_by_identifier(identifier="OMK-5")
 ```
 
 또는 직접 UUID가 있으면:
 
-```
+```python
 mcp__plane__retrieve_work_item(work_item_id="<uuid>")
 ```
 
@@ -47,16 +47,21 @@ mcp__plane__retrieve_work_item(work_item_id="<uuid>")
 
 연결된 WI에 구조화 댓글을 추가한다:
 
-```
+```python
 mcp__plane__create_work_item_comment(
   work_item_id="<wi_uuid>",
-  comment_html="## omk 세션 연결\n\n**세션 ID**: `<session_id[:8]>...`\n**연결 시각**: <timestamp>\n**목표**: 사용자 요청에 의한 수동 연결"
+  comment_html=(
+    "## omk 세션 연결\n\n"
+    "**세션 ID**: `<session_id[:8]>...`\n"
+    "**연결 시각**: <timestamp>\n"
+    "**목표**: 사용자 요청에 의한 수동 연결"
+  )
 )
 ```
 
 ### 5. 사용자에게 확인 알림
 
-```
+```text
 [omk] Task가 연결되었습니다.
   WI: <identifier> — <wi_name>
   URL: <plane_url>
@@ -66,6 +71,7 @@ mcp__plane__create_work_item_comment(
 ## 현재 PlaneContext 읽기
 
 현재 세션의 PlaneContext 정보는 세션 파일에서 확인한다:
+
 - `state.plane_context.work_item_ids` — 연결된 WI UUID 목록
 - `state.plane_context.focused_work_item_id` — 현재 집중 WI
 - `state.plane_context.project_id` — 연결된 프로젝트

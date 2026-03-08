@@ -225,7 +225,13 @@ def _get_task_mode(cfg: Any) -> str:
     return getattr(cfg, "task_mode", "main-sub") or "main-sub"
 
 
-def _apply_task_labels(wi_id: str, cfg: Any, is_main: bool = True) -> None:
+def _apply_task_labels(
+    wi_id: str,
+    cfg: Any,
+    *,
+    project_id: str = "",
+    is_main: bool = True,
+) -> None:
     """WI에 omk 표준 라벨(omk:session, omk:type:main/sub)을 적용한다.
 
     실패 시 fail-open으로 처리 — 라벨 적용 실패가 훅을 실패시키지 않는다.
@@ -242,7 +248,7 @@ def _apply_task_labels(wi_id: str, cfg: Any, is_main: bool = True) -> None:
     except ImportError:
         return
 
-    project_id = cfg.project_id
+    project_id = project_id or cfg.project_id
     if not project_id or not cfg.api_key or not cfg.workspace_slug:
         return
 
@@ -555,7 +561,12 @@ def _handle_startup_or_resume(session_id: str, source: str) -> None:
         target_wi = focused_id or state.plane_context.work_item_ids[0]
         task_mode = _get_task_mode(cfg)
         is_main = task_mode == "main-sub"
-        _apply_task_labels(target_wi, cfg, is_main=is_main)
+        _apply_task_labels(
+            target_wi,
+            cfg,
+            project_id=state.plane_context.project_id or cfg.project_id,
+            is_main=is_main,
+        )
         # ST-28: 차단 WI / Cycle 마감 알림 (fail-open)
         if source in ("startup", "resume") and cfg.api_key:
             try:

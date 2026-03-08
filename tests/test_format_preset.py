@@ -55,7 +55,9 @@ class TestFormatPresetSessionStart:
 
         mock_resp = MagicMock()
         mock_resp.status_code = 201
-        mock_client = MagicMock()
+        import httpx
+
+        mock_client = MagicMock(spec=httpx.Client)
         mock_client.post.return_value = mock_resp
         mock_cm = MagicMock()
         mock_cm.__enter__ = MagicMock(return_value=mock_client)
@@ -82,7 +84,9 @@ class TestFormatPresetSessionStart:
 
         mock_resp = MagicMock()
         mock_resp.status_code = 201
-        mock_client = MagicMock()
+        import httpx
+
+        mock_client = MagicMock(spec=httpx.Client)
         mock_client.post.return_value = mock_resp
         mock_cm = MagicMock()
         mock_cm.__enter__ = MagicMock(return_value=mock_client)

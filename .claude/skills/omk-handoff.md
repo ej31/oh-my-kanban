@@ -12,7 +12,7 @@
 ### 1. 현재 WI 확인
 
 `state.plane_context.focused_work_item_id`를 확인한다. 없으면:
-```
+```text
 [omk] 현재 세션에 연결된 Task가 없습니다.
   핸드오프 메모를 남길 Work Item이 없습니다.
 ```
@@ -29,7 +29,7 @@
 
 ### 3. 핸드오프 댓글 추가
 
-```
+```python
 mcp__plane__create_work_item_comment(
   work_item_id="<focused_wi_id>",
   comment_html="## 핸드오프\n\n**현재 상태**: <current_status>\n\n**미완성 부분**: <incomplete_items>\n\n**다음 할 일**: <next_steps>\n\n**주의사항**: <notes>\n\n---\n*omk에 의해 <timestamp>에 기록됨 (세션 ID: <session_id[:8]>...)*"
@@ -38,7 +38,7 @@ mcp__plane__create_work_item_comment(
 
 ### 4. 확인 알림
 
-```
+```text
 [omk] 핸드오프 메모가 기록되었습니다.
   WI: <identifier> — <wi_name>
   다음 세션에서 이 메모가 자동으로 표시됩니다.

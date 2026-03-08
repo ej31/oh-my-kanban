@@ -4,21 +4,23 @@
 
 ## 실행 조건
 
-사용자가 "/oh-my-kanban:comments", "/omk:cm" 또는 "댓글 보여줘", "WI 코멘트 확인해줘", "팀원 코멘트 있어?" 등을 요청한 경우.
+사용자가 "/oh-my-kanban:comments", "/omk:cm" 또는 "댓글 보여줘",
+"WI 코멘트 확인해줘", "팀원 코멘트 있어?" 등을 요청한 경우.
 
 ## 절차
 
 ### 1. 현재 WI 확인
 
 `state.plane_context.focused_work_item_id`를 확인한다. 없으면:
-```
+
+```text
 [omk] 현재 세션에 연결된 Task가 없습니다.
-  /omk focus로 먼저 Task를 연결하세요.
+  /oh-my-kanban:focus로 먼저 Task를 연결하세요.
 ```
 
 ### 2. 댓글 조회
 
-```
+```python
 mcp__plane__list_work_item_comments(
   work_item_id="<focused_wi_id>"
 )
@@ -28,7 +30,7 @@ mcp__plane__list_work_item_comments(
 
 최근 10개 댓글을 시간 역순으로 보여준다:
 
-```
+```text
 [omk] WI: <identifier> — <wi_name>
   최근 댓글 (<count>개):
 
@@ -42,7 +44,8 @@ mcp__plane__list_work_item_comments(
 ```
 
 댓글이 없으면:
-```
+
+```text
 [omk] <identifier>에 댓글이 없습니다.
   URL: <plane_url>
 ```
