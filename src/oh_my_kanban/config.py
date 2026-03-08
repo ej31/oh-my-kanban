@@ -137,9 +137,18 @@ def load_config(profile: str = "default") -> Config:
                     )
             if "auto_complete_subtasks" in section:
                 val = section["auto_complete_subtasks"]
-                cfg.auto_complete_subtasks = (
-                    val if isinstance(val, bool) else str(val).lower() == "true"
-                )
+                if isinstance(val, bool):
+                    cfg.auto_complete_subtasks = val
+                elif isinstance(val, int):
+                    cfg.auto_complete_subtasks = val != 0
+                else:
+                    normalized = str(val).strip().lower()
+                    truthy = {"true", "yes", "y", "on", "1"}
+                    falsy = {"false", "no", "n", "off", "0"}
+                    if normalized in truthy:
+                        cfg.auto_complete_subtasks = True
+                    elif normalized in falsy:
+                        cfg.auto_complete_subtasks = False
             if "session_retention_days" in section:
                 try:
                     cfg.session_retention_days = max(1, int(section["session_retention_days"]))

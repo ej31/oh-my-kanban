@@ -12,8 +12,8 @@
 
 세션 파일에서 현재 메인 WI를 확인한다:
 
-- `state.plane_context.focused_work_item_id` — 집중 WI (parent로 사용)
-- `state.plane_context.main_task_id` — 메인 태스크 (없으면 focused 사용)
+- `state.plane_context.main_task_id` — 있으면 이것을 `parent_id`로 사용
+- `state.plane_context.focused_work_item_id` — `main_task_id`가 없을 때만 폴백으로 사용
 
 연결된 WI가 없으면:
 
@@ -29,6 +29,9 @@
 ### 3. Sub-task 생성
 
 ```python
+# parent_id 결정 규칙:
+# 1. main_task_id가 있으면 main_task_id
+# 2. 없으면 focused_work_item_id
 mcp__plane__create_work_item(
   project_id="<project_id>",
   name="<subtask_name>",

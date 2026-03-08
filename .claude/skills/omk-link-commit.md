@@ -28,7 +28,7 @@ omk link-commit a1b2c3d7f9e2b4c6d8e0f1a2b3c4d5e6f7a8b9c0
        comment_html=(
            "<h3>커밋 기록</h3>"
            "<p><strong>커밋</strong>: <code>{hash_short}</code><br>"
-           "<strong>메시지</strong>: {commit_msg}<br>"
+           "<strong>메시지</strong>: {sanitize_comment(commit_msg)}<br>"
            "<em>omk에 의해 수동 기록됨</em></p>"
        )
    )

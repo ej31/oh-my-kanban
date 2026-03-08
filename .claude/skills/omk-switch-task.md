@@ -12,6 +12,11 @@
 
 `state.plane_context.focused_work_item_id`를 확인한다.
 
+- `focused_work_item_id`가 없으면 에러 메시지를 출력한다
+  예: "현재 활성화된 WI가 없습니다"
+- 새 WI가 현재 WI와 동일하면 전환하지 않는다
+  예: "이미 해당 WI로 작업 중입니다"
+
 ### 2. 새 WI 선택
 
 사용자가 새 WI를 지정하지 않은 경우, 활성 WI 목록을 보여주고 선택을 유도한다:
@@ -28,8 +33,9 @@ mcp__plane__list_work_items(project_id="<project_id>")
 
 1. 이름이 "On Hold"인 상태 (정확 일치)
 2. 이름이 "Paused"인 상태 (정확 일치)
-3. `group="cancelled"` 중 첫 번째
-4. 없으면 "Backlog" 폴백
+3. 이름이 "Backlog"인 상태 (정확 일치)
+4. `group="backlog"` 중 첫 번째
+5. 없으면 사용자에게 수동 선택을 요청
 
 ```python
 mcp__plane__update_work_item(
@@ -44,10 +50,10 @@ mcp__plane__update_work_item(
 mcp__plane__create_work_item_comment(
   work_item_id="<old_wi_id>",
   comment_html=(
-    "## omk 작업 일시 중단\n\n"
-    "**세션 ID**: `<session_id[:8]>...`\n"
-    "**전환 시각**: <timestamp>\n"
-    "**전환 이유**: 사용자 요청으로 다른 Task로 전환"
+    "<h2>omk 작업 일시 중단</h2>"
+    "<p><strong>세션 ID</strong>: <code><session_id[:8]>...</code><br>"
+    "<strong>전환 시각</strong>: <timestamp><br>"
+    "<strong>전환 이유</strong>: 사용자 요청으로 다른 Task로 전환</p>"
   )
 )
 ```
@@ -60,10 +66,10 @@ mcp__plane__create_work_item_comment(
 mcp__plane__create_work_item_comment(
   work_item_id="<new_wi_id>",
   comment_html=(
-    "## omk 세션 전환\n\n"
-    "**세션 ID**: `<session_id[:8]>...`\n"
-    "**전환 시각**: <timestamp>\n"
-    "**이전 Task**: <old_wi_identifier>"
+    "<h2>omk 세션 전환</h2>"
+    "<p><strong>세션 ID</strong>: <code><session_id[:8]>...</code><br>"
+    "<strong>전환 시각</strong>: <timestamp><br>"
+    "<strong>이전 Task</strong>: <old_wi_identifier></p>"
   )
 )
 ```
@@ -73,6 +79,10 @@ mcp__plane__create_work_item_comment(
 세션 파일의 `plane_context.focused_work_item_id`를 새 WI UUID로 업데이트한다.
 
 ### 6. 관계 설정 (선택)
+
+사용자가 명시적으로 관계 설정을 요청했거나, 두 WI가 같은 기능 맥락에서
+이어지는 작업일 때만 `relates_to` 관계를 추가한다.
+완전 교체 작업이거나 링크가 오히려 혼란을 주는 경우에는 생략한다.
 
 두 WI 간 `relates_to` 관계를 설정한다:
 

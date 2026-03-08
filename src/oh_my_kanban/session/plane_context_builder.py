@@ -162,7 +162,7 @@ def _fetch_sub_tasks(
 def _build_wi_context(
     wi_data: dict[str, Any],
     comments: list[dict[str, Any]],
-    wi_id: str,
+    _wi_id: str,
     sub_tasks: list[dict[str, Any]] | None = None,
 ) -> str:
     """Work Item 데이터와 댓글을 사람이 읽기 좋은 텍스트로 변환한다."""

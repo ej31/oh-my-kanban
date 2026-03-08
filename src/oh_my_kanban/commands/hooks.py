@@ -393,7 +393,8 @@ def _install_hooks(local: bool, local_only: bool = False, non_interactive: bool 
         except Exception as e:
             click.echo(f"  경고: 설정 저장 실패: {e}", err=True)
 
-    # omk 표준 라벨 초기화 (설정이 있는 경우)
+    # omk 표준 라벨 초기화는 대화형/비대화형 모두에서 수행한다.
+    # 비대화형 설치에서도 이후 훅 흐름이 표준 라벨을 전제로 단순해지기 때문이다.
     try:
         from oh_my_kanban.config import load_config
         from oh_my_kanban.hooks.label_conventions import ensure_omk_labels

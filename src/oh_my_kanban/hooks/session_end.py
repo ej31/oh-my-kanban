@@ -219,7 +219,6 @@ def main() -> None:
                 if target:
                     notify_success(
                         SuccessNudge(wi_identifier="WI", wi_name="세션 종료 기록됨", wi_url=""),
-                        hook_name="SessionEnd",
                     )
 
             # ST-22: 핸드오프 메모 유도 (Claude에게 additionalContext 주입)

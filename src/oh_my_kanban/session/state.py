@@ -159,7 +159,7 @@ class SessionState:
         config_data = data.get("config", {})
         timeline_data = data.get("timeline", [])
 
-        throttle_data = data.get("error_throttle") or {}
+        throttle_data = data.get("error_throttle")
         error_throttle = ErrorThrottle(
             category=throttle_data.get("category", ""),
             last_error_at=throttle_data.get("last_error_at"),

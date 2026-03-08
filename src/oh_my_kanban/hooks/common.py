@@ -51,7 +51,7 @@ def notify_and_exit(diagnostic: HookDiagnostic, hook_name: str = "") -> None:
     sys.exit(0)
 
 
-def notify_success(nudge: SuccessNudge, hook_name: str = "") -> None:
+def notify_success(nudge: SuccessNudge) -> None:
     """WI 연결 성공 메시지를 systemMessage로 출력한다."""
     truncated_name = nudge.wi_name[:HUD_TASK_NAME_MAX]
     message = f"omk: {nudge.wi_identifier} [{truncated_name}] 연결됨"

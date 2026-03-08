@@ -32,9 +32,16 @@
    mcp__plane__create_work_item_comment(
        project_id=<현재 project_id>,
        work_item_id=<focused_work_item_id>,
-       comment_html="<h3>브랜치 연결</h3><p><strong>브랜치</strong>: "
-       "<code>{escaped_branch_name}</code><br><strong>저장소</strong>: "
-       "{escaped_repo_url}<br><em>omk에 의해 자동 기록됨</em></p>"
+       comment_html=(
+           "<h3>브랜치 연결</h3><p><strong>브랜치</strong>: "
+           f"<code>{escaped_branch_name}</code><br>"
+           + (
+               f"<strong>저장소</strong>: {escaped_repo_url}<br>"
+               if escaped_repo_url
+               else "<strong>저장소</strong>: 원격 저장소 URL 없음<br>"
+           )
+           + "<em>omk에 의해 자동 기록됨</em></p>"
+       )
    )
    ```
 

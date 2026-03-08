@@ -49,6 +49,16 @@ def _find_active_session_id() -> str | None:
     return active[0].session_id if active else None
 
 
+def _scope_payload(scope: Any) -> dict[str, Any]:
+    """ScopeState를 MCP 응답 dict로 직렬화한다."""
+    return {
+        "summary": scope.summary,
+        "topics": scope.topics,
+        "expanded_topics": scope.expanded_topics,
+        "keywords": scope.keywords,
+    }
+
+
 # ── MCP Tools ────────────────────────────────────────────────────────────────
 
 
@@ -219,12 +229,7 @@ def omk_update_scope(
         return {
             "success": True,
             "message": "변경할 내용이 없습니다.",
-            "scope": {
-                "summary": state.scope.summary,
-                "topics": state.scope.topics,
-                "expanded_topics": state.scope.expanded_topics,
-                "keywords": state.scope.keywords,
-            },
+            "scope": _scope_payload(state.scope),
         }
 
     state.timeline.append(
@@ -239,12 +244,7 @@ def omk_update_scope(
     return {
         "success": True,
         "message": f"scope 업데이트 완료: {', '.join(changed)}",
-        "scope": {
-            "summary": state.scope.summary,
-            "topics": state.scope.topics,
-            "expanded_topics": state.scope.expanded_topics,
-            "keywords": state.scope.keywords,
-        },
+        "scope": _scope_payload(state.scope),
     }
 
 
@@ -384,11 +384,11 @@ def omk_add_comment(
                 "success": False,
                 "error": f"네트워크 오류: {e}",
             })
-        except Exception as e:
+        except httpx.HTTPError as e:
             results.append({
                 "work_item_id": wi_id,
                 "success": False,
-                "error": f"예외: {type(e).__name__}: {e}",
+                "error": f"HTTP 클라이언트 오류: {type(e).__name__}: {e}",
             })
 
     success_count = sum(1 for r in results if r.get("success"))

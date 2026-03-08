@@ -448,7 +448,7 @@ def _notify_wi_connected(state: SessionState, cfg: Any) -> None:
         wi_name=wi_name,
         wi_url=wi_url,
     )
-    notify_success(nudge, hook_name="SessionStart")
+    notify_success(nudge)
 
 
 def _handle_compact(session_id: str) -> None:

@@ -37,7 +37,7 @@ WI가 없으면:
 **일반 메모:**
 
 ```html
-<p>[{timestamp}] {memo_text}</p>
+<p>[{timestamp}] {sanitize_comment(memo_text)}</p>
 ```
 
 **결정 사항:**
@@ -45,9 +45,9 @@ WI가 없으면:
 ```html
 <h3>결정 사항</h3>
 <ul>
-  <li>결정: {decision}</li>
-  <li>이유: {reason}</li>
-  <li>검토한 대안: {alternatives}</li>
+  <li>결정: {sanitize_comment(decision)}</li>
+  <li>이유: {sanitize_comment(reason)}</li>
+  <li>검토한 대안: {sanitize_comment(alternatives)}</li>
 </ul>
 ```
 
@@ -55,7 +55,7 @@ WI가 없으면:
 
 ```html
 <h3>진행 상황</h3>
-<p>{status_update}</p>
+<p>{sanitize_comment(status_update)}</p>
 ```
 
 ### 4. 댓글 추가

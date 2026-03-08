@@ -53,7 +53,7 @@ def _extract_commit_hash(tool_response: str) -> str:
     return match.group(1) if match else ""
 
 
-def _post_commit_comment(state, commit_hash: str, commit_command: str) -> None:
+def _post_commit_comment(state, commit_hash: str, _commit_command: str = "") -> None:
     """WI에 커밋 정보 댓글을 추가하고 Claude에게 additionalContext를 주입한다 (ST-24).
 
     성공 시 stats.commit_hashes에 커밋 해시를 기록한다.
