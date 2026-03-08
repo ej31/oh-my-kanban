@@ -26,7 +26,7 @@ def should_create_subtask(task_mode: str) -> bool:
     return normalized != TASK_MODE_FLAT
 
 
-def build_task_title(summary: str, mode: str, is_subtask: bool = False) -> str:
+def build_task_title(summary: str, mode: str, *, is_subtask: bool = False) -> str:
     """task_mode에 따라 적절한 태스크 제목을 생성한다.
 
     Args:

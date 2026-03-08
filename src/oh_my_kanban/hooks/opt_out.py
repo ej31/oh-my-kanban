@@ -36,7 +36,7 @@ def _post_opt_out_comment(state: SessionState) -> None:
         return
 
     workspace_slug = cfg.workspace_slug
-    if not workspace_slug or not validate_plane_url_params(workspace_slug, project_id):
+    if not validate_plane_url_params(workspace_slug, project_id):
         print("[omk] 유효하지 않은 workspace_slug 또는 project_id — opt-out 건너뜀", file=sys.stderr)
         return
 
@@ -83,7 +83,7 @@ def _delete_work_items(state: SessionState) -> int:
         return 0
 
     workspace_slug = cfg.workspace_slug
-    if not workspace_slug or not validate_plane_url_params(workspace_slug, project_id):
+    if not validate_plane_url_params(workspace_slug, project_id):
         print("[omk] 유효하지 않은 workspace_slug 또는 project_id — WI 삭제 건너뜀", file=sys.stderr)
         return 0
 

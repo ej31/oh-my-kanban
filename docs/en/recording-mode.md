@@ -79,5 +79,5 @@ Includes everything from metadata mode plus timeline events.
 ## Notes
 
 - In `none` mode, session state is still saved locally. Only Plane API calls are skipped.
-- Invalid `upload_level` values automatically fall back to `metadata`.
+- Invalid `upload_level` values automatically fall back to `none` (safe default — no upload).
 - Changes to `upload_level` take effect from the next session.

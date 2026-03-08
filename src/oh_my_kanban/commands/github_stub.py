@@ -63,9 +63,9 @@ def _run_gh(*args: str) -> str:
     except subprocess.TimeoutExpired:
         raise click.ClickException(
             f"gh 명령이 {_GH_TIMEOUT}초 내에 완료되지 않았습니다."
-        )
+        ) from None
     except OSError as e:
-        raise click.ClickException(f"gh 실행 실패: {e}")
+        raise click.ClickException(f"gh 실행 실패: {e}") from e
 
     if result.returncode != 0:
         stderr = result.stderr.strip()

@@ -26,7 +26,7 @@ omk hooks snapshot list
 
 Example output:
 
-```
+```text
 === Snapshot List ===
   abc12345_20260101T100000  Session: abc12345...  OAuth refactoring
   def67890_20260101T090000  Session: def67890...  API endpoint addition
