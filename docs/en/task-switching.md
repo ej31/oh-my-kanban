@@ -36,9 +36,9 @@ omk hooks switch-task --session-id abc12345 --new "New feature"
 ## Timeline Example
 
 ```text
-2026-01-01T10:00:00 [scope_init] Session started
-2026-01-01T10:30:00 [task_switch] Task switch | New task: Emergency bug fix | Reason: Production incident
-2026-01-01T11:00:00 [prompt] Session ended normally
+2026-01-01T10:00:00 [scope_init] 세션 시작
+2026-01-01T10:30:00 [task_switch] 태스크 전환 | 새 태스크: Emergency bug fix | 이유: Production incident
+2026-01-01T11:00:00 [prompt] 세션 정상 종료
 ```
 
 ## Notes
