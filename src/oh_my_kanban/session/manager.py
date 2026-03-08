@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import json
+import os
+import stat
 import sys
 from pathlib import Path
-from typing import Optional
 
 from oh_my_kanban.config import CONFIG_DIR
 from oh_my_kanban.session.state import SessionState
@@ -21,8 +22,13 @@ _SESSION_ID_MAX_LEN = 200
 
 
 def _sessions_dir() -> Path:
-    """세션 디렉토리를 반환하고 없으면 생성한다."""
+    """세션 디렉토리를 반환하고 없으면 생성한다. 0o700 권한으로 생성."""
     SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
+    # 세션 디렉토리는 소유자만 접근 가능 (세션 파일에 민감 정보 포함 가능)
+    try:
+        os.chmod(SESSIONS_DIR, stat.S_IRWXU)  # 0o700
+    except OSError:
+        pass
     return SESSIONS_DIR
 
 
@@ -50,7 +56,7 @@ def _session_path(session_id: str) -> Path:
     return target
 
 
-def load_session(session_id: str) -> Optional[SessionState]:
+def load_session(session_id: str) -> SessionState | None:
     """세션 파일을 로드한다. 없거나 파싱 실패 시 None 반환."""
     if not session_id:
         return None
@@ -74,11 +80,20 @@ def save_session(state: SessionState) -> None:
     tmp = path.with_suffix(".tmp")
     try:
         tmp.write_text(state.to_json(), encoding="utf-8")
+        # 세션 파일은 소유자만 읽기/쓰기 (0o600) — 민감 정보 보호
+        try:
+            os.chmod(tmp, stat.S_IRUSR | stat.S_IWUSR)
+        except OSError:
+            pass
         tmp.rename(path)
-    except OSError as e:
+    except OSError:
         # 원자적 쓰기 실패 → 직접 쓰기 시도
         try:
             path.write_text(state.to_json(), encoding="utf-8")
+            try:
+                os.chmod(path, stat.S_IRUSR | stat.S_IWUSR)
+            except OSError:
+                pass
         except OSError as e2:
             print(
                 f"[omk] 세션 저장 실패 (session_id={state.session_id!r}): {e2}",
@@ -113,6 +128,14 @@ def list_sessions() -> list[SessionState]:
     except OSError as e:
         print(f"[omk] 세션 디렉토리 접근 실패: {e}", file=sys.stderr)
     return sessions
+
+
+def get_session_lock_path(session_id: str) -> Path:
+    """세션 파일에 대한 배타적 잠금용 .lock 파일 경로를 반환한다.
+
+    `_session_path`를 외부에서 직접 사용하는 대신 이 공개 API를 사용한다.
+    """
+    return _session_path(session_id).with_suffix(".lock")
 
 
 def delete_session_file(session_id: str) -> bool:

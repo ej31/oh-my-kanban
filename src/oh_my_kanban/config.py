@@ -31,7 +31,9 @@ SOURCE_LABELS: dict[str, str] = {
 _ALLOWED_CONFIG_KEYS = frozenset({
     "base_url", "api_key", "workspace_slug", "project_id",
     "output", "linear_api_key", "linear_team_id",
-    "drift_sensitivity", "drift_cooldown",
+    "drift_sensitivity", "drift_cooldown", "task_mode",
+    "upload_level", "auto_archive_days", "auto_complete_subtasks",
+    "session_retention_days",
 })
 
 if sys.version_info >= (3, 11):
@@ -64,6 +66,11 @@ class Config:
     linear_team_id: str = ""
     drift_sensitivity: float = 0.5
     drift_cooldown: int = 3
+    task_mode: str = "main-sub"
+    upload_level: str = "metadata"
+    auto_archive_days: int = 7
+    auto_complete_subtasks: bool = True
+    session_retention_days: int = 30
     project_id_source: str = ""  # 활성 project_id의 출처: "env", "omk_project_toml", "claude_md", "config_toml", ""
 
 
@@ -131,6 +138,16 @@ def load_config(profile: str = "default") -> Config:
                 cfg.drift_sensitivity = max(0.0, min(1.0, float(section["drift_sensitivity"])))
             if "drift_cooldown" in section:
                 cfg.drift_cooldown = max(0, int(section["drift_cooldown"]))
+            if "task_mode" in section:
+                cfg.task_mode = str(section["task_mode"])
+            if "upload_level" in section:
+                cfg.upload_level = str(section["upload_level"])
+            if "auto_archive_days" in section:
+                cfg.auto_archive_days = max(0, int(section["auto_archive_days"]))
+            if "auto_complete_subtasks" in section:
+                cfg.auto_complete_subtasks = bool(section["auto_complete_subtasks"])
+            if "session_retention_days" in section:
+                cfg.session_retention_days = max(1, int(section["session_retention_days"]))
         except (OSError, tomllib.TOMLDecodeError) as e:
             print(f"경고: 설정 파일 파싱 오류 ({CONFIG_FILE}): {e}", file=sys.stderr)
 
@@ -155,6 +172,10 @@ def load_config(profile: str = "default") -> Config:
                 f"기본값 {cfg.drift_sensitivity} 사용.",
                 file=sys.stderr,
             )
+    if env_val := os.environ.get("OMK_TASK_MODE"):
+        cfg.task_mode = env_val
+    if env_val := os.environ.get("OMK_UPLOAD_LEVEL"):
+        cfg.upload_level = env_val
     if env_val := os.environ.get("OMK_DRIFT_COOLDOWN"):
         try:
             # 음수 방지 (0 이상 정수)

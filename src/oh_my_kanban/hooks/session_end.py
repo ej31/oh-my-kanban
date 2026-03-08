@@ -15,6 +15,7 @@ from oh_my_kanban.hooks.common import (
     get_session_id,
     read_hook_input,
     record_health_warning,
+    sanitize_comment,
 )
 from oh_my_kanban.hooks.http_client import build_plane_headers, plane_http_client, plane_request
 from oh_my_kanban.session.manager import load_session, save_session
@@ -95,7 +96,7 @@ def _post_plane_comment(state: SessionState, comment: str) -> bool:
                 try:
                     resp = plane_request(
                         client, "POST", url,
-                        json={"comment_html": comment},
+                        json={"comment_html": sanitize_comment(comment)},
                         context=f"댓글 추가 wi_id={wi_id}",
                     )
                     if resp.status_code in (200, 201):

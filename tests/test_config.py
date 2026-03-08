@@ -103,3 +103,144 @@ def test_invalid_env_drift_cooldown_ignored(tmp_path: Path, monkeypatch: pytest.
         cfg = load_config()
 
     assert cfg.drift_cooldown == 3
+
+
+# ── ST-12: WI 워크플로우 설정 필드 테스트 ──────────────────────────────────────
+
+
+def test_config_default_task_mode() -> None:
+    """Config 기본값: task_mode는 'main-sub'여야 한다."""
+    cfg = Config()
+    assert cfg.task_mode == "main-sub"
+
+
+def test_config_default_upload_level() -> None:
+    """Config 기본값: upload_level은 'metadata'여야 한다."""
+    cfg = Config()
+    assert cfg.upload_level == "metadata"
+
+
+def test_config_default_auto_archive_days() -> None:
+    """Config 기본값: auto_archive_days는 7이어야 한다."""
+    cfg = Config()
+    assert cfg.auto_archive_days == 7
+
+
+def test_config_default_auto_complete_subtasks() -> None:
+    """Config 기본값: auto_complete_subtasks는 True여야 한다."""
+    cfg = Config()
+    assert cfg.auto_complete_subtasks is True
+
+
+def test_config_default_session_retention_days() -> None:
+    """Config 기본값: session_retention_days는 30이어야 한다."""
+    cfg = Config()
+    assert cfg.session_retention_days == 30
+
+
+def test_toml_task_mode_loaded(tmp_path: Path) -> None:
+    """TOML에 task_mode가 있을 때 load_config()가 해당 값을 반환한다."""
+    config_file = _write_config(
+        tmp_path,
+        '[default]\ntask_mode = "module-task-sub"\n',
+    )
+
+    with patch("oh_my_kanban.config.CONFIG_FILE", config_file):
+        cfg = load_config()
+
+    assert cfg.task_mode == "module-task-sub"
+
+
+def test_toml_upload_level_loaded(tmp_path: Path) -> None:
+    """TOML에 upload_level이 있을 때 load_config()가 해당 값을 반환한다."""
+    config_file = _write_config(
+        tmp_path,
+        '[default]\nupload_level = "full"\n',
+    )
+
+    with patch("oh_my_kanban.config.CONFIG_FILE", config_file):
+        cfg = load_config()
+
+    assert cfg.upload_level == "full"
+
+
+def test_toml_auto_archive_days_loaded(tmp_path: Path) -> None:
+    """TOML에 auto_archive_days가 있을 때 load_config()가 해당 값을 반환한다."""
+    config_file = _write_config(
+        tmp_path,
+        '[default]\nauto_archive_days = 14\n',
+    )
+
+    with patch("oh_my_kanban.config.CONFIG_FILE", config_file):
+        cfg = load_config()
+
+    assert cfg.auto_archive_days == 14
+
+
+def test_toml_session_retention_days_minimum(tmp_path: Path) -> None:
+    """session_retention_days 최솟값은 1이어야 한다 (0 입력 시 1로 보정)."""
+    config_file = _write_config(
+        tmp_path,
+        '[default]\nsession_retention_days = 0\n',
+    )
+
+    with patch("oh_my_kanban.config.CONFIG_FILE", config_file):
+        cfg = load_config()
+
+    assert cfg.session_retention_days == 1
+
+
+def test_env_overrides_task_mode(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """환경변수 OMK_TASK_MODE가 TOML의 task_mode 값을 오버라이드한다."""
+    config_file = _write_config(
+        tmp_path,
+        '[default]\ntask_mode = "main-sub"\n',
+    )
+    monkeypatch.setenv("OMK_TASK_MODE", "module-task-sub")
+
+    with patch("oh_my_kanban.config.CONFIG_FILE", config_file):
+        cfg = load_config()
+
+    assert cfg.task_mode == "module-task-sub"
+
+
+def test_env_overrides_upload_level(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """환경변수 OMK_UPLOAD_LEVEL이 TOML의 upload_level 값을 오버라이드한다."""
+    config_file = _write_config(
+        tmp_path,
+        '[default]\nupload_level = "metadata"\n',
+    )
+    monkeypatch.setenv("OMK_UPLOAD_LEVEL", "full")
+
+    with patch("oh_my_kanban.config.CONFIG_FILE", config_file):
+        cfg = load_config()
+
+    assert cfg.upload_level == "full"
+
+
+def test_allowed_config_keys_includes_workflow_fields() -> None:
+    """_ALLOWED_CONFIG_KEYS에 워크플로우 설정 키가 포함되어 있어야 한다."""
+    from oh_my_kanban.config import _ALLOWED_CONFIG_KEYS
+
+    assert "task_mode" in _ALLOWED_CONFIG_KEYS
+    assert "upload_level" in _ALLOWED_CONFIG_KEYS
+    assert "auto_archive_days" in _ALLOWED_CONFIG_KEYS
+    assert "auto_complete_subtasks" in _ALLOWED_CONFIG_KEYS
+    assert "session_retention_days" in _ALLOWED_CONFIG_KEYS
+
+
+def test_toml_auto_complete_subtasks_native_bool_loaded(tmp_path: Path) -> None:
+    """TOML bool 스칼라가 auto_complete_subtasks에 반영되어야 한다."""
+    config_file = _write_config(
+        tmp_path,
+        "[default]\nauto_complete_subtasks = true\n",
+    )
+
+    with patch("oh_my_kanban.config.CONFIG_FILE", config_file):
+        cfg = load_config()
+
+    assert cfg.auto_complete_subtasks is True

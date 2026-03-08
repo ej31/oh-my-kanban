@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any, Optional
@@ -129,6 +130,27 @@ def record_health_warning(warning: dict[str, Any]) -> None:
     except Exception as e:
         # fail-open: 기록 실패 시 훅을 차단하지 않는다
         print(f"[omk] health_warnings 기록 실패: {type(e).__name__}", file=sys.stderr)
+
+
+# ── 댓글 보안 필터 ────────────────────────────────────────────────────────────
+
+# 민감 정보 패턴 (API 키, 토큰, 비밀번호 등)
+_SENSITIVE_PATTERNS: list[tuple[re.Pattern[str], str]] = [
+    (re.compile(r"plane_api_[a-f0-9]{32}"), "[PLANE_API_KEY]"),
+    (re.compile(r"ghp_[A-Za-z0-9]{36}"), "[GITHUB_PAT]"),
+    (re.compile(r"sk-[A-Za-z0-9]{48,}"), "[API_KEY]"),
+    (re.compile(r"xoxb-[A-Za-z0-9\-]+"), "[SLACK_TOKEN]"),
+    (re.compile(r"Bearer\s+[A-Za-z0-9\-_.~+/]+=*", re.IGNORECASE), "Bearer [REDACTED]"),
+    (re.compile(r"(?i)(?:password|passwd|pwd)\s*[:=]\s*\S+"), "[PASSWORD_REDACTED]"),
+]
+
+
+def sanitize_comment(text: str) -> str:
+    """댓글 텍스트에서 민감 정보(API 키, 토큰, 비밀번호)를 제거한다."""
+    result = text
+    for pattern, replacement in _SENSITIVE_PATTERNS:
+        result = pattern.sub(replacement, result)
+    return result
 
 
 def exit_fail_open() -> None:

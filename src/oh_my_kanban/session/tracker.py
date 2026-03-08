@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+
 from oh_my_kanban.session.state import SessionState
 
 

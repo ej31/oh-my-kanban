@@ -51,6 +51,13 @@ class PlaneContext:
     work_item_ids: list[str] = field(default_factory=list)
     module_id: Optional[str] = None
     stale_work_item_ids: list[str] = field(default_factory=list)
+    focused_work_item_id: Optional[str] = None
+    last_comment_check: Optional[str] = None
+    known_comment_ids: list[str] = field(default_factory=list)
+    comment_poll_failures: int = 0
+    last_subtask_check: Optional[str] = None
+    subtask_check_failures: int = 0
+    subtask_completion_nudged_ids: list[str] = field(default_factory=list)
 
 
 @dataclass

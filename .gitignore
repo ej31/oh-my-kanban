@@ -28,14 +28,9 @@ env/
 # 로그
 *.log
 
-# OMC 세션 상태
-.omc/state/
-.omc/notepad.md
-.omc/prd.json
-.omc/plans/
-.omc/progress.txt
-.omc/project-memory.json
-.omc/sessions/
+# OMC 런타임 데이터
+.omc/
+.omx/
 
 # Claude Code 로컬 설정 (omk hooks install이 자동 관리)
 .claude/settings.json
@@ -45,7 +40,8 @@ env/
 .ruff_cache/
 .mypy_cache/
 
-# installer (Node.js)
+# installer / docs (Node.js)
 installer/node_modules/
+docs/node_modules/
 installer/dist/
 .omk/

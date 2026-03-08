@@ -8,7 +8,7 @@ from collections import Counter
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from oh_my_kanban.session.state import DriftResult, SessionState, ScopeState
+    from oh_my_kanban.session.state import DriftResult, ScopeState, SessionState
 
 # ── 가중치 상수 (일반 모드) ──────────────────────────────────────────────────
 WEIGHT_TF_COSINE = 0.4
@@ -102,11 +102,11 @@ def classify_drift(score: float, sensitivity: float) -> str:
 # ── 드리프트 점수 계산 ─────────────────────────────────────────────────────
 
 def compute_drift_score(
-    scope: "ScopeState",
+    scope: ScopeState,
     prompt_text: str,
     files_touched: list[str],
     sensitivity: float = 0.5,
-) -> "DriftResult":
+) -> DriftResult:
     """현재 스코프 대비 프롬프트의 드리프트 점수를 계산한다.
 
     sensitivity는 세션 설정값(state.config.sensitivity)을 전달해야 한다.
@@ -185,7 +185,7 @@ def _top_keywords(tokens: list[str], n: int) -> list[str]:
     return [word for word, _ in counter.most_common(n)]
 
 
-def init_scope(state: "SessionState", prompt_text: str) -> None:
+def init_scope(state: SessionState, prompt_text: str) -> None:
     """첫 프롬프트로 세션 스코프를 초기화한다."""
     tokens = tokenize_text(prompt_text)
     if len(tokens) < MIN_SCOPE_TOKENS:
@@ -196,18 +196,17 @@ def init_scope(state: "SessionState", prompt_text: str) -> None:
     state.scope.expanded_topics = []
 
 
-def expand_scope(state: "SessionState", prompt_text: str) -> None:
+def expand_scope(state: SessionState, prompt_text: str) -> None:
     """기존 스코프에 새 프롬프트 토큰을 추가한다."""
     new_tokens = tokenize_text(prompt_text)
     remaining = MAX_SCOPE_TOKENS - len(state.scope.tokens)
     if remaining > 0:
-        state.scope.tokens.extend(new_tokens[:remaining])
+        state.scope.tokens = [*state.scope.tokens, *new_tokens[:remaining]]
 
     # 새 토픽 추가
     new_keywords = _top_keywords(new_tokens, 10)
-    for kw in new_keywords:
-        if kw not in state.scope.expanded_topics:
-            state.scope.expanded_topics.append(kw)
+    new_expanded = [kw for kw in new_keywords if kw not in state.scope.expanded_topics]
+    state.scope.expanded_topics = [*state.scope.expanded_topics, *new_expanded]
 
     # 키워드 재계산
     state.scope.keywords = _top_keywords(state.scope.tokens, 20)

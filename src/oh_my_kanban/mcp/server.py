@@ -26,6 +26,7 @@ except ImportError as e:
     ) from e
 
 from oh_my_kanban.config import load_config
+from oh_my_kanban.hooks.common import sanitize_comment
 from oh_my_kanban.hooks.http_client import build_plane_headers, plane_http_client, plane_request, warn_auth_failure
 from oh_my_kanban.session.manager import list_sessions, load_session, save_session
 from oh_my_kanban.session.state import STATUS_ACTIVE, TimelineEvent, now_iso
@@ -148,14 +149,15 @@ def omk_link_work_item(work_item_id: str, session_id: str = "") -> dict[str, Any
             "work_item_ids": state.plane_context.work_item_ids,
         }
 
-    state.plane_context.work_item_ids.append(wi_id)
-    state.timeline.append(
+    state.plane_context.work_item_ids = [*state.plane_context.work_item_ids, wi_id]
+    state.timeline = [
+        *state.timeline,
         TimelineEvent(
             timestamp=now_iso(),
             type="prompt",
             summary=f"Work Item 연결: {wi_id}",
-        )
-    )
+        ),
+    ]
     save_session(state)
 
     return {
@@ -219,13 +221,14 @@ def omk_update_scope(
     if not changed:
         return {"success": True, "message": "변경할 내용이 없습니다.", "scope": state.scope.__dict__}
 
-    state.timeline.append(
+    state.timeline = [
+        *state.timeline,
         TimelineEvent(
             timestamp=now_iso(),
             type="scope_expanded",
             summary=f"범위 수동 업데이트: {', '.join(changed)}",
-        )
-    )
+        ),
+    ]
     save_session(state)
 
     return {
@@ -318,8 +321,11 @@ def omk_add_comment(
     plane = state.plane_context
     project_id = plane.project_id
 
-    if work_item_id.strip():
-        target_wi_ids = [work_item_id.strip()]
+    wi_id_input = work_item_id.strip()
+    if wi_id_input:
+        if not _UUID_RE.match(wi_id_input):
+            return {"error": f"유효하지 않은 UUID 형식입니다: {wi_id_input!r}"}
+        target_wi_ids = [wi_id_input]
     else:
         target_wi_ids = plane.work_item_ids
 
@@ -352,7 +358,7 @@ def omk_add_comment(
                 try:
                     resp = plane_request(
                         client, "POST", url,
-                        json={"comment_html": comment.strip()},
+                        json={"comment_html": sanitize_comment(comment.strip())},
                         context=f"댓글 추가 wi_id={wi_id}",
                     )
                     if resp.status_code in (200, 201):
