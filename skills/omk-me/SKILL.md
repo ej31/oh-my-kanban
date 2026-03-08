@@ -1,67 +1,67 @@
 ---
 name: omk-me
-description: 현재 세션의 상태, 연결된 WI, 진행 상황 등을 보여준다.
+description: Shows the current session's status, linked WIs, progress, and more.
 ---
 
-# omk me — 현재 세션 정보 조회
+# omk me - View current session information
 
-현재 세션의 상태, 연결된 WI, 진행 상황 등을 보여준다.
+Shows the current session's status, linked WIs, progress, and more.
 
-## 실행 조건
+## Trigger conditions
 
-사용자가 "/oh-my-kanban:me", "/omk:me" 또는
-"현재 세션 상태 보여줘", "내 작업 상황 알려줘", "omk 상태 확인해줘" 등을 요청한 경우.
+When the user requests "/oh-my-kanban:me", "/omk:me", or
+phrases like "show current session status", "tell me my work status", "check omk status", etc.
 
-## 절차
+## Procedure
 
-### 1. 세션 파일 읽기
+### 1. Read the session file
 
-현재 세션의 상태를 세션 파일에서 읽는다.
+Read the current session's status from the session file.
 
-### 2. 세션 정보 표시
+### 2. Display session information
 
 ```text
-[omk] 현재 세션 정보
-  세션 ID: <session_id[:8]>...
-  시작 시각: <created_at (KST 변환)>
-  세션 기간: <duration>
+[omk] Current Session Info
+  Session ID: <session_id[:8]>...
+  Started at: <created_at (converted to local time)>
+  Session duration: <duration>
 
-  📋 연결된 Task: <identifier> — <wi_name>
+  Linked Task: <identifier> - <wi_name>
      URL: <plane_url>
-     상태: <wi_status>
+     Status: <wi_status>
 
-  📊 진행 통계:
-     요청 횟수: <total_prompts>회
-     수정 파일: <files_touched_count>개
-     범위 이탈 경고: <drift_warnings>회
-     범위 자동 확장: <scope_expansions>회
+  Progress stats:
+     Requests: <total_prompts>
+     Files modified: <files_touched_count>
+     Scope drift warnings: <drift_warnings>
+     Scope auto-expansions: <scope_expansions>
 
-  🎯 세션 목표:
+  Session goal:
      <scope_summary>
 
-  📁 주요 수정 파일:
+  Key files modified:
      <files_touched[:5]>
 
-  ⏱️ 마지막 댓글 폴링: <last_comment_check or '없음'>
+  Last comment poll: <last_comment_check or 'none'>
 ```
 
-연결된 WI가 없으면:
+If no WI is linked:
 
 ```text
-  📋 연결된 Task: 없음
-     /oh-my-kanban:focus로 Task를 연결하거나 /oh-my-kanban:create-task로 새로 생성하세요.
+  Linked Task: None
+     Link a Task with /oh-my-kanban:focus or create a new one with /oh-my-kanban:create-task.
 ```
 
-### 3. 현재 사용자 정보 (선택)
+### 3. Current user information (optional)
 
-Plane API를 통해 현재 인증된 사용자 정보를 조회한다:
+Query the currently authenticated user via the Plane API:
 
 ```python
 mcp__plane__get_me()
 ```
 
-## 주의사항
+## Notes
 
-- 세션 파일 읽기 실패 시 "세션 정보를 불러올 수 없습니다"를 출력한다
-- 타임스탬프는 가능하면 KST (UTC+9)로 변환하여 표시한다
-- WI URL은 config에서 base_url, workspace_slug, project_id로 조합하여 생성한다
+- If reading the session file fails, output "Unable to load session information"
+- Convert timestamps to local time (UTC+9) where possible
+- Construct the WI URL from `base_url`, `workspace_slug`, and `project_id` in the config

@@ -1,72 +1,74 @@
 ---
 name: omk-github-projects
-description: GitHub Projects 기반 WI를 `gh` CLI로 관리한다.
+description: Manages GitHub Projects-based WIs with the `gh` CLI.
 ---
 
-# omk github-projects — GitHub WI를 `gh`로 관리
+# omk github-projects - Manage GitHub WIs with `gh`
 
-GitHub 기반 WI는 `omk gh` 같은 별도 래퍼로 관리하지 않는다.
-반드시 `gh` CLI와 GitHub Projects를 직접 사용한다.
+GitHub-based WIs are not managed by separate wrappers like `omk gh`.
+Always use the `gh` CLI and GitHub Projects directly.
 
-## 실행 조건
+## Execution Conditions
 
-사용자가 "/oh-my-kanban:github-projects", "/omk:gh" 또는
-"GitHub WI 관리해줘", "gh로 프로젝트 상태 바꿔줘", "GitHub Projects로 태스크 운영해줘" 등을 요청한 경우.
+When the user requests "/oh-my-kanban:github-projects", "/omk:gh", or
+"Manage GitHub WI", "Change project status with gh", "Operate tasks with GitHub Projects", etc.
 
-## 기본 원칙
+## Basic Principles
 
-- 저장소 이슈(Issue)와 프로젝트 아이템(Project Item)은 구분한다
-- 제목/본문/댓글/닫기는 `gh issue`
-- 보드 상태(Status), Iteration, 커스텀 필드는 `gh project`
-- `gh project item-edit`는 한 번에 **한 필드만** 갱신할 수 있다
-- GitHub Projects 작업 전에는 항상 권한과 대상 Project를 먼저 확인한다
+- Distinguish between Repository Issues and Project Items.
+- Title/Body/Comments/Closing are handled by `gh issue`.
+- Board Status, Iteration, and Custom Fields are handled by `gh project`.
+- `gh project item-edit` can only update **one field** at a time.
+- Always verify permissions and target Project before working on GitHub Projects.
 
-## 절차
+## Procedure
 
-### 1. 인증과 권한 확인
+### 1. Authentication and Permissions Check
 
-먼저 현재 인증 상태를 확인한다:
+First, check the current authentication status:
 
 ```bash
 gh auth status
 ```
 
-문제가 있으면 아래 순서로 복구한다:
+If there's an issue, restore it with the following steps:
 
 ```bash
 gh auth login
 gh auth refresh -s project
 ```
 
-추가 점검:
+Additional check:
 
 ```bash
 gh repo view OWNER/REPO
 ```
 
-- `gh project` 계열은 최소 `project` scope가 필요하다
-- repo는 보이는데 project가 안 보이면 조직 Project 권한이 부족할 수 있다
-- 이 경우 사용자에게 org/project 접근 권한 확인을 안내한다
+- `gh project` commands require at least `project` scope.
+- If the repo is visible but the project is not, organization Project permissions might be insufficient.
+- In this case, guide the user to check org/project access permissions.
 
-### 2. 대상 저장소와 GitHub Project 확정
+### 2. Confirm Target Repository and GitHub Project
 
-현재 저장소 기준으로 작업할지 먼저 정한다.
-저장소가 명시되지 않았으면 현재 git remote와 `gh repo view` 결과를 우선 사용한다.
+First, decide whether to work based on the current repository.
+If no repository is specified, prioritize the current git remote and `gh repo view` results.
 
-Project 후보 확인:
+Check Project candidates:
 
 ```bash
-gh project list --owner OWNER --format json
+gh project list --owner OWNER --limit 100 --format json
 ```
 
-선택한 Project 상세 확인:
+Detailed check of the selected Project:
 
 ```bash
 gh project view PROJECT_NUMBER --owner OWNER --format json
-gh project field-list PROJECT_NUMBER --owner OWNER --format json
+gh project field-list PROJECT_NUMBER --owner OWNER --limit 100 --format json
 ```
 
-쓰기 작업에 필요한 내부 ID가 부족하면 GraphQL로 보강한다:
+If internal IDs required for write operations are missing, supplement with GraphQL:
+
+Organization Project:
 
 ```bash
 gh api graphql -f query='
@@ -75,7 +77,7 @@ query($owner: String!, $number: Int!) {
     projectV2(number: $number) {
       id
       title
-      fields(first: 50) {
+      fields(first: 100) {
         nodes {
           ... on ProjectV2Field { id name dataType }
           ... on ProjectV2SingleSelectField { id name options { id name } }
@@ -91,107 +93,135 @@ query($owner: String!, $number: Int!) {
 }' -f owner=OWNER -F number=PROJECT_NUMBER
 ```
 
-여기서 확인해야 하는 값:
+User Project:
 
-- `PROJECT_NUMBER`: 사람이 입력하는 프로젝트 번호
-- `project id`: `item-edit`에 필요한 내부 node ID
-- `field id`: Status, Iteration, Due Date 등 필드 ID
-- `single select option id`: Status 같은 단일 선택 필드의 옵션 ID
+```bash
+gh api graphql -f query='
+query($owner: String!, $number: Int!) {
+  user(login: $owner) {
+    projectV2(number: $number) {
+      id
+      title
+      fields(first: 100) {
+        nodes {
+          ... on ProjectV2Field { id name dataType }
+          ... on ProjectV2SingleSelectField { id name options { id name } }
+          ... on ProjectV2IterationField {
+            id
+            name
+            configuration { iterations { id title startDate } }
+          }
+        }
+      }
+    }
+  }
+}' -f owner=OWNER -F number=PROJECT_NUMBER
+```
 
-### 3. WI 데이터 모델 맞추기
+Values to confirm here:
 
-GitHub에서는 아래 식별자를 혼동하면 안 된다:
+- `PROJECT_NUMBER`: Project number entered by humans.
+- `project id`: Internal node ID needed for `item-edit`.
+- `field id`: Field IDs for Status, Iteration, Due Date, etc.
+- `single select option id`: Option IDs for single-select fields like Status.
 
-- Issue 번호: `123`
+### 3. Match WI Data Model
+
+In GitHub, do not confuse the following identifiers:
+
+- Issue number: `123`
 - Issue URL: `https://github.com/OWNER/REPO/issues/123`
 - Project number: `7`
-- Project item id: Project 안에서 쓰는 내부 item ID
-- Project field id / option id: 상태 변경용 내부 ID
+- Project item id: Internal item ID used within a Project.
+- Project field id / option id: Internal IDs for status changes.
 
-실무 원칙:
+Practical principle:
 
-- "작업 내용 관리"는 issue를 기준으로 본다
-- "보드 위치와 상태 관리"는 project item을 기준으로 본다
+- "Work content management" is based on issues.
+- "Board position and status management" is based on project items.
 
-### 4. 기존 WI 찾기
+### 4. Find Existing WI
 
-이슈 목록에서 후보를 찾는다:
+Find candidates from the issue list:
 
 ```bash
 gh issue list -R OWNER/REPO --state all \
+  --limit 100 \
   --json number,title,state,assignees,labels,projectItems,url
 ```
 
-검색이 필요하면:
+If search is needed:
 
 ```bash
 gh issue list -R OWNER/REPO --state all --search "keyword sort:updated-desc"
 ```
 
-단일 WI 상세:
+Single WI details:
 
 ```bash
 gh issue view ISSUE_NUMBER -R OWNER/REPO --comments --json title,body,state,projectItems,url
 ```
 
-이미 issue는 있는데 Project에 없으면 추가한다:
+If an issue already exists but is not in the Project, add it:
 
 ```bash
 gh project item-add PROJECT_NUMBER --owner OWNER --url ISSUE_URL
 ```
 
-### 5. 새 WI 생성
+### 5. Create New WI
 
-일반적인 개발 WI는 먼저 issue를 만든다:
+For general development WIs, first create an issue:
 
 ```bash
 gh issue create -R OWNER/REPO \
-  --title "제목" \
-  --body "설명" \
+  --title "Title" \
+  --body "Description" \
   --label "backend" \
   --assignee "@me"
 ```
 
-Project 제목이 명확하게 하나로 고정돼 있다면 생성 시 바로 연결할 수 있다:
+If the Project title is clearly fixed to one, it can be linked directly upon creation:
 
 ```bash
 gh issue create -R OWNER/REPO \
-  --title "제목" \
-  --body "설명" \
+  --title "Title" \
+  --body "Description" \
   --project "Project Title"
 ```
 
-Project 연결이 불명확하거나 owner에 같은 제목 Project가 여러 개면 아래처럼 명시적으로 추가한다:
+If the Project link is unclear or if there are multiple Projects with the same title under the owner, add it explicitly as below:
 
 ```bash
 gh project item-add PROJECT_NUMBER --owner OWNER --url ISSUE_URL
 ```
 
-저장소 issue가 아니라 초안 카드가 필요하면 draft item으로 생성한다:
+If a draft card is needed instead of a repository issue, create it as a draft item:
 
 ```bash
 gh project item-create PROJECT_NUMBER --owner OWNER \
   --title "Draft task" \
-  --body "메모 또는 TODO"
+  --body "Memo or TODO"
 ```
 
-### 6. 상태와 커스텀 필드 갱신
+### 6. Update Status and Custom Fields
 
-먼저 Project item과 field 식별자를 확보한다.
+First, secure the Project item and field identifiers.
 
-프로젝트 아이템 찾기:
+Find project item:
 
 ```bash
 gh issue view ISSUE_NUMBER -R OWNER/REPO --json projectItems
 ```
 
-또는
+Or:
 
 ```bash
-gh project item-list PROJECT_NUMBER --owner OWNER --format json
+gh project item-list PROJECT_NUMBER --owner OWNER --limit 200 --format json
 ```
 
-내부 item ID가 애매하면 GraphQL로 issue 번호와 item ID를 직접 매핑한다:
+If the internal item ID is ambiguous, directly map issue number and item ID with GraphQL:
+
+Organization Project:
 
 ```bash
 gh api graphql -f query='
@@ -214,7 +244,30 @@ query($owner: String!, $number: Int!) {
 }' -f owner=OWNER -F number=PROJECT_NUMBER
 ```
 
-Status 같은 단일 선택 필드 변경:
+User Project:
+
+```bash
+gh api graphql -f query='
+query($owner: String!, $number: Int!) {
+  user(login: $owner) {
+    projectV2(number: $number) {
+      id
+      items(first: 200) {
+        nodes {
+          id
+          content {
+            ... on Issue { number title url }
+            ... on PullRequest { number title url }
+            ... on DraftIssue { title body }
+          }
+        }
+      }
+    }
+  }
+}' -f owner=OWNER -F number=PROJECT_NUMBER
+```
+
+Change single-select fields like Status:
 
 ```bash
 gh project item-edit \
@@ -224,7 +277,7 @@ gh project item-edit \
   --single-select-option-id STATUS_OPTION_ID
 ```
 
-Iteration 변경:
+Change Iteration:
 
 ```bash
 gh project item-edit \
@@ -234,7 +287,7 @@ gh project item-edit \
   --iteration-id ITERATION_ID
 ```
 
-Text / Date / Number 필드 변경:
+Change Text / Date / Number fields:
 
 ```bash
 gh project item-edit --id ITEM_ID --project-id PROJECT_ID --field-id FIELD_ID --text "value"
@@ -242,95 +295,97 @@ gh project item-edit --id ITEM_ID --project-id PROJECT_ID --field-id FIELD_ID --
 gh project item-edit --id ITEM_ID --project-id PROJECT_ID --field-id FIELD_ID --number 3
 ```
 
-필드 값을 지울 때:
+When clearing field values:
 
 ```bash
 gh project item-edit --id ITEM_ID --project-id PROJECT_ID --field-id FIELD_ID --clear
 ```
 
-주의:
+Note:
 
-- `gh project item-edit`는 issue 자체를 수정하지 않는다
-- 필드 여러 개를 바꿔야 하면 명령을 여러 번 실행한다
-- `Status` 옵션 이름이 아니라 **option id**가 필요하다
+- `gh project item-edit` does not modify the issue itself.
+- If multiple fields need to be changed, execute the command multiple times.
+- The **option id** is needed for `Status` options, not the option name.
 
-### 7. 진행 기록과 핸드오프
+### 7. Progress Log and Handoff
 
-작업 기록은 issue 댓글에 남긴다:
+Log work progress in issue comments:
 
 ```bash
-gh issue comment ISSUE_NUMBER -R OWNER/REPO --body "진행 상황 / 결정 사항 / 다음 액션"
+gh issue comment ISSUE_NUMBER -R OWNER/REPO --body "Progress / Decisions / Next Action"
 ```
 
-최근 댓글 확인:
+Check recent comments:
 
 ```bash
 gh issue view ISSUE_NUMBER -R OWNER/REPO --comments
 ```
 
-라벨, 담당자, 마일스톤 조정:
+Adjust labels, assignees, milestones:
 
 ```bash
 gh issue edit ISSUE_NUMBER -R OWNER/REPO --add-label "blocked"
-gh issue edit ISSUE_NUMBER -R OWNER/REPO --add-assignee "@me"
+gh issue edit ISSUE_NUMBER -R OWNER/REPO --add-assignee " @me"
 gh issue edit ISSUE_NUMBER -R OWNER/REPO --milestone "Sprint 12"
 ```
 
-### 8. 완료, 재개, 정리
+### 8. Complete, Reopen, and Clean Up
 
-완료 처리:
-
-```bash
-gh issue close ISSUE_NUMBER -R OWNER/REPO --reason completed --comment "완료 요약"
-```
-
-재개:
+Complete:
 
 ```bash
-gh issue reopen ISSUE_NUMBER -R OWNER/REPO --comment "재개 사유"
+gh issue close ISSUE_NUMBER -R OWNER/REPO --reason completed --comment "Completion summary"
 ```
 
-보드에서 아이템을 archive 해야 하면:
+Reopen:
+
+```bash
+gh issue reopen ISSUE_NUMBER -R OWNER/REPO --comment "Reason for reopening"
+```
+
+If an item needs to be archived from the board:
 
 ```bash
 gh project item-archive PROJECT_NUMBER --owner OWNER --id ITEM_ID
 ```
 
-보통은 아래 순서가 안전하다:
+Usually, the following sequence is safer:
 
-1. Project Status를 Done 계열로 변경
-2. issue에 완료 댓글 추가
-3. issue close
-4. 팀 규칙상 필요할 때만 item archive
+1. Change Project Status to a Done-related status.
+2. Add a completion comment to the issue.
+3. Close the issue.
+4. Archive the item only if required by team rules.
 
-### 9. 최종 검증
+### 9. Final Verification
 
-작업 후에는 아래 둘 다 확인한다:
+After working, check both:
 
 ```bash
 gh issue view ISSUE_NUMBER -R OWNER/REPO --json title,state,assignees,labels,projectItems,url
-gh project item-list PROJECT_NUMBER --owner OWNER --format json
+gh project item-list PROJECT_NUMBER --owner OWNER --limit 200 --format json
 ```
 
-검증 포인트:
+Verification points:
 
-- 올바른 issue가 Project에 연결되었는가
-- Status/Iteration/custom field가 의도대로 반영되었는가
-- 댓글/완료 상태가 누락되지 않았는가
+- Is the correct issue linked to the Project?
+- Are Status/Iteration/custom fields reflected as intended?
+- Are comments/completion status not missing?
 
-## 권장 운영 패턴
+## Recommended Operating Patterns
 
-- 신규 개발 작업: `gh issue create` -> `gh project item-add` -> `gh project item-edit`
-- 진행 기록: `gh issue comment`
-- 상태 전환: `gh project item-edit`
-- 완료 처리: `gh issue close`
-- 재개: `gh issue reopen` + 필요 시 Status 재조정
+- New development work: `gh issue create` -> `gh project item-add` -> `gh project item-edit`
+- Progress log: `gh issue comment`
+- Status transition: `gh project item-edit`
+- Completion: `gh issue close`
+- Reopen: `gh issue reopen` + readjust Status if necessary
 
-## 주의사항
+## Precautions
 
-- GitHub Projects는 내부 ID 기반 조작이 많아서 `PROJECT_NUMBER`와 `PROJECT_ID`를 혼동하지 않는다
-- 저장소 issue 번호만으로는 Status 변경이 안 된다. Project item ID가 필요하다
-- `--project "제목"` 방식은 동명이인 Project가 있으면 혼동될 수 있다
-- 내부 ID 확보가 애매하면 `gh api graphql`을 보조 수단으로 사용한다
-- org Project를 다룰 때는 repo 권한과 project 권한을 별도로 확인한다
-- 사용자가 `omk gh`를 요청해도 실제 실행은 `gh` CLI로 안내하고 처리한다
+- GitHub Projects often involve internal ID-based manipulation, so do not confuse `PROJECT_NUMBER` and `PROJECT_ID`.
+- Status cannot be changed with only the repository issue number. The Project item ID is required.
+- The `--project "Title"` method can cause confusion if there are multiple Projects with the same title under the owner.
+- If securing internal IDs is ambiguous, use `gh api graphql` as a supplementary tool.
+- Choose `organization(login: ...)` or `user(login: ...)` for GraphQL fallbacks based on the owner type.
+- `gh project list`, `gh project field-list`, and `gh project item-list` have small default limits, so explicitly set `--limit` on larger boards.
+- When dealing with org Projects, check repo permissions and project permissions separately.
+- Even if the user requests `omk gh`, guide and process the actual execution with the `gh` CLI.

@@ -1,36 +1,36 @@
 ---
 name: omk-create-task
-description: 새 Plane Work Item을 생성하고 현재 세션에 연결한다.
+description: Creates a new Plane Work Item and links it to the current session.
 ---
 
-# omk create-task — 새 Task 생성 + 세션 연결
+# omk create-task - Create New Task + Link to Session
 
-새 Plane Work Item을 생성하고 현재 세션에 연결한다.
+Creates a new Plane Work Item and links it to the current session.
 
-## 실행 조건
+## Trigger Conditions
 
-사용자가 "/oh-my-kanban:create-task", "/omk:ct" 또는 "새 태스크 만들어줘", "Task 생성해줘" 등을 요청한 경우.
+When the user requests "/oh-my-kanban:create-task", "/omk:ct" or phrases like "create a new task", "make a Task" etc.
 
-## 절차
+## Procedure
 
-### 1. Task 정보 수집
+### 1. Collect Task Information
 
-사용자에게 Task 이름과 설명을 확인한다. 대화 맥락에서 자동 추론 가능하면 추론하고 확인을 요청한다:
+Confirm the Task name and description with the user. If it can be inferred from conversation context, infer it and ask for confirmation:
 
 ```
-새로 만들 Task 이름: <사용자 입력 또는 추론>
-설명 (선택): <사용자 입력>
+New Task name: <user input or inferred>
+Description (optional): <user input>
 ```
 
-### 2. config에서 task_mode 확인
+### 2. Check task_mode in Config
 
-`~/.config/oh-my-kanban/config.toml`의 `task_mode` 값을 확인한다:
-- `main-sub`: MainTask 구조로 생성 (단독 WI, omk:type:main 라벨)
-- `module-task-sub`: Module에 연결된 Task로 생성 (Module 선택 필요)
+Check the `task_mode` value in `~/.config/oh-my-kanban/config.toml`:
+- `main-sub`: Create as MainTask structure (standalone WI, omk:type:main label)
+- `module-task-sub`: Create as Task linked to a Module (requires Module selection)
 
-### 3. WI 생성
+### 3. Create WI
 
-task_mode에 따라 적절한 구조로 WI를 생성한다:
+Create the WI with the appropriate structure based on task_mode:
 
 **Mode A (main-sub):**
 ```
@@ -39,63 +39,62 @@ mcp__plane__create_work_item(
   name="<task_name>",
   description="<description>",
   state_id="<in_progress_state_id>",
-  label_ids=["<omk:session 라벨 ID>", "<omk:type:main 라벨 ID>"]
+  label_ids=["<omk:session label ID>", "<omk:type:main label ID>"]
 )
 ```
 
 **Mode B (module-task-sub):**
-먼저 Module 목록 조회:
+First retrieve the Module list:
 ```
 mcp__plane__list_modules(project_id="<project_id>")
 ```
-Module 선택 후 WI 생성:
+After selecting a Module, create the WI:
 ```
 mcp__plane__create_work_item(
   project_id="<project_id>",
   name="<task_name>",
   description="<description>",
   state_id="<in_progress_state_id>",
-  label_ids=["<omk:session 라벨 ID>"]
+  label_ids=["<omk:session label ID>"]
 )
 mcp__plane__add_work_items_to_module(module_id="<module_id>", work_item_ids=["<new_wi_id>"])
 ```
 
-### 4. 세션 시작 댓글 추가
+### 4. Add Session Start Comment
 
-생성된 WI에 세션 시작 댓글을 추가한다:
+Add a session start comment to the created WI:
 ```
 mcp__plane__create_work_item_comment(
   work_item_id="<new_wi_id>",
-  comment_html="## omk 세션 시작\n\n**세션 ID**: `<session_id[:8]>...`\n**시작 시각**: <timestamp>\n**목표**: <task_name>"
+  comment_html="## omk Session Start\n\n**Session ID**: `<session_id[:8]>...`\n**Start time**: <timestamp>\n**Goal**: <task_name>"
 )
 ```
 
-### 5. PlaneContext 업데이트
+### 5. Update PlaneContext
 
-생성된 WI UUID를 세션의 plane_context에 반영한다:
-- `work_item_ids` 에 새 WI UUID 추가
-- `focused_work_item_id` 를 새 WI UUID로 설정
-- `main_task_id` 를 새 WI UUID로 설정
+Reflect the created WI UUID in the session's plane_context:
+- Add new WI UUID to `work_item_ids`
+- Set `focused_work_item_id` to the new WI UUID
 
-### 6. 사용자에게 확인 알림
+### 6. Confirmation Notification
 
 ```
-[omk] Task가 등록되었습니다.
-  WI: <identifier> — <task_name>
+[omk] Task has been registered.
+  WI: <identifier> - <task_name>
   URL: <plane_url>
-  중요한 메모나 맥락이 있으시면 위 링크에서 댓글로 남겨주세요.
-  이 세션에서 자동으로 참고합니다.
+  If you have important notes or context, please leave them as comments at the link above.
+  They will be automatically referenced in this session.
 ```
 
-## 현재 PlaneContext 읽기
+## Reading Current PlaneContext
 
-- `state.plane_context.project_id` — 생성할 프로젝트 ID
-- `state.plane_context.work_item_ids` — 기존 연결 WI 목록
-- project_id가 없으면 사용자에게 먼저 `omk setup`을 실행하도록 안내한다
+- `state.plane_context.project_id` - project ID to create in
+- `state.plane_context.work_item_ids` - existing linked WI list
+- If `project_id` is not set, guide the user through `/omk-setup` or the `omk config init` + `omk hooks install` workflow first
 
-## 주의사항
+## Notes
 
-- WI 생성 전 항상 이름을 사용자에게 확인받는다
-- 상태(State) ID는 하드코딩하지 않고 `mcp__plane__list_states`로 동적 조회한다
-- 라벨 ID는 하드코딩하지 않고 `mcp__plane__list_labels`로 동적 조회한다
-- 생성 실패 시 명확한 에러 메시지를 출력한다
+- Always confirm the name with the user before creating a WI
+- Do not hardcode State IDs; dynamically retrieve them via `mcp__plane__list_states`
+- Do not hardcode Label IDs; dynamically retrieve them via `mcp__plane__list_labels`
+- Display a clear error message if creation fails

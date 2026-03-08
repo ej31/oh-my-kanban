@@ -1,46 +1,63 @@
 ---
 name: omk-hooks-doctor
-description: oh-my-kanban 훅 설치 상태를 진단하고 문제를 수정합니다. 세션 추적이 작동하지 않거나 훅 관련 오류가 발생할 때 사용합니다.
+description: Diagnoses and fixes oh-my-kanban hook installation issues. Use when session tracking is not working or hook-related errors occur.
 ---
 
-oh-my-kanban 훅 설치 상태를 진단해주세요.
+# omk-hooks-doctor - Diagnose Hook Installation
 
-다음 명령을 실행하세요:
+Use this skill when session tracking is not starting, hook wiring looks broken, or you need to verify the current Claude Code hook installation.
+
+## 1. Check Current Hook Status
+
+Run:
 
 ```bash
 omk hooks status
 ```
 
-**훅이 설치되지 않은 경우** 다음 명령으로 설치합니다:
+Summarize:
+- whether hooks are installed globally, per-project, or local-only
+- which hook events are registered
+- whether any active sessions are visible
+
+## 2. Reinstall Hooks If Needed
+
+If hooks are missing or stale, reinstall them with the appropriate scope:
 
 ```bash
 omk hooks install
 ```
 
-**훅을 재설치해야 하는 경우** (업데이트 후 또는 오류 발생 시):
+For a clean reinstall:
 
 ```bash
 omk hooks uninstall
 omk hooks install
 ```
 
-**진단 항목:**
-- SessionStart / SessionEnd 훅 등록 여부
-- `~/.claude/hooks/` 디렉토리 내 훅 파일 존재 여부
-- oh-my-kanban 설정 파일 유효성
-- Plane API 연결 상태
+Project-specific installs use `.claude/settings.json`, local-only installs use `.claude/settings.local.json`, and global installs use `~/.claude/settings.json`.
 
-**일반적인 문제 해결:**
+## 3. Run Product Diagnostics
 
-| 증상 | 해결 방법 |
-|------|-----------|
-| 세션 시작 시 Work Item이 생성되지 않음 | `omk hooks install` 재실행 |
-| `omk` 명령어를 찾을 수 없음 | `pip install oh-my-kanban` 또는 `npx oh-my-kanban` 사용 |
-| Plane 연결 오류 | `omk wizard`로 설정 재구성 |
-| 훅 실행 권한 오류 | `chmod +x ~/.claude/hooks/*.sh` 실행 |
-
-설정 마법사를 처음부터 다시 실행하려면:
+If the hook wiring is present but tracking still fails, run:
 
 ```bash
-npx oh-my-kanban wizard
+omk doctor
 ```
+
+Use the `omk-doctor` or `omk-setup` skills when you need guided recovery for configuration or API issues.
+
+## Common Troubleshooting
+
+| Symptom | Solution |
+| --- | --- |
+| `omk hooks status` shows no omk hooks | Run `omk hooks install` again in the intended scope |
+| Hooks are installed but no session is tracked | Restart Claude Code after installation, then check `omk hooks status` again |
+| `omk` command is not found | Install or upgrade with `pip install oh-my-kanban` |
+| Hook wiring exists but Plane/Linear access fails | Run `omk doctor` and follow the reported recovery steps |
+| A project should not be tracked | Use `omk project opt-out` or the current-session opt-out workflow instead of removing files manually |
+
+## Notes
+
+- Do not rely on `~/.claude/hooks/` shell scripts; this project installs hook configuration through Claude settings JSON files.
+- Prefer `omk hooks status`, `omk hooks install`, `omk hooks uninstall`, and `omk doctor` over ad hoc file edits.

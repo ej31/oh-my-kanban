@@ -1,29 +1,29 @@
 ---
 name: omk-comments
-description: 현재 세션과 연결된 Work Item의 최근 댓글을 보여준다.
+description: Shows recent comments on the Work Item linked to the current session.
 ---
 
-# omk comments — 현재 WI의 최근 댓글 조회
+# omk comments - View Recent Comments on Current WI
 
-현재 세션과 연결된 Work Item의 최근 댓글을 보여준다.
+Shows recent comments on the Work Item linked to the current session.
 
-## 실행 조건
+## Trigger Conditions
 
-사용자가 "/oh-my-kanban:comments", "/omk:cm" 또는 "댓글 보여줘",
-"WI 코멘트 확인해줘", "팀원 코멘트 있어?" 등을 요청한 경우.
+When the user requests "/oh-my-kanban:comments", "/omk:cm", or phrases like
+"show comments", "check WI comments", "any team comments?" etc.
 
-## 절차
+## Procedure
 
-### 1. 현재 WI 확인
+### 1. Check Current WI
 
-`state.plane_context.focused_work_item_id`를 확인한다. 없으면:
+Check `state.plane_context.focused_work_item_id`. If not set:
 
 ```text
-[omk] 현재 세션에 연결된 Task가 없습니다.
-  /oh-my-kanban:focus로 먼저 Task를 연결하세요.
+[omk] No Task is linked to the current session.
+  Please link a Task first using /oh-my-kanban:focus.
 ```
 
-### 2. 댓글 조회
+### 2. Retrieve Comments
 
 ```python
 mcp__plane__list_work_item_comments(
@@ -31,38 +31,38 @@ mcp__plane__list_work_item_comments(
 )
 ```
 
-### 3. 결과 표시
+### 3. Display Results
 
-최근 10개 댓글을 시간 역순으로 보여준다:
+Show the 10 most recent comments in reverse chronological order:
 
 ```text
-[omk] WI: <identifier> — <wi_name>
-  최근 댓글 (<count>개):
+[omk] WI: <identifier> - <wi_name>
+  Recent comments (<count>):
 
-  📝 <author> (<timestamp>):
+  Comment: <author> (<timestamp>):
   <comment_text>
 
-  📝 <author> (<timestamp>):
+  Comment: <author> (<timestamp>):
   <comment_text>
 
   ...
 ```
 
-댓글이 없으면:
+If there are no comments:
 
 ```text
-[omk] <identifier>에 댓글이 없습니다.
+[omk] No comments on <identifier>.
   URL: <plane_url>
 ```
 
-### 4. 새 댓글 처리
+### 4. Handle New Comments
 
-새 댓글(이전 폴링 이후 추가된 것)이 있으면 강조하여 표시한다.
+If there are new comments (added since the last poll), highlight them.
 
-세션의 `known_comment_ids`를 최신 댓글 ID 목록으로 업데이트한다.
+Update the session's `known_comment_ids` with the latest comment ID list.
 
-## 주의사항
+## Notes
 
-- 댓글 조회 실패 시 명확한 에러 메시지를 출력한다
-- omk 자체가 달은 댓글(## omk로 시작)은 다른 색/형식으로 구분하면 좋다
-- 연결된 WI가 여러 개인 경우, 각 WI의 댓글을 모두 보여준다
+- Display a clear error message if comment retrieval fails
+- Comments posted by omk itself (starting with ## omk) should be visually distinguished with a different color/format
+- If multiple WIs are linked, show comments for all of them

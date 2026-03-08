@@ -1,83 +1,84 @@
 ---
 name: omk-open
-description: 현재 세션에 연결된 Plane Work Item의 웹 URL을 표시한다.
+description: Displays the web URL of the Plane Work Item linked to the current session.
 ---
 
-# omk open — 현재 Task 웹 링크 표시
+# omk open - Display the current Task web link
 
-현재 세션에 연결된 Plane Work Item의 웹 URL을 표시한다.
+Displays the web URL of the Plane Work Item linked to the current session.
 
-## 실행 조건
+## Trigger conditions
 
-사용자가 "/oh-my-kanban:open", "/omk:o" 또는 "Task 링크 보여줘", "Plane에서 열어줘" 등을 요청한 경우.
+When the user requests "/oh-my-kanban:open", "/omk:o", or
+phrases like "show Task link", "open in Plane", etc.
 
-## 절차
+## Procedure
 
-### 1. 현재 WI 확인
+### 1. Check the current WI
 
-현재 세션의 PlaneContext에서 연결된 WI를 확인한다:
+Check the linked WI from the current session's PlaneContext:
 
-- `state.plane_context.focused_work_item_id` — 집중 WI (우선)
-- `state.plane_context.work_item_ids` — 연결된 WI 목록
+- `state.plane_context.focused_work_item_id` - focused WI (priority)
+- `state.plane_context.work_item_ids` - list of linked WIs
 
-WI가 없으면:
+If no WI exists:
 
 ```text
-연결된 Task가 없습니다. /oh-my-kanban:focus로 Task에 연결하거나
-/oh-my-kanban:create-task로 새 Task를 생성하세요.
+No Task is linked. Link a Task with /oh-my-kanban:focus or
+create a new Task with /oh-my-kanban:create-task.
 ```
 
-### 2. WI 상세 조회
+### 2. Retrieve WI details
 
 ```python
 mcp__plane__retrieve_work_item(work_item_id="<focused_work_item_id>")
 ```
 
-응답에서 `sequence_id`와 WI 이름을 추출한다.
+Extract `sequence_id` and the WI name from the response.
 
-### 3. URL 생성
+### 3. Construct the URL
 
-Plane URL 패턴:
+Plane URL pattern:
 
 ```text
 {base_url}/{workspace_slug}/projects/{project_id}/issues/{sequence_id}/
 ```
 
-설정에서 값을 읽는다:
+Read values from the configuration:
 
-- `base_url`: `~/.config/oh-my-kanban/config.toml`의 `base_url`
-- `workspace_slug`: 설정의 `workspace_slug`
+- `base_url`: `base_url` in `~/.config/oh-my-kanban/config.toml`
+- `workspace_slug`: `workspace_slug` in the configuration
 - `project_id`: `state.plane_context.project_id`
 
-### 4. URL 출력
+### 4. Output the URL
 
 ```text
-[omk] 현재 Task
-  WI: <identifier> — <wi_name>
-  상태: <state_name>
+[omk] Current Task
+  WI: <identifier> - <wi_name>
+  Status: <state_name>
   URL: <plane_url>
 
-  클릭하거나 브라우저에 붙여넣기 하세요.
+  Click or paste into your browser.
 ```
 
-### 5. 멀티 WI 처리
+### 5. Handling multiple WIs
 
-여러 WI가 연결된 경우 모두 표시한다:
+If multiple WIs are linked, display all of them:
 
 ```text
-[omk] 연결된 Tasks
-  1. <identifier1> — <name1>: <url1>
-  2. <identifier2> — <name2>: <url2>
+[omk] Linked Tasks
+  1. <identifier1> - <name1>: <url1>
+  2. <identifier2> - <name2>: <url2>
 ```
 
-## 현재 PlaneContext 읽기
+## Reading the current PlaneContext
 
-- `state.plane_context.focused_work_item_id` — 집중 WI UUID
-- `state.plane_context.work_item_ids` — 전체 연결 WI 목록
-- `state.plane_context.project_id` — URL 생성에 필요한 프로젝트 ID
+- `state.plane_context.focused_work_item_id` - focused WI UUID
+- `state.plane_context.work_item_ids` - full list of linked WIs
+- `state.plane_context.project_id` - project ID needed for URL construction
 
-## 주의사항
+## Notes
 
-- URL은 클릭 가능한 하이퍼링크 형식으로 출력한다
-- WI 조회 실패 시에도 세션 파일에 저장된 정보로 URL을 생성 시도한다
-- base_url이 설정되지 않은 경우 plane.so 기본값을 사용한다
+- Output the URL as a clickable hyperlink format
+- Even if WI retrieval fails, attempt to construct the URL from information stored in the session file
+- If `base_url` is not configured, use the plane.so default value

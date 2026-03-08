@@ -1,88 +1,87 @@
 ---
 name: omk-focus
-description: 현재 Claude Code 세션을 특정 Plane Work Item에 연결한다.
+description: Connects the current Claude Code session to a specific Plane Work Item.
 ---
 
-# omk focus — 기존 WI에 세션 연결
+# omk focus - Connect session to an existing WI
 
-현재 Claude Code 세션을 특정 Plane Work Item에 연결한다.
+Connects the current Claude Code session to a specific Plane Work Item.
 
-## 실행 조건
+## Execution Conditions
 
-사용자가 "/oh-my-kanban:focus", "/omk:f" 또는 "WI 연결해줘", "YCF-123에 연결해줘" 등을 요청한 경우.
+When the user requests "/oh-my-kanban:focus", "/omk:f", or "Connect WI", "Connect to YCF-123", etc.
 
-## 절차
+## Procedure
 
-### 1. WI 식별자 확인
+### 1. Confirm WI identifier
 
-사용자가 WI 식별자(예: OMK-5, YCF-123)를 제공했는지 확인한다.
-제공하지 않은 경우, 활성 WI 목록을 보여주고 선택을 유도한다:
+Check if the user has provided a WI identifier (e.g., OMK-5, YCF-123).
+If not provided, show a list of active WIs and prompt for selection:
 
 ```python
-mcp__plane__list_work_items(project_id="<project_id>", state="진행 중")
+mcp__plane__list_work_items(project_id="<project_id>")
 ```
 
-### 2. WI 조회
+### 2. Retrieve WI
 
-사용자가 제공한 식별자로 WI를 조회한다:
+Retrieve the WI using the identifier provided by the user:
 
 ```python
 mcp__plane__retrieve_work_item_by_identifier(identifier="OMK-5")
 ```
 
-또는 직접 UUID가 있으면:
+Or if a UUID is available directly:
 
 ```python
 mcp__plane__retrieve_work_item(work_item_id="<uuid>")
 ```
 
-### 3. PlaneContext 업데이트
+### 3. Update PlaneContext
 
-세션 파일에서 현재 PlaneContext를 읽고 work_item_ids, focused_work_item_id를 업데이트한다:
+Read the current PlaneContext from the session file and update `work_item_ids` and `focused_work_item_id`:
 
 ```python
-# ~/.local/share/oh-my-kanban/sessions/<session_id>.json 에서
-# plane_context.work_item_ids 에 WI UUID 추가
-# plane_context.focused_work_item_id 를 해당 UUID로 설정
+# In ~/.config/oh-my-kanban/sessions/<session_id>.json
+# Add WI UUID to plane_context.work_item_ids
+# Set plane_context.focused_work_item_id to the corresponding UUID
 ```
 
-실제 업데이트는 `omk` CLI 또는 직접 세션 파일 수정으로 처리한다.
+Actual updates are handled by the `omk` CLI or by directly modifying the session file.
 
-### 4. 세션 시작 댓글 추가
+### 4. Add Session Start Comment
 
-연결된 WI에 구조화 댓글을 추가한다:
+Add a structured comment to the connected WI:
 
 ```python
 mcp__plane__create_work_item_comment(
   work_item_id="<wi_uuid>",
   comment_html=(
-    "## omk 세션 연결\n\n"
-    "**세션 ID**: `<session_id[:8]>...`\n"
-    "**연결 시각**: <timestamp>\n"
-    "**목표**: 사용자 요청에 의한 수동 연결"
+    "## omk Session Connected\n\n"
+    "**Session ID**: `<session_id[:8]>...`\n"
+    "**Connection Time**: <timestamp>\n"
+    "**Goal**: Manual connection by user request"
   )
 )
 ```
 
-### 5. 사용자에게 확인 알림
+### 5. Notify User
 
 ```text
-[omk] Task가 연결되었습니다.
-  WI: <identifier> — <wi_name>
+[omk] Task connected.
+  WI: <identifier> - <wi_name>
   URL: <plane_url>
-  이 세션에서 작업 진행 상황이 자동으로 기록됩니다.
+  Work progress in this session will be automatically recorded.
 ```
 
-## 현재 PlaneContext 읽기
+## Reading Current PlaneContext
 
-현재 세션의 PlaneContext 정보는 세션 파일에서 확인한다:
+Current session PlaneContext information is checked in the session file:
 
-- `state.plane_context.work_item_ids` — 연결된 WI UUID 목록
-- `state.plane_context.focused_work_item_id` — 현재 집중 WI
-- `state.plane_context.project_id` — 연결된 프로젝트
+- `state.plane_context.work_item_ids` - List of connected WI UUIDs
+- `state.plane_context.focused_work_item_id` - Currently focused WI
+- `state.plane_context.project_id` - Connected project
 
-## 주의사항
+## Precautions
 
-- 이미 연결된 WI가 있으면 사용자에게 확인 후 교체한다
-- WI 조회 실패 시 사용자에게 명확한 에러 메시지를 출력한다
-- 연결 후 HUD가 갱신되어야 한다 (`update_hud()` 호출)
+- If a WI is already connected, confirm with the user before replacing it.
+- If WI retrieval fails, output a clear error message to the user.

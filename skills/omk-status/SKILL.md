@@ -1,41 +1,43 @@
 ---
 name: omk-status
-description: 현재 Claude Code 세션에 연결된 Plane Work Item 정보를 표시한다.
+description: Displays Plane Work Item information linked to the current Claude Code session.
 ---
 
-# omk status — 현재 세션 WI 상태 표시
+# omk status - Display Current Session WI Status
 
-현재 Claude Code 세션에 연결된 Plane Work Item 정보를 표시한다.
+Displays Plane Work Item information linked to the current Claude Code session.
 
-## 표시 정보
+## Displayed information
 
-1. **연결된 WI 목록** — `state.plane_context.work_item_ids`
-2. **집중 WI** — `state.plane_context.focused_work_item_id`
-3. **메인 태스크** — `state.plane_context.main_task_id`
-4. **외부 삭제된 WI** — `state.plane_context.stale_work_item_ids`
-5. **세션 통계** — 요청 횟수, 수정 파일 수
+1. **Linked WI list** - `state.plane_context.work_item_ids`
+2. **Focused WI** - `state.plane_context.focused_work_item_id`
+3. **Externally deleted WIs** - `state.plane_context.stale_work_item_ids`
+4. **Session statistics** - request count, modified file count
 
-## 현재 상태 조회 방법
+## How to retrieve current status
 
-MCP tool을 사용한다:
+Use the MCP tool for a summarized view:
 
 ```python
 omk_get_session_status()
 ```
 
-또는 세션 파일에서 직접 읽는다:
+`omk_get_session_status()` currently returns `project_id`, `work_item_ids`, `module_id`, and session statistics. For `focused_work_item_id`, `stale_work_item_ids`, or comment polling timestamps, inspect the session file directly.
+
+Or read directly from the session file:
 
 ```bash
-cat ~/.local/share/oh-my-kanban/sessions/<session_id>.json | python3 -m json.tool
+cat ~/.config/oh-my-kanban/sessions/<session_id>.json | python3 -m json.tool
 ```
 
-## PlaneContext 읽기
+## Reading PlaneContext
 
-세션 상태에서 다음을 확인한다:
+Verify the following from the session state:
 
-- `plane_context.project_id` — 프로젝트 UUID
-- `plane_context.work_item_ids` — 추적 중인 WI UUID 목록
-- `plane_context.focused_work_item_id` — 현재 집중 작업 WI
-- `plane_context.last_comment_check` — 마지막 댓글 폴링 시각
+- `plane_context.project_id` - Project UUID
+- `plane_context.work_item_ids` - List of tracked WI UUIDs
+- `plane_context.focused_work_item_id` - Currently focused WI
+- `plane_context.stale_work_item_ids` - Linked WIs that could not be loaded anymore
+- `plane_context.last_comment_check` - Last comment polling time
 
-WI가 연결되지 않은 경우: `/oh-my-kanban:focus <WI-ID>` 또는 `/oh-my-kanban:create-task`로 연결한다.
+If no WI is linked: connect one with `/oh-my-kanban:focus <WI-ID>` or `/oh-my-kanban:create-task`.

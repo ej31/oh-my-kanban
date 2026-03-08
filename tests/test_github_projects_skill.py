@@ -20,7 +20,11 @@ def test_github_projects_skill_exists_in_root_and_package() -> None:
 
 
 def test_github_projects_skill_covers_required_workflow() -> None:
-    content = ROOT_SKILL.read_text(encoding="utf-8")
+    root_content = ROOT_SKILL.read_text(encoding="utf-8")
+    packaged_content = PACKAGED_SKILL.read_text(encoding="utf-8")
+
+    assert root_content == packaged_content
+    content = root_content
 
     required_terms = [
         "gh auth status",
@@ -34,6 +38,10 @@ def test_github_projects_skill_covers_required_workflow() -> None:
         "gh issue close",
         "GitHub Projects",
         "omk gh",
+        "organization(login: $owner)",
+        "user(login: $owner)",
+        "--limit 100",
+        "--limit 200",
     ]
 
     for term in required_terms:
@@ -41,7 +49,11 @@ def test_github_projects_skill_covers_required_workflow() -> None:
 
 
 def test_help_mentions_github_projects_skill() -> None:
+    expected_row = (
+        "| `/oh-my-kanban:github-projects` | Manage GitHub Projects WIs with `gh` CLI "
+        "(`/omk:gh` alias) |"
+    )
+
     for help_file in HELP_SKILLS:
         content = help_file.read_text(encoding="utf-8")
-        assert "/omk:gh" in content
-        assert "/oh-my-kanban:github-projects" in content
+        assert expected_row in content

@@ -1,52 +1,52 @@
 ---
 name: omk-done
-description: 현재 세션의 Work Item 상태를 "완료"로 변경한다.
+description: Changes the current session's Work Item status to "Done".
 ---
 
-# omk done — 현재 WI를 완료 처리
+# omk done - Mark Current WI as Done
 
-현재 세션의 Work Item 상태를 "완료"로 변경한다.
+Changes the current session's Work Item status to "Done".
 
-## 실행 조건
+## Trigger Conditions
 
-사용자가 "/oh-my-kanban:done", "/omk:d" 또는 "태스크 완료했어", "WI 닫아줘", "완료 처리해줘" 등을 요청한 경우.
+When the user requests "/oh-my-kanban:done", "/omk:d" or phrases like "task is done", "close the WI", "mark as complete" etc.
 
-## 절차
+## Procedure
 
-### 1. 현재 WI 확인
+### 1. Check Current WI
 
-세션의 focused_work_item_id를 확인한다. 없으면:
+Check the session's focused_work_item_id. If not set:
 
 ```text
-[omk] 현재 세션에 연결된 Task가 없습니다.
-  /oh-my-kanban:focus로 먼저 Task를 연결하세요.
+[omk] No Task is linked to the current session.
+  Please link a Task first using /oh-my-kanban:focus.
 ```
 
-### 2. 완료 상태 조회
+### 2. Retrieve Done Status
 
-프로젝트의 "완료" 상태 ID를 동적으로 조회한다:
+Dynamically retrieve the "Done" status ID for the project:
 
 ```text
 mcp__plane__list_states(project_id="<project_id>")
 ```
 
-아래 순서로 완료 상태를 찾는다:
+Find the done status in the following order:
 
-1. `group="completed"` 중 첫 번째
-2. 이름이 "완료", "Done", "Completed"인 상태
+1. First status where `group="completed"`
+2. Status with a completed-state name such as "Done" or "Completed"
 
-### 3. 사용자 확인
+### 3. User Confirmation
 
-상태를 바꾸기 전에 먼저 사용자에게 확인한다.
+Confirm with the user before changing the status.
 
 ```text
-[omk] <identifier>를 완료 처리할까요?
-  yes/confirm 응답이 있을 때만 상태를 변경합니다.
+[omk] Mark <identifier> as done?
+  Status will only be changed upon yes/confirm response.
 ```
 
-사용자가 명시적으로 확인한 경우에만 다음 단계를 진행한다.
+Proceed to the next step only if the user explicitly confirms.
 
-### 4. 완료 처리
+### 4. Mark as Done
 
 ```text
 mcp__plane__update_work_item(
@@ -55,29 +55,29 @@ mcp__plane__update_work_item(
 )
 ```
 
-### 5. 완료 댓글 추가
+### 5. Add Completion Comment
 
 ```text
 mcp__plane__create_work_item_comment(
   work_item_id="<focused_wi_id>",
-  comment_html="## omk 세션 완료\n\n**세션 ID**: `<session_id[:8]>...`\n"
-  "**완료 시각**: <timestamp>\n**요약**: <scope_summary>"
+  comment_html="## omk Session Complete\n\n**Session ID**: `<session_id[:8]>...`\n"
+  "**Completed at**: <timestamp>\n**Summary**: <scope_summary>"
 )
 ```
 
-### 6. 확인 알림
+### 6. Confirmation Notification
 
 ```text
-[omk] Task를 완료 처리했습니다.
-  WI: <identifier> — <wi_name>
-  상태: <previous_state> → 완료
+[omk] Task has been marked as done.
+  WI: <identifier> - <wi_name>
+  Status: <previous_state> -> Done
   URL: <plane_url>
 ```
 
-## 주의사항
+## Notes
 
-- 완료 처리 전 사용자에게 확인을 받는다
-  예: "OMK-5를 완료 처리할까요?"
-- Sub-task가 있고 미완료 항목이 있으면 경고를 표시한다
-- 완료 상태를 찾지 못하면 사용자에게 수동 처리를 안내한다
-- 상태 변경 실패 시 명확한 에러 메시지를 출력한다
+- Get user confirmation before marking as done
+  e.g., "Mark OMK-5 as done?"
+- If there are sub-tasks with incomplete items, display a warning
+- If the done status cannot be found, guide the user to handle it manually
+- Display a clear error message if status change fails

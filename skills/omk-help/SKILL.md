@@ -1,136 +1,136 @@
 ---
 name: omk-help
-description: oh-my-kanban 사용법을 안내합니다. 질문을 입력하면 FAQ로 답변합니다.
+description: Provides guidance on using oh-my-kanban. When you enter a question, it answers with an FAQ.
 ---
 
-# omk-help 스킬 실행 지침
+# omk-help Skill Execution Guide
 
-사용자가 `/omk-help` 또는 `/omk-help [질문]`을 실행하면 아래를 수행하세요.
-
----
-
-## 인수 없음: 스킬 목록 표시
-
-인수 없이 실행하면 아래 스킬 목록을 카테고리별로 표시합니다.
-
-### 설정 및 진단
-
-| 스킬 | 설명 |
-| --- | --- |
-| `/omk-setup` | Plane/Linear API 설정 마법사 |
-| `/omk-status` | 훅 설치 상태와 활성 세션 확인 |
-| `/omk-doctor` | 설정·API·훅 통합 진단 |
-| `/omk-help` | 이 도움말 표시 |
-
-### WI 연결 및 생성
-
-| 스킬 | 설명 |
-| --- | --- |
-| `/omk-focus <WI-ID>` | 특정 WI를 현재 세션에 연결 |
-| `/omk-create-task "<제목>"` | 새 WI 생성 후 세션 연결 |
-| `/omk-subtask "<제목>"` | 현재 WI에 서브태스크 생성 |
-| `/omk-done` | 현재 WI 완료 처리 |
-| `/omk-switch-task <WI-ID>` | 다른 WI로 전환 |
-| `/omk:gh` | GitHub Projects WI를 `gh` CLI로 관리하는 절차 안내 |
-
-### 기록 및 메모
-
-| 스킬 | 설명 |
-| --- | --- |
-| `/omk-note "<메모>"` | 현재 WI에 즉시 댓글 추가 |
-| `/omk-decision "<결정>"` | 결정 사항 댓글 기록 |
-| `/omk-handoff` | 핸드오프 메모 작성 |
-| `/omk-snapshot` | 현재 세션 상태 스냅샷 저장 |
-
-### 조회
-
-| 스킬 | 설명 |
-| --- | --- |
-| `/omk-comments` | 현재 WI 최근 댓글 조회 |
-| `/omk-history [WI-ID]` | WI 활동 이력 조회 |
-| `/omk-me` | 내 세션 요약 |
-| `/omk-sprint` | 현재 스프린트 진행 상황 |
-
-### 고급
-
-| 스킬 | 설명 |
-| --- | --- |
-| `/omk-open` | 현재 WI를 브라우저에서 열기 |
-| `/omk-context-sync` | WI 컨텍스트 강제 동기화 |
-| `/omk-disable-this-session` | 현재 세션 추적 비활성화 |
-
-질문이 있으면 `/omk-help [질문]` 형식으로 입력하세요.
+When a user executes `/omk-help` or `/omk-help [question]`, perform the following:
 
 ---
 
-## 인수 있음: FAQ 답변
+## No Arguments: Display Skill List
 
-사용자가 질문을 입력하면 아래 FAQ에서 관련 항목을 찾아 답변합니다.
-관련 항목이 없으면 `/omk-doctor` 실행 또는 GitHub Issues를 안내합니다.
+When executed without arguments, it displays the following skill list by category.
 
-### 설치 및 설정
+### Setup and Diagnostics
 
-**Q: 처음에 무엇을 해야 하나요?**
-A: 설치 후 `/omk-setup` 스킬로 Plane 또는 Linear API 키를 설정하세요. 이후 `/omk-status`로 상태를 확인하세요.
+| Skill | Description |
+| --- | --- |
+| `/omk-setup` | Plane/Linear API setup wizard |
+| `/omk-status` | Check hook installation status and active sessions |
+| `/omk-doctor` | Integrated diagnosis of settings, API, and hooks |
+| `/omk-help` | Display this help |
 
-**Q: API 키는 어디서 얻나요?**
-A: Plane → 프로필 > API 토큰. Linear → Settings > API > Personal API keys.
+### WI Connection and Creation
 
-**Q: 설정 파일은 어디 있나요?**
-A: `~/.config/oh-my-kanban/config.toml`에 저장됩니다. `/omk-doctor`로 파일 상태를 진단할 수 있습니다.
+| Skill | Description |
+| --- | --- |
+| `/omk-focus <WI-ID>` | Connect a specific WI to the current session |
+| `/omk-create-task "<title>"` | Create a new WI and connect it to the session |
+| `/omk-subtask "<title>"` | Create a subtask for the current WI |
+| `/omk-done` | Mark the current WI as complete |
+| `/omk-switch-task <WI-ID>` | Switch to another WI |
+| `/oh-my-kanban:github-projects` | Manage GitHub Projects WIs with `gh` CLI (`/omk:gh` alias) |
 
-**Q: workspace_slug란 무엇인가요?**
-A: Plane URL에서 `https://<host>/<workspace_slug>/projects/...` 형태로 확인할 수 있습니다.
+### History and Notes
 
-**Q: 여러 프로젝트에서 다른 설정을 쓰고 싶어요.**
-A: `omk hooks install --local`로 프로젝트별 `.claude/settings.json`에 설치하고, `.omk/project.toml`에 `project_id`를 지정하세요.
+| Skill | Description |
+| --- | --- |
+| `/omk-note "<note>"` | Add a comment instantly to the current WI |
+| `/omk-decision "<decision>"` | Record a decision as a comment |
+| `/omk-handoff` | Create a handoff note |
+| `/omk-snapshot` | Save a snapshot of the current session state |
 
-### 훅 문제
+### Query
 
-**Q: 훅이 활성화되어 있는지 어떻게 확인하나요?**
-A: `/omk-status` 스킬을 실행하거나 `omk hooks status` 명령을 실행하세요.
+| Skill | Description |
+| --- | --- |
+| `/omk-comments` | View recent comments for the current WI |
+| `/omk-history [WI-ID]` | View WI activity history |
+| `/omk-me` | My session summary |
+| `/omk-sprint` | Current sprint progress |
 
-**Q: 훅이 작동하지 않아요. 세션 컨텍스트가 로드되지 않습니다.**
-A: 아래 순서로 확인하세요:
-1. `/omk-status`로 훅 설치 상태 확인
-2. 훅이 없으면 `omk hooks install`로 재설치
-3. Claude Code를 완전히 재시작
-4. 여전히 안 되면 `/omk-doctor`로 전체 진단
+### Advanced
 
-**Q: 훅 설치는 어떻게 하나요?**
-A: `/omk-setup` 스킬로 대화형 설치하거나 `omk hooks install` 명령을 직접 실행하세요.
+| Skill | Description |
+| --- | --- |
+| `/omk-open` | Open the current WI in a browser |
+| `/omk-context-sync` | Force synchronization of WI context |
+| `/omk-disable-this-session` | Disable tracking for the current session |
 
-### WI 연결 문제
+If you have a question, enter it in the format `/omk-help [question]`.
 
-**Q: WI ID는 어떤 형식인가요?**
-A: Plane은 `<PROJECT>-<번호>` (예: `DEV-42`), Linear는 `<TEAM>-<번호>` 형식입니다.
+---
 
-**Q: GitHub Projects는 `omk gh` 명령이 있나요?**
-A: 없습니다. GitHub 기반 WI는 `/oh-my-kanban:github-projects` 또는 `/omk:gh` 스킬을 통해 `gh issue`, `gh project` 조합으로 관리합니다.
+## With Arguments: FAQ Answers
 
-**Q: omk focus가 안 됩니다. WI를 찾을 수 없다고 해요.**
-A: 아래를 확인하세요:
-1. `/omk-doctor`로 API 연결 상태 확인
-2. WI ID 형식이 올바른지 확인 (`DEV-42` 형식)
-3. `project_id`가 설정되어 있는지 확인 (`.omk/project.toml`)
+When the user enters a question, find and answer relevant items from the FAQ below.
+If no relevant items are found, guide them to run `/omk-doctor` or check GitHub Issues.
 
-**Q: stale WI란 무엇인가요?**
-A: 이전에 연결했던 WI가 삭제되거나 접근 불가 상태가 된 것입니다. `/omk-focus <새_WI_ID>`로 새 WI를 연결하거나 `/omk-disable-this-session`으로 추적을 비활성화하세요.
+### Installation and Setup
 
-**Q: 현재 어떤 WI가 연결되어 있나요?**
-A: `/omk-status` 스킬로 현재 세션의 연결된 WI 목록을 확인하세요.
+**Q: What should I do first?**
+A: After installation, set up your Plane or Linear API key with the `/omk-setup` skill. Then, check the status with `/omk-status`.
 
-### 주요 스킬 사용법
+**Q: Where do I get API keys?**
+A: Plane -> Profile > API Tokens. Linear -> Settings > API > Personal API keys.
 
-**Q: omk-note와 omk-decision의 차이는 무엇인가요?**
-A: `/omk-note`는 자유형식 메모, `/omk-decision`은 의사결정 기록에 특화된 포맷으로 댓글을 남깁니다.
+**Q: Where is the configuration file located?**
+A: It is saved in `~/.config/oh-my-kanban/config.toml`. You can diagnose the file status with `/omk-doctor`.
 
-**Q: omk-done 실행 후 WI 상태가 자동으로 바뀌나요?**
-A: 네, 연결된 WI를 완료 상태(Done)로 변경합니다. Plane에 Done 상태가 설정되어 있어야 합니다.
+**Q: What is `workspace_slug`?**
+A: You can find it in the Plane URL in the form `https://<host>/<workspace_slug>/projects/...`.
 
-**Q: 세션 중 WI를 전환하려면 어떻게 하나요?**
-A: `/omk-switch-task <WI-ID>` 스킬로 새 WI를 현재 세션에 연결합니다.
+**Q: I want to use different settings for multiple projects.**
+A: Install `omk hooks install --local` in the project-specific `.claude/settings.json`, and specify `project_id` in `.omk/project.toml`.
 
-**Q: 답변을 찾지 못했다면?**
-A: `/omk-doctor`로 전체 진단을 실행하거나 GitHub Issues에 문의하세요.
+### Hook Issues
+
+**Q: How do I check if hooks are active?**
+A: Run the `/omk-status` skill or the `omk hooks status` command.
+
+**Q: Hooks are not working. Session context is not loading.**
+A: Check in the following order:
+1. Check hook installation status with `/omk-status`
+2. If hooks are missing, reinstall with `omk hooks install`
+3. Restart Claude Code completely
+4. If still not working, perform a full diagnosis with `/omk-doctor`
+
+**Q: How do I install hooks?**
+A: Install interactively with the `/omk-setup` skill or directly run the `omk hooks install` command.
+
+### WI Connection Issues
+
+**Q: What is the format of a WI ID?**
+A: Plane uses `<PROJECT>-<NUMBER>` (e.g., `DEV-42`), and Linear uses `<TEAM>-<NUMBER>` format.
+
+**Q: Is there an `omk gh` command for GitHub Projects?**
+A: No. GitHub-based WIs are managed through the `/oh-my-kanban:github-projects` or `/omk:gh` skill, using a combination of `gh issue` and `gh project`.
+
+**Q: `omk focus` is not working. It says WI cannot be found.**
+A: Check the following:
+1. Check API connection status with `/omk-doctor`
+2. Verify that the WI ID format is correct (e.g., `DEV-42`)
+3. Check if `project_id` is set (`.omk/project.toml`)
+
+**Q: What is a stale WI?**
+A: It means a previously connected WI has been deleted or is inaccessible. Connect a new WI with `/omk-focus <new_WI_ID>` or disable tracking with `/omk-disable-this-session`.
+
+**Q: Which WI is currently connected?**
+A: Check the list of connected WIs for the current session with the `/omk-status` skill.
+
+### Key Skill Usage
+
+**Q: What is the difference between `omk-note` and `omk-decision`?**
+A: `/omk-note` is for free-form notes, while `/omk-decision` leaves comments in a specialized format for recording decisions.
+
+**Q: Does the WI status change automatically after running `omk-done`?**
+A: Yes, it changes the connected WI to a 'Done' status. The 'Done' status must be configured in Plane.
+
+**Q: How do I switch WIs during a session?**
+A: Use the `/omk-switch-task <WI-ID>` skill to connect a new WI to the current session.
+
+**Q: What if I can't find an answer?**
+A: Run a full diagnosis with `/omk-doctor` or inquire on GitHub Issues.
 GitHub Issues: https://github.com/ej31/oh-my-kanban/issues

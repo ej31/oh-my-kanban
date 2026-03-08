@@ -1,13 +1,13 @@
 {
   "name": "oh-my-kanban",
   "displayName": "oh-my-kanban",
-  "description": "Plane/Linear 프로젝트 관리 CLI + Claude Code 세션 자동 추적 훅",
+  "description": "Plane/Linear project management CLI with Claude Code session tracking hooks",
   "author": "ej31",
   "homepage": "https://github.com/ej31/oh-my-kanban",
   "plugins": [
     {
       "name": "oh-my-kanban",
-      "description": "세션 드리프트 감지, 파일 수정 추적, Plane/Linear WI 자동 연동",
+      "description": "Detects session drift, tracks file edits, and syncs Plane/Linear work items automatically",
       "path": ".",
       "install": "pip install oh-my-kanban && omk hooks install"
     }

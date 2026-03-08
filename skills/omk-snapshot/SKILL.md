@@ -1,78 +1,61 @@
 ---
 name: omk-snapshot
-description: 현재 세션 상태의 스냅샷을 저장하거나 저장된 스냅샷을 조회합니다.
+description: Saves or reviews a manual snapshot of the current session state.
 ---
 
-# omk snapshot — 현재 세션 스냅샷 저장/조회
+# omk snapshot - Manual Session Snapshot Workflow
 
-현재 세션 상태의 스냅샷을 저장하거나 저장된 스냅샷을 조회합니다.
+Use this skill when you want to save, inspect, or manually restore the current session state.
 
-## 하위 명령
+## Current Implementation Status
 
-### omk snapshot save [메모]
+A dedicated `omk snapshot` CLI command is not implemented in the current release.
+Handle snapshot requests by working directly with the local session JSON files.
 
-현재 세션 상태를 스냅샷으로 저장합니다.
+## Save a Snapshot
 
-```bash
-omk snapshot save "OAuth 리팩토링 완료 직전"
-omk snapshot save  # 메모 없이 타임스탬프로 자동 명명
-```
-
-**실행 단계**:
-
-1. 현재 세션 JSON 파일 읽기 (`~/.claude/oh-my-kanban/sessions/{session_id}.json`)
-2. 스냅샷 파일로 복사: `~/.claude/oh-my-kanban/snapshots/{session_id}_{timestamp}.json`
-3. 메모가 있으면 스냅샷 파일에 `snapshot_note` 필드 추가
-4. 출력:
+1. Read the current session JSON file from `~/.config/oh-my-kanban/sessions/<session_id>.json`
+2. Copy it to a timestamped file under `~/.config/oh-my-kanban/snapshots/`
+3. If the user supplied a note, store it alongside the saved snapshot metadata
+4. Report the saved path and a short summary
 
 ```text
-[omk] 스냅샷 저장됨: omk-snap-2026-03-08T14:30:00
-  파일: ~/.claude/oh-my-kanban/snapshots/{session_id}_20260308T143000.json
-  목표: {현재 scope.summary}
-  수정 파일: {len(files_touched)}개
+[omk] Snapshot saved.
+  File: ~/.config/oh-my-kanban/snapshots/{session_id}_20260308T143000.json
+  Goal: {current scope.summary}
+  Modified files: {len(files_touched)}
 ```
 
-### omk snapshot list
+## List Snapshots
 
-저장된 스냅샷 목록을 조회합니다.
-
-**실행 단계**:
-
-1. `~/.claude/oh-my-kanban/snapshots/` 디렉토리 조회
-2. 현재 세션 ID와 일치하는 스냅샷 필터링
-3. 최신순 정렬 후 출력:
+1. List files in `~/.config/oh-my-kanban/snapshots/`
+2. Filter snapshots that belong to the current session when appropriate
+3. Sort newest first
+4. Show the snapshot ID, timestamp, and note if one exists
 
 ```text
-[omk] 저장된 스냅샷 목록:
-  1. omk-snap-2026-03-08T14:30:00 — "OAuth 리팩토링 완료 직전"
-  2. omk-snap-2026-03-08T12:00:00 — (메모 없음)
+[omk] Saved snapshots:
+  1. omk-snap-2026-03-08T14:30:00 - "Before OAuth refactor cleanup"
+  2. omk-snap-2026-03-08T12:00:00 - (no note)
 ```
 
-### omk snapshot restore <스냅샷_ID>
+## Restore a Snapshot
 
-스냅샷을 현재 세션에 복원합니다.
+Restoring a snapshot overwrites the current session state. Always confirm with the user first.
 
-```bash
-omk snapshot restore omk-snap-2026-03-08T14:30:00
-```
-
-**주의**: 복원은 현재 세션 상태를 **덮어씁니다**. 반드시 사용자 확인 후 진행.
-
-**실행 단계**:
-
-1. 스냅샷 파일 확인
-2. 사용자에게 확인: "현재 세션 상태를 스냅샷으로 복원합니다. 계속하시겠습니까?"
-3. 확인 시: 세션 파일 복원 (`session_id` 필드는 유지, 나머지 덮어쓰기)
-4. 출력:
+1. Resolve the requested snapshot file
+2. Confirm with the user that the current session state will be overwritten
+3. If confirmed, restore the snapshot into the current session file while preserving the current `session_id`
+4. Report the restored goal and key stats
 
 ```text
-[omk] 스냅샷 복원됨.
-  목표: {복원된 scope.summary}
-  수정 파일: {len(files_touched)}개
+[omk] Snapshot restored.
+  Goal: {restored scope.summary}
+  Modified files: {len(files_touched)}
 ```
 
-## 주의사항
+## Notes
 
-- 스냅샷 디렉토리가 없으면 자동 생성
-- 스냅샷 파일은 원본 세션 JSON과 동일한 형식
-- restore 명령은 반드시 사용자 확인 필요 (되돌릴 수 없음)
+- Create the snapshots directory automatically if it does not exist.
+- Snapshot files should keep the same JSON shape as the original session files.
+- Restoration is destructive and must require explicit user confirmation.

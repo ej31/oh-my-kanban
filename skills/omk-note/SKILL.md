@@ -1,69 +1,70 @@
 ---
 name: omk-note
-description: 현재 세션에 연결된 Plane Work Item에 메모/댓글을 추가한다.
+description: Adds a memo/comment to the Plane Work Item linked to the current session.
 ---
 
-# omk note — 현재 Task에 메모 추가
+# omk note - Add a memo to the current Task
 
-현재 세션에 연결된 Plane Work Item에 메모/댓글을 추가한다.
+Adds a memo/comment to the Plane Work Item linked to the current session.
 
-## 실행 조건
+## Trigger conditions
 
-사용자가 "/oh-my-kanban:note", "/omk:n" 또는 "메모 남겨줘", "댓글 추가해줘", "이거 기록해줘" 등을 요청한 경우.
+When the user requests "/oh-my-kanban:note", "/omk:n", or
+phrases like "leave a memo", "add a comment", "record this", etc.
 
-## 절차
+## Procedure
 
-### 1. 현재 WI 확인
+### 1. Check the current WI
 
-현재 세션의 PlaneContext에서 연결된 WI를 확인한다:
+Check the linked WI from the current session's PlaneContext:
 
-- `state.plane_context.focused_work_item_id` — 집중 WI (우선)
-- `state.plane_context.work_item_ids[0]` — 첫 번째 연결 WI (폴백)
+- `state.plane_context.focused_work_item_id` - focused WI (priority)
+- `state.plane_context.work_item_ids[0]` - first linked WI (fallback)
 
-WI가 없으면:
-
-```text
-연결된 Task가 없습니다. /oh-my-kanban:focus로 Task에 연결하거나
-/oh-my-kanban:create-task로 새 Task를 생성하세요.
-```
-
-### 2. 메모 내용 확인
-
-사용자가 제공한 텍스트를 메모로 사용한다. 제공하지 않은 경우 요청한다:
+If no WI exists:
 
 ```text
-어떤 내용을 기록할까요?
+No Task is linked. Link a Task with /oh-my-kanban:focus or
+create a new Task with /oh-my-kanban:create-task.
 ```
 
-### 3. 댓글 형식 선택
+### 2. Confirm memo content
 
-메모 유형에 따라 적절한 형식을 사용한다:
+Use the text provided by the user as the memo. If not provided, request it:
 
-**일반 메모:**
+```text
+What would you like to record?
+```
+
+### 3. Choose the comment format
+
+Use an appropriate format based on the memo type:
+
+**General memo:**
 
 ```html
 <p>[{timestamp}] {sanitize_comment(memo_text)}</p>
 ```
 
-**결정 사항:**
+**Decision:**
 
 ```html
-<h3>결정 사항</h3>
+<h3>Decision</h3>
 <ul>
-  <li>결정: {sanitize_comment(decision)}</li>
-  <li>이유: {sanitize_comment(reason)}</li>
-  <li>검토한 대안: {sanitize_comment(alternatives)}</li>
+  <li>Decision: {sanitize_comment(decision)}</li>
+  <li>Reason: {sanitize_comment(reason)}</li>
+  <li>Alternatives considered: {sanitize_comment(alternatives)}</li>
 </ul>
 ```
 
-**진행 상황 업데이트:**
+**Progress update:**
 
 ```html
-<h3>진행 상황</h3>
+<h3>Progress</h3>
 <p>{sanitize_comment(status_update)}</p>
 ```
 
-### 4. 댓글 추가
+### 4. Add the comment
 
 ```python
 mcp__plane__create_work_item_comment(
@@ -72,21 +73,21 @@ mcp__plane__create_work_item_comment(
 )
 ```
 
-### 5. 완료 확인
+### 5. Confirm completion
 
 ```text
-[omk] 메모가 기록되었습니다.
-  WI: <identifier> — <wi_name>
-  내용: <memo_summary>
+[omk] Memo recorded.
+  WI: <identifier> - <wi_name>
+  Content: <memo_summary>
 ```
 
-## 현재 PlaneContext 읽기
+## Reading the current PlaneContext
 
-- `state.plane_context.focused_work_item_id` — 메모를 추가할 WI UUID
-- `state.plane_context.project_id` — 프로젝트 ID
+- `state.plane_context.focused_work_item_id` - WI UUID to add the memo to
+- `state.plane_context.project_id` - project ID
 
-## 주의사항
+## Notes
 
-- 민감한 정보(API 키, 비밀번호 등)는 메모에 포함하지 않는다
-- 댓글 추가 실패 시 사용자에게 명확한 에러와 함께 Plane 웹 링크를 제공한다
-- 긴 메모는 HTML 형식으로 구조화하여 가독성을 높인다
+- Do not include sensitive information (API keys, passwords, etc.) in memos
+- If adding a comment fails, provide the user with a clear error and a Plane web link
+- Structure long memos in HTML format to improve readability

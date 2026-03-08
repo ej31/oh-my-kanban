@@ -1,61 +1,61 @@
 ---
 name: omk-sprint
-description: 현재 프로젝트의 활성 Sprint(Cycle) 정보와 미완료 Task 목록을 조회합니다.
+description: Retrieves active Sprint (Cycle) information and a list of incomplete Tasks for the current project.
 ---
 
-# omk sprint — 현재 Sprint(Cycle) 상태 조회
+# omk sprint - View Current Sprint (Cycle) Status
 
-현재 프로젝트의 활성 Sprint(Cycle) 정보와 미완료 Task 목록을 조회합니다.
+Retrieves active Sprint (Cycle) information and a list of incomplete Tasks for the current project.
 
-## 실행 단계
+## Execution Steps
 
-1. **활성 Cycle 조회**
+1. **Retrieve Active Cycle**
 
 ```python
-mcp__plane__list_cycles(project_id=<현재 project_id>)
+mcp__plane__list_cycles(project_id=<current_project_id>)
 ```
 
-status가 "current" 또는 end_date가 미래인 Cycle을 찾는다.
+Find a Cycle with status "current" or an `end_date` in the future.
 
-1. **Cycle 내 Work Items 조회**
+2. **Retrieve Work Items within Cycle**
 
 ```python
 mcp__plane__list_cycle_work_items(
-  project_id=<현재 project_id>,
+  project_id=<current_project_id>,
   cycle_id=<active_cycle_id>
 )
 ```
 
-1. **상태별 분류**
-   - 미완료 (group: started, unstarted, backlog)
-   - 완료 (group: completed, cancelled)
+3. **Categorize by Status**
+   - Incomplete (group: started, unstarted, backlog)
+   - Completed (group: completed, cancelled)
 
-1. **결과 출력** (아래 형식):
+4. **Output Results** (in the following format):
 
 ```text
 [omk] Sprint: {cycle_name}
-  기간: {start_date} ~ {end_date} (D-{days_left})
-  진행률: {done_count}/{total_count} ({percent}%)
+  Period: {start_date} ~ {end_date} (D-{days_left})
+  Progress: {done_count}/{total_count} ({percent}%)
 
-  미완료 Task ({incomplete_count}개):
-    OMK-XXX: Task 이름 (In Progress)
-    OMK-YYY: Task 이름 (Todo)
+  Incomplete Tasks ({incomplete_count} items):
+    OMK-XXX: Task Name (In Progress)
+    OMK-YYY: Task Name (Todo)
     ...
 ```
 
-## 컨텍스트 접근
+## Context Access
 
 ```python
-# 세션 상태에서 project_id 조회
+# Retrieve project_id from session state
 import json, pathlib
 session_files = list(pathlib.Path.home().glob(".config/oh-my-kanban/sessions/*.json"))
-# 가장 최근 파일의 plane_context.project_id 사용
+# Use plane_context.project_id from the most recent file
 ```
 
-또는 MCP 설정에서 `OMK_PROJECT_ID` 환경변수를 참조한다.
+Or reference the `OMK_PROJECT_ID` environment variable in the MCP settings.
 
-## 주의사항
+## Notes
 
-- Cycle이 없으면 "현재 활성 Sprint가 없습니다." 안내
-- API 실패 시 오류 메시지 출력 후 종료
-- 마감 3일 이내이면 경고 강조 표시
+- If no Cycle exists, display "No active Sprint."
+- If API call fails, output an error message and terminate.
+- Highlight warning if deadline is within 3 days.
