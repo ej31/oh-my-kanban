@@ -98,7 +98,7 @@ class TestInstallMcp:
                 "oh_my_kanban.commands.hooks._settings_path",
                 return_value=settings_path,
             ),
-            pytest.raises(Exception, match="파싱 실패"),
+            pytest.raises(click.ClickException, match="파싱 실패"),
         ):
             _install_mcp(local=False)
 
@@ -254,12 +254,12 @@ class TestMutualExclusion:
 
     def test_install_둘_다_지정시_UsageError(self) -> None:
         """install에서 --local과 --local-only를 동시에 지정하면 UsageError."""
+        ctx = click.Context(install)
         with pytest.raises(click.UsageError, match="동시에 사용할 수 없습니다"):
-            ctx = click.Context(install)
             ctx.invoke(install, local=True, local_only=True)
 
     def test_uninstall_둘_다_지정시_UsageError(self) -> None:
         """uninstall에서 --local과 --local-only를 동시에 지정하면 UsageError."""
+        ctx = click.Context(uninstall)
         with pytest.raises(click.UsageError, match="동시에 사용할 수 없습니다"):
-            ctx = click.Context(uninstall)
             ctx.invoke(uninstall, local=True, local_only=True)
