@@ -117,13 +117,13 @@ def _post_plane_comment(state: SessionState, comment: str) -> bool:
     }
 
     success_count = 0
-    for wi_id in wi_ids:
-        url = (
-            f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
-            f"/projects/{project_id}/issues/{wi_id}/comments/"
-        )
-        try:
-            with httpx.Client(timeout=PLANE_API_TIMEOUT, follow_redirects=False) as client:
+    with httpx.Client(timeout=PLANE_API_TIMEOUT, follow_redirects=False) as client:
+        for wi_id in wi_ids:
+            url = (
+                f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
+                f"/projects/{project_id}/issues/{wi_id}/comments/"
+            )
+            try:
                 resp = client.post(
                     url, headers=headers, json={"comment_html": comment}
                 )
@@ -135,18 +135,18 @@ def _post_plane_comment(state: SessionState, comment: str) -> bool:
                         f"HTTP {resp.status_code}",
                         file=sys.stderr,
                     )
-        except (httpx.TimeoutException, httpx.NetworkError, httpx.HTTPStatusError) as e:
-            print(
-                f"[omk] Plane 댓글 추가 실패 (wi_id={wi_id!r}): {type(e).__name__}: {e}",
-                file=sys.stderr,
-            )
-            continue
-        except Exception as e:
-            print(
-                f"[omk] Plane 댓글 추가 중 예외 (wi_id={wi_id!r}): {type(e).__name__}: {e}",
-                file=sys.stderr,
-            )
-            continue
+            except (httpx.TimeoutException, httpx.NetworkError, httpx.HTTPStatusError) as e:
+                print(
+                    f"[omk] Plane 댓글 추가 실패 (wi_id={wi_id!r}): {type(e).__name__}: {e}",
+                    file=sys.stderr,
+                )
+                continue
+            except Exception as e:
+                print(
+                    f"[omk] Plane 댓글 추가 중 예외 (wi_id={wi_id!r}): {type(e).__name__}: {e}",
+                    file=sys.stderr,
+                )
+                continue
 
     return success_count > 0
 

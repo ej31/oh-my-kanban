@@ -25,7 +25,7 @@ except ImportError as e:
     ) from e
 
 from oh_my_kanban.config import load_config
-from oh_my_kanban.hooks.common import PLANE_API_TIMEOUT
+from oh_my_kanban.hooks.common import PLANE_API_TIMEOUT, sanitize_comment
 from oh_my_kanban.session.manager import list_sessions, load_session, save_session
 from oh_my_kanban.session.state import STATUS_ACTIVE, TimelineEvent, now_iso
 
@@ -157,7 +157,7 @@ def omk_link_work_item(work_item_id: str, session_id: str = "") -> dict[str, Any
             "work_item_ids": state.plane_context.work_item_ids,
         }
 
-    state.plane_context.work_item_ids.append(wi_id)
+    state.plane_context.work_item_ids = [*state.plane_context.work_item_ids, wi_id]
     state.timeline.append(
         TimelineEvent(
             timestamp=now_iso(),
@@ -327,7 +327,10 @@ def omk_add_comment(
     project_id = plane.project_id
 
     if work_item_id.strip():
-        target_wi_ids = [work_item_id.strip()]
+        wi_stripped = work_item_id.strip()
+        if not _UUID_RE.match(wi_stripped):
+            return {"error": f"유효하지 않은 UUID 형식입니다: {wi_stripped!r}"}
+        target_wi_ids = [wi_stripped]
     else:
         target_wi_ids = plane.work_item_ids
 
@@ -355,15 +358,20 @@ def omk_add_comment(
         "Content-Type": "application/json",
     }
 
+    # 민감 정보 제거 후 게시
+    sanitized_comment = sanitize_comment(comment.strip())
+
     results: list[dict[str, Any]] = []
-    for wi_id in target_wi_ids:
-        url = (
-            f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
-            f"/projects/{project_id}/issues/{wi_id}/comments/"
-        )
-        try:
-            with httpx.Client(timeout=PLANE_API_TIMEOUT, follow_redirects=False) as client:
-                resp = client.post(url, headers=headers, json={"comment_html": comment.strip()})
+    with httpx.Client(timeout=PLANE_API_TIMEOUT, follow_redirects=False) as client:
+        for wi_id in target_wi_ids:
+            url = (
+                f"{base_url}/api/v1/workspaces/{cfg.workspace_slug}"
+                f"/projects/{project_id}/issues/{wi_id}/comments/"
+            )
+            try:
+                resp = client.post(
+                    url, headers=headers, json={"comment_html": sanitized_comment}
+                )
                 if resp.status_code in (200, 201):
                     results.append({"work_item_id": wi_id, "success": True})
                 else:
@@ -372,24 +380,24 @@ def omk_add_comment(
                         "success": False,
                         "error": f"HTTP {resp.status_code}",
                     })
-        except httpx.TimeoutException:
-            results.append({
-                "work_item_id": wi_id,
-                "success": False,
-                "error": f"요청 시간 초과 ({PLANE_API_TIMEOUT}초)",
-            })
-        except httpx.NetworkError as e:
-            results.append({
-                "work_item_id": wi_id,
-                "success": False,
-                "error": f"네트워크 오류: {e}",
-            })
-        except httpx.HTTPError as e:
-            results.append({
-                "work_item_id": wi_id,
-                "success": False,
-                "error": f"HTTP 클라이언트 오류: {type(e).__name__}: {e}",
-            })
+            except httpx.TimeoutException:
+                results.append({
+                    "work_item_id": wi_id,
+                    "success": False,
+                    "error": f"요청 시간 초과 ({PLANE_API_TIMEOUT}초)",
+                })
+            except httpx.NetworkError as e:
+                results.append({
+                    "work_item_id": wi_id,
+                    "success": False,
+                    "error": f"네트워크 오류: {e}",
+                })
+            except httpx.HTTPError as e:
+                results.append({
+                    "work_item_id": wi_id,
+                    "success": False,
+                    "error": f"HTTP 클라이언트 오류: {type(e).__name__}: {e}",
+                })
 
     success_count = sum(1 for r in results if r.get("success"))
     return {

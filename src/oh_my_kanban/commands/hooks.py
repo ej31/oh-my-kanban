@@ -78,7 +78,7 @@ def _build_omk_hooks_config(python_path: str, hooks_dir: Path) -> dict:
         ],
         "PostToolUse": [
             {
-                "matcher": "Edit|Write|MultiEdit",
+                "matcher": "Edit|Write|MultiEdit|Bash",
                 "hooks": [
                     {
                         "type": "command",

@@ -201,13 +201,12 @@ def expand_scope(state: SessionState, prompt_text: str) -> None:
     new_tokens = tokenize_text(prompt_text)
     remaining = MAX_SCOPE_TOKENS - len(state.scope.tokens)
     if remaining > 0:
-        state.scope.tokens.extend(new_tokens[:remaining])
+        state.scope.tokens = [*state.scope.tokens, *new_tokens[:remaining]]
 
     # 새 토픽 추가
     new_keywords = _top_keywords(new_tokens, 10)
-    for kw in new_keywords:
-        if kw not in state.scope.expanded_topics:
-            state.scope.expanded_topics.append(kw)
+    new_expanded = [kw for kw in new_keywords if kw not in state.scope.expanded_topics]
+    state.scope.expanded_topics = [*state.scope.expanded_topics, *new_expanded]
 
     # 키워드 재계산
     state.scope.keywords = _top_keywords(state.scope.tokens, 20)

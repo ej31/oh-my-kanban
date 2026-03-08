@@ -196,9 +196,10 @@ def update_hud(wi_identifier: str, wi_name: str, wi_status: str) -> None:
                 ["tmux", "rename-window", f"omk:{safe_identifier}"],
                 check=False,
                 capture_output=True,
+                timeout=3,
             )
-        except OSError:
-            pass  # tmux 실행 실패 시 무시
+        except (OSError, subprocess.TimeoutExpired):
+            pass  # tmux 실행 실패 또는 타임아웃 시 무시
 
 
 def reset_hud() -> None:
@@ -211,6 +212,7 @@ def reset_hud() -> None:
                 ["tmux", "rename-window", ""],
                 check=False,
                 capture_output=True,
+                timeout=3,
             )
         except OSError:
             pass  # tmux 실행 실패 시 무시
