@@ -5,7 +5,8 @@
 
 ## 실행 조건
 
-사용자가 "/oh-my-kanban:disable-this-session", "/omk:off" 또는 "추적 꺼줘", "이 세션은 Q&A야", "기록하지 말아줘" 등을 요청한 경우.
+사용자가 "/oh-my-kanban:disable-this-session", "/omk:off" 또는
+"추적 꺼줘", "이 세션은 Q&A야", "기록하지 말아줘" 등을 요청한 경우.
 
 ## 절차
 
@@ -20,6 +21,7 @@ omk hooks opt-out
 ```
 
 이 명령은 다음을 수행한다:
+
 - `state.opted_out = True` 설정
 - `state.status = "opted_out"` 설정
 - WI가 연결된 경우 구조화 댓글 1회를 추가 (WI 삭제는 하지 않음)

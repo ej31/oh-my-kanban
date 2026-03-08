@@ -5,6 +5,7 @@
 ## 실행 단계
 
 1. **세션 파일 집계**
+
    - `~/.claude/oh-my-kanban/sessions/*.json` 읽기
    - 집계 항목:
      - 총 세션 수
@@ -12,20 +13,22 @@
      - 총 수정 파일 수 (중복 제거한 `stats.files_touched`)
      - 드리프트 경고 총합 (`stats.drift_warnings`)
      - 평균 세션당 프롬프트 수
-   - 핫스팟 파일 (3개 이상 세션에서 수정된 파일):
-     ```
+   - 핫스팟 파일 (5개 이상 세션에서 수정된 파일):
+
+     ```text
      [hotspot] src/auth.py — 7개 세션에서 수정됨 (리팩토링 검토 권장)
      ```
 
-2. **WI 현황 조회 (Plane API 있을 때)**
+1. **WI 현황 조회 (Plane API 있을 때)**
+
    - `mcp__plane__list_work_items`로 전체 WI 목록 조회
    - 상태별 분포 계산 (In Progress / Backlog / Done 등)
    - 완료율 계산: `완료된 WI / 전체 WI * 100`
    - 최근 10개 WI 목록 (업데이트 시각 기준)
 
-3. **출력 형식**
+1. **출력 형식**
 
-```
+```text
 [omk stats] 세션 통계
   총 세션: 24개
   총 프롬프트: 1,247회
@@ -46,7 +49,8 @@
 ## API 키 없을 때
 
 세션 통계만 출력하고 WI 현황은 건너뜀:
-```
+
+```text
 [omk stats] Plane API 키가 설정되지 않아 WI 현황을 조회할 수 없습니다.
   /oh-my-kanban:setup 으로 설정하세요.
 ```

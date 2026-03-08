@@ -129,6 +129,12 @@ def _post_plane_comment(state: SessionState, comment: str) -> bool:
                 )
                 if resp.status_code in (200, 201):
                     success_count += 1
+                else:
+                    print(
+                        f"[omk] Plane 댓글 추가 실패 (wi_id={wi_id!r}): "
+                        f"HTTP {resp.status_code}",
+                        file=sys.stderr,
+                    )
         except (httpx.TimeoutException, httpx.NetworkError, httpx.HTTPStatusError) as e:
             print(
                 f"[omk] Plane 댓글 추가 실패 (wi_id={wi_id!r}): {type(e).__name__}: {e}",

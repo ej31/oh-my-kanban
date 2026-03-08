@@ -7,7 +7,7 @@ export default defineConfig({
 
   // 한국어 기본, 영어 지원
   locales: {
-    root: {
+    ko: {
       label: '한국어',
       lang: 'ko',
       link: '/ko/',

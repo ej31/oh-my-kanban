@@ -40,6 +40,7 @@ curl -s -o /dev/null -w "%{http_code}" \
 ```
 
 응답 코드별 진단:
+
 - `200` — 정상
 - `401` — API 키 오류 → Plane에서 새 토큰 발급
 - `403` — 권한 없음 → 워크스페이스 접근 권한 확인
@@ -49,6 +50,7 @@ curl -s -o /dev/null -w "%{http_code}" \
 ### 4. PlaneContext 상태 진단
 
 현재 세션의 PlaneContext를 확인한다:
+
 - `plane_context.project_id` — 비어있으면 CLAUDE.md에 project_id 추가
 - `plane_context.work_item_ids` — 비어있으면 `omk focus <WI-ID>`로 연결
 - `plane_context.stale_work_item_ids` — 여기 있는 WI는 삭제된 것
@@ -63,6 +65,7 @@ ls -lt ~/.local/share/oh-my-kanban/sessions/ | head -5
 ## PlaneContext에서 정보 읽기
 
 진단 스킬도 `state.plane_context`에서 현재 WI 정보를 읽어 표시한다:
+
 - `focused_work_item_id` — 집중 WI
 - `work_item_ids` — 전체 추적 WI 목록
 - `stale_work_item_ids` — 삭제 감지된 WI 목록
@@ -70,6 +73,7 @@ ls -lt ~/.local/share/oh-my-kanban/sessions/ | head -5
 ## 자가 복구 시도
 
 진단 후 자동 복구 가능한 항목:
+
 1. config.toml 권한 오류 → `chmod 600 ~/.config/oh-my-kanban/config.toml`
 2. stale WI 정리 → `omk focus <새_WI_ID>`로 새 WI 연결
 3. 세션 충돌 → `omk disable-this-session`으로 현재 세션 비활성화 후 재시작
