@@ -9,8 +9,8 @@ import sys
 
 import click
 
-# 레포지토리 형식 검증 패턴 (owner/repo)
-# 첫 글자는 반드시 영숫자여야 함 (GitHub 실제 제약 반영, '..'/'.-' 등 방지)
+# 레포지토리 형식 검증 패턴 (owner/repo) — 첫 글자 영숫자 필수 (GitHub 제약 반영)
+# 연속 구두점('..'/'.-')은 부분 차단; 경로 트래버설은 subprocess 배열 인자로 방지
 _REPO_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._-]*/[a-zA-Z0-9][a-zA-Z0-9._-]*$")
 
 def _validate_repo(repo: str | None) -> None:

@@ -65,7 +65,7 @@ Filename format: `{session_id_prefix}_{timestamp}.json`
 
 ## Notes
 
-- Snapshot files are owner-readable only (0o600 permissions).
+- Snapshot files are owner read/write only (0o600 permissions).
 - API keys and sensitive information are not included in snapshots.
 - Restoring while active sessions exist may cause conflicts. Use `--force` to override.
 - Snapshots persist until manually deleted.

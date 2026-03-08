@@ -30,7 +30,7 @@ omk hooks switch-task --session-id abc12345 --new "New feature"
 ## After Switching
 
 - Suspended Work Items are not deleted. They remain visible in Plane.
-- If `--new` is specified, a new WI will be created automatically during the next session hook execution.
+- If `--new` is specified, the requested title is included in the switch output and timeline summary. Create or focus the next WI explicitly after switching.
 - You can also use the `/oh-my-kanban:focus` skill to focus on a different existing WI.
 
 ## Timeline Example
@@ -43,6 +43,6 @@ omk hooks switch-task --session-id abc12345 --new "New feature"
 
 ## Notes
 
-- Cannot switch without an active session.
+- Cannot switch without an active session unless `--session-id` is provided.
 - Session scope and statistics are preserved during switching.
 - Frequent task switching may reduce session tracking accuracy.
