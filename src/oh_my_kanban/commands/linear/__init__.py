@@ -1,10 +1,12 @@
-"""Linear 프로바이더 커맨드 그룹."""
+"""Linear provider command group."""
+
 from __future__ import annotations
 
 import click
 
 from oh_my_kanban.config import load_config
-from oh_my_kanban.linear_context import LinearContext
+from oh_my_kanban.core.app_context import AppContext
+from oh_my_kanban.providers.linear.context import LinearContext
 
 from .cycle import cycle
 from .issue import issue as _issue_cmd
@@ -15,13 +17,19 @@ from .state import state
 from .team import team
 
 
-@click.group()
+@click.group("linear")
 @click.pass_context
 def linear(ctx: click.Context) -> None:
     """Linear 프로젝트 관리."""
+
     parent_obj = ctx.obj
-    output = parent_obj.output if parent_obj else "table"
-    cfg = load_config()
+    if isinstance(parent_obj, AppContext):
+        cfg = parent_obj.config
+        output = parent_obj.output
+    else:
+        cfg = load_config()
+        output = cfg.output or "table"
+
     ctx.obj = LinearContext(
         _api_key=cfg.linear_api_key,
         team_id=cfg.linear_team_id,
@@ -36,3 +44,5 @@ linear.add_command(label)
 linear.add_command(project)
 linear.add_command(cycle)
 linear.add_command(_issue_cmd)
+
+__all__ = ["linear"]

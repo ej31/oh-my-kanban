@@ -1,0 +1,11 @@
+{
+  "name": "@oh-my-kanban/setup",
+  "private": true,
+  "version": "0.0.0-stub",
+  "description": "Phase-2 interactive installer scaffold for oh-my-kanban",
+  "type": "module",
+  "scripts": {
+    "build": "echo 'installer scaffold only'",
+    "start": "node ./src/index.ts"
+  }
+}

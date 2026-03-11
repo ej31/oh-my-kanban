@@ -134,7 +134,7 @@ class TestConfigSet:
             with patch("oh_my_kanban.commands.config_cmd.load_config") as mock_load:
                 mock_load.return_value = Config()
                 with patch("oh_my_kanban.commands.config_cmd.save_config"):
-                    result = runner.invoke(cli, ["config", "set", "api_key", "new-api-key"])
+                    result = runner.invoke(cli, ["config", "set", "plane.api_key", "new-api-key"])
                     assert result.exit_code == 0
 
 

@@ -50,11 +50,11 @@ pip install -e ".[dev]"
 
 ### 1. Configure Plane
 
-`config init` is Plane-focused interactive setup.
+`config init` is provider-aware interactive setup. It can configure Plane, Linear, or both in one profile.
 
 ```bash
 omk config init
-omk config set project_id YOUR_PROJECT_UUID
+omk config set plane.project_id YOUR_PROJECT_UUID
 ```
 
 If you prefer non-interactive setup:
@@ -71,8 +71,8 @@ export PLANE_PROJECT_ID="your-project-id"
 You can persist Linear settings in the config file:
 
 ```bash
-omk config set linear_api_key lin_api_xxxxxxxxxx
-omk config set linear_team_id your-linear-team-id
+omk config set linear.api_key lin_api_xxxxxxxxxx
+omk config set linear.team_id your-linear-team-id
 ```
 
 Or provide them via environment variables:
@@ -103,22 +103,30 @@ omk linear issue list --team YOUR_LINEAR_TEAM_ID
 
 ```toml
 [default]
+output = "table"
+
+[default.plane]
 base_url = "https://api.plane.so"
 api_key = "pl_xxxxx"
 workspace_slug = "my-workspace"
 project_id = "plane-project-uuid"
-output = "table"
-linear_api_key = "lin_api_xxxxx"
-linear_team_id = "team-id"
+
+[default.linear]
+api_key = "lin_api_xxxxx"
+team_id = "team-id"
 
 [production]
+output = "json"
+
+[production.plane]
 base_url = "https://plane.example.com"
 api_key = "pl_yyyyy"
 workspace_slug = "prod-workspace"
 project_id = "prod-project-uuid"
-output = "json"
-linear_api_key = "lin_api_prod"
-linear_team_id = "prod-team-id"
+
+[production.linear]
+api_key = "lin_api_prod"
+team_id = "prod-team-id"
 ```
 
 ### Precedence
@@ -142,13 +150,13 @@ Command-line options > environment variables > config file > defaults
 ```bash
 omk config init
 omk config show [--profile PROFILE]
-omk config set base_url VALUE
-omk config set api_key VALUE
-omk config set workspace_slug VALUE
-omk config set project_id VALUE
+omk config set plane.base_url VALUE
+omk config set plane.api_key VALUE
+omk config set plane.workspace_slug VALUE
+omk config set plane.project_id VALUE
 omk config set output VALUE
-omk config set linear_api_key VALUE
-omk config set linear_team_id VALUE
+omk config set linear.api_key VALUE
+omk config set linear.team_id VALUE
 omk config profile list
 omk config profile use NAME
 ```
@@ -163,8 +171,6 @@ omk [OPTIONS] COMMAND [ARGS]...
 
 | Option | Environment Variable | Description |
 |---|---|---|
-| `--workspace`, `-w` | `PLANE_WORKSPACE_SLUG` | Plane workspace slug |
-| `--project`, `-p` | `PLANE_PROJECT_ID` | Plane project UUID |
 | `--output`, `-o` | - | Output format: `table`, `json`, `plain` |
 | `--profile` | `PLANE_PROFILE` | Config profile |
 | `--version` | - | Show version |
@@ -174,6 +180,12 @@ omk [OPTIONS] COMMAND [ARGS]...
 - `omk config` - provider-independent configuration
 - `omk plane` / `omk pl` - Plane commands
 - `omk linear` / `omk ln` - Linear commands
+
+Plane-specific context options live on the provider group:
+
+```bash
+omk plane --workspace MY_WORKSPACE --project PROJECT_UUID work-item list
+```
 
 ### Plane Commands
 

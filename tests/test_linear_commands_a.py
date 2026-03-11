@@ -6,6 +6,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from click.testing import CliRunner
 
+from oh_my_kanban.cli import cli
+
 
 # ─── 헬퍼 ─────────────────────────────────────────────────────────────────────
 
@@ -81,6 +83,44 @@ class TestLinearGroup:
             result = runner.invoke(linear, ["me", "--help"])
         # me --help는 성공해야 함
         assert result.exit_code == 0
+
+    def test_linear_group_uses_root_profile_config(self, runner, tmp_path):
+        """root --profile로 선택한 설정이 linear 그룹에 그대로 전달되어야 한다."""
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            "\n".join(
+                [
+                    "[default]",
+                    'output = "table"',
+                    "",
+                    "[default.linear]",
+                    'api_key = ""',
+                    "",
+                    "[custom]",
+                    'output = "json"',
+                    "",
+                    "[custom.linear]",
+                    'api_key = "lin_api_custom"',
+                    'team_id = "team-custom"',
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": {"viewer": {"id": "u1", "name": "Alice", "email": "alice@example.com"}}
+        }
+        mock_response.raise_for_status = MagicMock()
+
+        with patch("oh_my_kanban.config.CONFIG_FILE", config_file):
+            with patch("httpx.Client.post", return_value=mock_response):
+                result = runner.invoke(cli, ["--profile", "custom", "linear", "me"])
+
+        assert result.exit_code == 0
+        assert "Alice" in result.output
 
 
 # ─── me 커맨드 ─────────────────────────────────────────────────────────────────

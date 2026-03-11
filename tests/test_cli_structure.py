@@ -55,6 +55,14 @@ def test_top_level_does_not_show_cycle_directly(runner):
     assert "cycle" not in top_level_commands
 
 
+def test_top_level_does_not_show_plane_only_options(runner):
+    """최상위 --help에 Plane 전용 옵션이 노출되면 안 된다."""
+    result = runner.invoke(cli, ["--help"])
+    assert result.exit_code == 0
+    assert "--workspace" not in result.output
+    assert "--project" not in result.output
+
+
 # ---------------------------------------------------------------------------
 # plane 서브그룹 커맨드 구조
 # ---------------------------------------------------------------------------
@@ -65,6 +73,14 @@ def test_plane_subgroup_shows_work_item(runner):
     result = runner.invoke(cli, ["plane", "--help"])
     assert result.exit_code == 0
     assert "work-item" in result.output
+
+
+def test_plane_subgroup_shows_workspace_and_project_options(runner):
+    """omk plane --help에 Plane 전용 옵션이 노출되어야 한다."""
+    result = runner.invoke(cli, ["plane", "--help"])
+    assert result.exit_code == 0
+    assert "--workspace" in result.output
+    assert "--project" in result.output
 
 
 def test_plane_subgroup_shows_cycle(runner):

@@ -317,3 +317,27 @@ def test_load_config_reads_linear_keys_from_toml(tmp_path):
 
     assert cfg.linear_api_key == "lin_api_from_toml"
     assert cfg.linear_team_id == "team-from-toml"
+
+
+def test_save_config_writes_namespaced_provider_sections(tmp_path):
+    """save_config()는 provider별 namespaced TOML 섹션으로 저장해야 한다."""
+    from oh_my_kanban.config import save_config
+
+    config_file = tmp_path / "config.toml"
+    with patch("oh_my_kanban.config.CONFIG_FILE", config_file):
+        save_config(
+            {
+                "output": "json",
+                "plane.api_key": "pl_key",
+                "plane.workspace_slug": "team-a",
+                "linear.api_key": "lin_key",
+                "linear.team_id": "lin-team",
+            }
+        )
+
+    saved = config_file.read_text(encoding="utf-8")
+    assert "[default]" in saved
+    assert "[default.plane]" in saved
+    assert "[default.linear]" in saved
+    assert 'workspace_slug = "team-a"' in saved
+    assert 'team_id = "lin-team"' in saved

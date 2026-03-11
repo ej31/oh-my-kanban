@@ -2,22 +2,28 @@
 
 from __future__ import annotations
 
-import os
 import re
 
 import click
 
 from oh_my_kanban.config import CONFIG_FILE, Config, list_profiles, load_config, save_config
 
-# plane.so 클라우드 API URL
 _CLOUD_API_URL = "https://api.plane.so"
-
-# Config 클래스에서 허용 키를 동적으로 파생 — 필드 추가 시 자동 반영
-_ALLOWED_KEYS = {f for f in Config.__dataclass_fields__ if f != "profile"}
+_PUBLIC_CONFIG_KEYS = (
+    "output",
+    "plane.base_url",
+    "plane.api_key",
+    "plane.workspace_slug",
+    "plane.project_id",
+    "linear.api_key",
+    "linear.team_id",
+)
+_MASKED_KEYS = {"plane.api_key", "linear.api_key"}
 
 
 def _save_config_safe(data: dict, profile: str = "default") -> None:
     """save_config 호출 실패를 Click 친화적 UsageError로 변환한다."""
+
     try:
         save_config(data, profile=profile)
     except (OSError, ValueError) as e:
@@ -25,156 +31,160 @@ def _save_config_safe(data: dict, profile: str = "default") -> None:
 
 
 def _extract_slug_from_url(url: str) -> str:
-    """URL에서 워크스페이스 슬러그를 추출한다.
+    """URL에서 워크스페이스 슬러그를 추출한다."""
 
-    지원 형식:
-      https://app.plane.so/my-workspace/
-      https://app.plane.so/my-workspace/projects/...
-      https://plane.example.com/my-workspace/
-    """
-    # URL에서 호스트 다음 첫 번째 경로 세그먼트 추출
     match = re.search(r"https?://[^/]+/([^/?#\s]+)", url)
     if match:
         return match.group(1)
     return ""
 
 
-@click.group()
-def config() -> None:
-    """설정 파일 관리."""
-    pass
+def _mask_secret(raw_key: str, prefix: int = 4, suffix: int = 4) -> str:
+    """Mask secrets for display."""
+
+    if raw_key and len(raw_key) > prefix + suffix:
+        return raw_key[:prefix] + "..." + raw_key[-suffix:]
+    if raw_key:
+        return "****"
+    return "(미설정)"
 
 
-@config.command("init")
-def config_init() -> None:
-    """대화형으로 ~/.config/oh-my-kanban/config.toml을 생성한다.
+def _prompt_plane_config(existing: Config) -> dict[str, str]:
+    """Collect Plane config interactively."""
 
-    \b
-    환경변수로도 설정 가능합니다 (AI 에이전트 자동화 용도):
-      PLANE_BASE_URL        - API 서버 URL
-      PLANE_API_KEY         - API 키
-      PLANE_WORKSPACE_SLUG  - 워크스페이스 슬러그
-    """
-    click.echo("oh-my-kanban 초기 설정을 시작합니다.")
-    click.echo(f"설정 파일 위치: {CONFIG_FILE}")
     click.echo()
-
-    # 환경변수에서 미리 값 가져오기
-    env_base_url = os.environ.get("PLANE_BASE_URL", "")
-    env_api_key = os.environ.get("PLANE_API_KEY", "")
-    env_workspace_slug = os.environ.get("PLANE_WORKSPACE_SLUG", "")
-
-    # 환경변수로 모든 값이 설정된 경우 대화형 없이 바로 저장
-    if env_api_key and env_workspace_slug:
-        base_url = env_base_url or _CLOUD_API_URL
-        click.echo("환경변수에서 설정을 읽었습니다:")
-        click.echo(f"  PLANE_BASE_URL        = {base_url}")
-        click.echo(f"  PLANE_API_KEY         = {'*' * 8}")
-        click.echo(f"  PLANE_WORKSPACE_SLUG  = {env_workspace_slug}")
-        _save_config_safe(
-            {
-                "base_url": base_url,
-                "api_key": env_api_key,
-                "workspace_slug": env_workspace_slug,
-            },
-            profile="default",
-        )
-        click.echo()
-        click.echo(f"설정이 저장되었습니다: {CONFIG_FILE}")
-        return
-
-    # 기존 설정 로드 (있으면 기본값으로 사용)
-    existing = load_config()
-
-    # 1단계: cloud vs self-hosted 선택
-    click.echo("어떤 Plane 서버를 사용하시나요?")
+    click.echo("Plane 서버를 설정합니다.")
     click.echo("  1) plane.so 클라우드 (https://app.plane.so)")
     click.echo("  2) 직접 설치한 서버 (self-hosted)")
     click.echo()
 
+    default_server_type = "1" if existing.base_url in ("", _CLOUD_API_URL) else "2"
     server_type = click.prompt(
         "서버 종류 선택",
         type=click.Choice(["1", "2"]),
-        default="1",
+        default=default_server_type,
         show_choices=False,
     )
 
     if server_type == "1":
-        # plane.so 클라우드
         base_url = _CLOUD_API_URL
-        click.echo()
-        click.echo("plane.so 클라우드를 사용합니다.")
-        click.echo("  API 키: https://app.plane.so/profile/api-tokens/ 에서 발급")
-        click.echo()
     else:
-        # self-hosted
-        click.echo()
-        click.echo("self-hosted 서버 URL을 입력하세요.")
-        click.echo("예) https://plane.example.com")
-        click.echo()
-        server_url = click.prompt(
+        click.echo("self-hosted 서버 URL을 입력하세요. 예) https://plane.example.com")
+        base_url = click.prompt(
             "서버 URL",
             default=existing.base_url if existing.base_url != _CLOUD_API_URL else "",
-        )
-        # self-hosted는 /api/v1 경로를 포함한 API URL 구성
-        server_url = server_url.rstrip("/")
-        # 이미 /api 가 포함되어 있으면 그대로, 아니면 그대로 사용 (SDK가 경로 처리)
-        base_url = server_url
+        ).rstrip("/")
 
-    # 2단계: API 키
     api_key = click.prompt(
         "API 키",
-        default=env_api_key or existing.api_key or "",
+        default=existing.api_key or "",
         hide_input=True,
         prompt_suffix=" (PLANE_API_KEY): ",
     )
-
     if not api_key:
-        raise click.UsageError("API 키는 필수입니다.")
+        raise click.UsageError("Plane API 키는 필수입니다.")
 
-    # 3단계: 워크스페이스 슬러그
     click.echo()
-    click.echo("워크스페이스를 확인하려면 로그인 후 주소창의 URL을 복사해서 붙여넣으세요.")
-    if server_type == "1":
-        click.echo("예) https://app.plane.so/my-workspace/")
-    else:
-        click.echo("예) https://plane.example.com/my-workspace/")
-    click.echo("또는 슬러그를 직접 입력하세요 (예: my-workspace)")
-    click.echo()
-
+    click.echo("워크스페이스 URL 또는 슬러그를 입력하세요.")
     workspace_input = click.prompt(
         "워크스페이스 URL 또는 슬러그",
-        default=env_workspace_slug or existing.workspace_slug or "",
+        default=existing.workspace_slug or "",
         prompt_suffix=" (PLANE_WORKSPACE_SLUG): ",
     )
 
-    # URL인 경우 슬러그 추출
     if workspace_input.startswith("http"):
         workspace_slug = _extract_slug_from_url(workspace_input)
         if not workspace_slug:
             raise click.UsageError(
-                f"URL에서 워크스페이스 슬러그를 찾을 수 없습니다: {workspace_input}\n"
-                "슬러그를 직접 입력해주세요 (예: my-workspace)"
+                f"URL에서 워크스페이스 슬러그를 찾을 수 없습니다: {workspace_input}"
             )
         click.echo(f"  → 슬러그 추출: {workspace_slug}")
     else:
         workspace_slug = workspace_input.strip()
 
-    if not workspace_slug:
-        raise click.UsageError("워크스페이스 슬러그는 필수입니다.")
+    project_id = click.prompt(
+        "기본 프로젝트 UUID (선택)",
+        default=existing.project_id or "",
+        prompt_suffix=" (PLANE_PROJECT_ID): ",
+        show_default=False,
+    ).strip()
 
-    _save_config_safe(
-        {
-            "base_url": base_url,
-            "api_key": api_key,
-            "workspace_slug": workspace_slug,
-        },
-        profile="default",
+    return {
+        "plane.base_url": base_url,
+        "plane.api_key": api_key,
+        "plane.workspace_slug": workspace_slug,
+        "plane.project_id": project_id,
+    }
+
+
+def _prompt_linear_config(existing: Config) -> dict[str, str]:
+    """Collect Linear config interactively."""
+
+    click.echo()
+    click.echo("Linear 설정을 구성합니다.")
+    api_key = click.prompt(
+        "Linear API 키",
+        default=existing.linear_api_key or "",
+        hide_input=True,
+        prompt_suffix=" (LINEAR_API_KEY): ",
+    )
+    if not api_key:
+        raise click.UsageError("Linear API 키는 필수입니다.")
+
+    team_id = click.prompt(
+        "기본 팀 ID (선택)",
+        default=existing.linear_team_id or "",
+        prompt_suffix=" (LINEAR_TEAM_ID): ",
+        show_default=False,
+    ).strip()
+
+    return {
+        "linear.api_key": api_key,
+        "linear.team_id": team_id,
+    }
+
+
+@click.group()
+def config() -> None:
+    """설정 파일 관리."""
+
+
+@config.command("init")
+@click.option("--profile", default="default", help="초기화할 프로필")
+def config_init(profile: str) -> None:
+    """대화형으로 provider-aware 설정을 생성한다."""
+
+    click.echo("oh-my-kanban 초기 설정을 시작합니다.")
+    click.echo(f"설정 파일 위치: {CONFIG_FILE}")
+    click.echo()
+
+    existing = load_config(profile)
+    payload: dict[str, str] = {}
+
+    configure_plane = click.confirm("Plane 설정을 구성하시겠습니까?", default=True)
+    configure_linear = click.confirm(
+        "Linear 설정을 구성하시겠습니까?",
+        default=bool(existing.linear_api_key or existing.linear_team_id),
     )
 
+    if not configure_plane and not configure_linear:
+        raise click.UsageError("최소 하나의 provider를 선택해야 합니다.")
+
+    if configure_plane:
+        payload.update(_prompt_plane_config(existing))
+    if configure_linear:
+        payload.update(_prompt_linear_config(existing))
+
+    payload["output"] = click.prompt(
+        "기본 출력 형식",
+        type=click.Choice(["table", "json", "plain"]),
+        default=existing.output or "table",
+        show_choices=True,
+    )
+
+    _save_config_safe(payload, profile=profile)
     click.echo()
-    click.echo(f"설정이 저장되었습니다: {CONFIG_FILE}")
-    click.echo()
+    click.echo(f"[{profile}] 설정이 저장되었습니다: {CONFIG_FILE}")
     click.echo("설정 확인: omk config show")
 
 
@@ -182,22 +192,9 @@ def config_init() -> None:
 @click.option("--profile", default="default", help="조회할 프로필")
 def config_show(profile: str) -> None:
     """현재 설정을 출력한다. API 키는 마스킹 처리된다."""
+
     cfg = load_config(profile)
-
-    # API 키 마스킹: pl_...xxxx 형식
-    raw_key = cfg.api_key
-    if raw_key and len(raw_key) > 8:
-        masked_key = raw_key[:4] + "..." + raw_key[-4:]
-    elif raw_key:
-        masked_key = "****"
-    else:
-        masked_key = "(미설정)"
-
     click.echo(f"프로필      : {cfg.profile}")
-    click.echo(f"base_url    : {cfg.base_url}")
-    click.echo(f"api_key     : {masked_key}")
-    click.echo(f"workspace   : {cfg.workspace_slug or '(미설정)'}")
-    click.echo(f"project_id  : {cfg.project_id or '(미설정)'}")
     click.echo(f"output      : {cfg.output}")
     click.echo(f"설정 파일   : {CONFIG_FILE if CONFIG_FILE.exists() else str(CONFIG_FILE) + ' (없음)'}")
     click.echo()
@@ -206,19 +203,16 @@ def config_show(profile: str) -> None:
         "  PLANE_BASE_URL, PLANE_API_KEY, PLANE_WORKSPACE_SLUG, PLANE_PROJECT_ID, "
         "LINEAR_API_KEY, LINEAR_TEAM_ID"
     )
-
-    # Linear 설정 섹션
+    click.echo()
+    click.echo("--- Plane ---")
+    click.echo(f"base_url          : {cfg.base_url}")
+    click.echo(f"api_key           : {_mask_secret(cfg.api_key)}")
+    click.echo(f"workspace_slug    : {cfg.workspace_slug or '(미설정)'}")
+    click.echo(f"project_id        : {cfg.project_id or '(미설정)'}")
     click.echo()
     click.echo("--- Linear ---")
-    linear_key = cfg.linear_api_key
-    if linear_key and len(linear_key) > 8:
-        masked_linear_key = linear_key[:8] + "***"
-    elif linear_key:
-        masked_linear_key = "****"
-    else:
-        masked_linear_key = "(미설정)"
-    click.echo(f"linear_api_key  : {masked_linear_key}")
-    click.echo(f"linear_team_id  : {cfg.linear_team_id or '(미설정)'}")
+    click.echo(f"api_key           : {_mask_secret(cfg.linear_api_key, prefix=8, suffix=0)}")
+    click.echo(f"team_id           : {cfg.linear_team_id or '(미설정)'}")
 
 
 @config.command("set")
@@ -230,29 +224,37 @@ def config_set(key: str, value: str, profile: str) -> None:
 
     \b
     사용 가능한 키:
-      base_url, api_key, workspace_slug, project_id, output, linear_api_key, linear_team_id
+      output
+      plane.base_url
+      plane.api_key
+      plane.workspace_slug
+      plane.project_id
+      linear.api_key
+      linear.team_id
     """
-    if key not in _ALLOWED_KEYS:
+
+    if key not in _PUBLIC_CONFIG_KEYS:
         raise click.UsageError(
-            f"알 수 없는 키: '{key}'\n허용 키: {', '.join(sorted(_ALLOWED_KEYS))}"
+            f"알 수 없는 키: '{key}'\n허용 키: {', '.join(_PUBLIC_CONFIG_KEYS)}"
         )
 
     if key == "output" and value not in ("json", "table", "plain"):
         raise click.UsageError("output 값은 json, table, plain 중 하나여야 합니다.")
 
     _save_config_safe({key: value}, profile=profile)
-    click.echo(f"[{profile}] {key} = {value if key != 'api_key' else '****'} 저장 완료")
+    display_value = "****" if key in _MASKED_KEYS else value
+    click.echo(f"[{profile}] {key} = {display_value} 저장 완료")
 
 
 @config.group("profile")
 def config_profile() -> None:
     """프로필 관리."""
-    pass
 
 
 @config_profile.command("list")
 def profile_list() -> None:
     """저장된 프로필 목록을 출력한다."""
+
     profiles = list_profiles()
     if not profiles:
         click.echo("저장된 프로필이 없습니다. 'omk config init'으로 설정하세요.")
@@ -270,6 +272,7 @@ def profile_use(name: str) -> None:
 
     NAME: 사용할 프로필 이름
     """
+
     profiles = list_profiles()
     if name not in profiles:
         available = ", ".join(profiles) if profiles else "(없음)"
@@ -277,7 +280,6 @@ def profile_use(name: str) -> None:
             f"프로필 '{name}'이 존재하지 않습니다. 사용 가능한 프로필: {available}"
         )
 
-    # 기본 프로필 정보를 'active_profile' 키로 저장
     _save_config_safe({"active_profile": name}, profile="_meta")
     click.echo(f"기본 프로필이 '{name}'으로 변경되었습니다.")
     click.echo("다음 실행 시 '--profile' 옵션 또는 PLANE_PROFILE 환경변수로 적용하세요.")

@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import re
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 # 프로필 이름 허용 문자: 영문자, 숫자, 하이픈, 밑줄만 허용 (TOML 섹션 헤더 인젝션 방지)
@@ -25,6 +25,24 @@ CONFIG_FILE = CONFIG_DIR / "config.toml"
 
 # 기본 Plane API URL (plane.so 클라우드)
 DEFAULT_BASE_URL = "https://api.plane.so"
+_ROOT_SCALAR_KEYS = {"output", "active_profile"}
+_LEGACY_PLANE_KEYS = ("base_url", "api_key", "workspace_slug", "project_id")
+_LEGACY_LINEAR_KEYS = ("linear_api_key", "linear_team_id")
+_INTERNAL_KEY_MAP = {
+    "output": ("output",),
+    "base_url": ("plane", "base_url"),
+    "api_key": ("plane", "api_key"),
+    "workspace_slug": ("plane", "workspace_slug"),
+    "project_id": ("plane", "project_id"),
+    "linear_api_key": ("linear", "api_key"),
+    "linear_team_id": ("linear", "team_id"),
+    "plane.base_url": ("plane", "base_url"),
+    "plane.api_key": ("plane", "api_key"),
+    "plane.workspace_slug": ("plane", "workspace_slug"),
+    "plane.project_id": ("plane", "project_id"),
+    "linear.api_key": ("linear", "api_key"),
+    "linear.team_id": ("linear", "team_id"),
+}
 
 
 @dataclass
@@ -39,6 +57,96 @@ class Config:
     profile: str = "default"
     linear_api_key: str = ""
     linear_team_id: str = ""
+
+
+def _empty_profile_section() -> dict:
+    """Return normalized profile storage."""
+
+    return {
+        "output": "table",
+        "plane": {
+            "base_url": DEFAULT_BASE_URL,
+            "api_key": "",
+            "workspace_slug": "",
+            "project_id": "",
+        },
+        "linear": {
+            "api_key": "",
+            "team_id": "",
+        },
+        "_other_root": {},
+        "_other_sections": {},
+    }
+
+
+def _normalize_profile_section(section: dict) -> dict:
+    """Normalize a raw TOML profile section into the canonical nested shape."""
+
+    normalized = _empty_profile_section()
+    plane = section.get("plane", {}) if isinstance(section.get("plane"), dict) else {}
+    linear = section.get("linear", {}) if isinstance(section.get("linear"), dict) else {}
+
+    normalized["output"] = str(section.get("output", normalized["output"]))
+    normalized["plane"]["base_url"] = str(plane.get("base_url", section.get("base_url", DEFAULT_BASE_URL)))
+    normalized["plane"]["api_key"] = str(plane.get("api_key", section.get("api_key", "")))
+    normalized["plane"]["workspace_slug"] = str(
+        plane.get("workspace_slug", section.get("workspace_slug", ""))
+    )
+    normalized["plane"]["project_id"] = str(plane.get("project_id", section.get("project_id", "")))
+    normalized["linear"]["api_key"] = str(
+        linear.get("api_key", section.get("linear_api_key", ""))
+    )
+    normalized["linear"]["team_id"] = str(
+        linear.get("team_id", section.get("linear_team_id", ""))
+    )
+
+    reserved = _ROOT_SCALAR_KEYS | set(_LEGACY_PLANE_KEYS) | set(_LEGACY_LINEAR_KEYS) | {"plane", "linear"}
+    for key, value in section.items():
+        if key in reserved:
+            continue
+        if isinstance(value, dict):
+            normalized["_other_sections"][key] = value
+        else:
+            normalized["_other_root"][key] = value
+    return normalized
+
+
+def _toml_literal(value: object) -> str:
+    """Serialize a Python scalar to a TOML literal."""
+
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return str(value)
+    return f'"{_escape_toml_string(str(value))}"'
+
+
+def _serialize_nested_tables(lines: list[str], prefix: str, data: dict) -> None:
+    """Recursively serialize nested TOML tables."""
+
+    lines.append(f"[{prefix}]")
+    for key, value in data.items():
+        if not isinstance(value, dict):
+            lines.append(f"{key} = {_toml_literal(value)}")
+    lines.append("")
+
+    for key, value in data.items():
+        if isinstance(value, dict):
+            _serialize_nested_tables(lines, f"{prefix}.{key}", value)
+
+
+def _set_profile_value(profile_data: dict, key: str, value: object) -> None:
+    """Apply an internal or dotted config key to normalized profile data."""
+
+    target = _INTERNAL_KEY_MAP.get(key)
+    if target is None:
+        profile_data["_other_root"][key] = value
+        return
+    if len(target) == 1:
+        profile_data[target[0]] = value
+        return
+    section_name, field_name = target
+    profile_data[section_name][field_name] = value
 
 
 def detect_project_id() -> str:
@@ -66,14 +174,14 @@ def load_config(profile: str = "default") -> Config:
         try:
             with open(CONFIG_FILE, "rb") as f:
                 data = tomllib.load(f)
-            section = data.get(profile, data.get("default", {}))
-            cfg.base_url = section.get("base_url", cfg.base_url)
-            cfg.api_key = section.get("api_key", cfg.api_key)
-            cfg.workspace_slug = section.get("workspace_slug", cfg.workspace_slug)
-            cfg.project_id = section.get("project_id", cfg.project_id)
-            cfg.output = section.get("output", cfg.output)
-            cfg.linear_api_key = section.get("linear_api_key", cfg.linear_api_key)
-            cfg.linear_team_id = section.get("linear_team_id", cfg.linear_team_id)
+            section = _normalize_profile_section(data.get(profile, data.get("default", {})))
+            cfg.output = str(section["output"])
+            cfg.base_url = str(section["plane"]["base_url"])
+            cfg.api_key = str(section["plane"]["api_key"])
+            cfg.workspace_slug = str(section["plane"]["workspace_slug"])
+            cfg.project_id = str(section["plane"]["project_id"])
+            cfg.linear_api_key = str(section["linear"]["api_key"])
+            cfg.linear_team_id = str(section["linear"]["team_id"])
         except (OSError, tomllib.TOMLDecodeError) as e:
             import sys
             print(f"경고: 설정 파일 파싱 오류 ({CONFIG_FILE}): {e}", file=sys.stderr)
@@ -116,21 +224,34 @@ def save_config(data: dict, profile: str = "default") -> None:
                 "Refusing to overwrite to prevent data loss."
             ) from e
 
-    # 프로필 업데이트
-    existing.setdefault(profile, {}).update(data)
-
-    # TOML 직렬화 (tomllib은 읽기 전용이므로 직접 작성)
-    # 값에 따옴표/백슬래시/개행이 포함될 수 있으므로 이스케이프 처리
-    lines = []
+    normalized_profiles: dict[str, dict] = {}
     for prof, values in existing.items():
+        if not isinstance(values, dict):
+            continue
+        normalized_profiles[prof] = _normalize_profile_section(values)
+
+    profile_data = normalized_profiles.setdefault(profile, _empty_profile_section())
+    for key, value in data.items():
+        _set_profile_value(profile_data, key, value)
+
+    lines = []
+    for prof, values in normalized_profiles.items():
         if not _PROFILE_NAME_RE.match(prof):
             raise ValueError(
                 f"Invalid profile name '{prof}': only letters, digits, hyphens, and underscores are allowed."
             )
         lines.append(f"[{prof}]")
-        for k, v in values.items():
-            lines.append(f'{k} = "{_escape_toml_string(str(v))}"')
+        lines.append(f'output = "{_escape_toml_string(str(values["output"]))}"')
+        for key, value in values["_other_root"].items():
+            lines.append(f"{key} = {_toml_literal(value)}")
         lines.append("")
+
+        if any(str(value) for value in values["plane"].values()):
+            _serialize_nested_tables(lines, f"{prof}.plane", values["plane"])
+        if any(str(value) for value in values["linear"].values()):
+            _serialize_nested_tables(lines, f"{prof}.linear", values["linear"])
+        for key, value in values["_other_sections"].items():
+            _serialize_nested_tables(lines, f"{prof}.{key}", value)
 
     CONFIG_FILE.write_text("\n".join(lines), encoding="utf-8")
 
@@ -142,7 +263,7 @@ def list_profiles() -> list[str]:
     try:
         with open(CONFIG_FILE, "rb") as f:
             data = tomllib.load(f)
-        return list(data.keys())
+        return [name for name in data.keys() if name != "_meta"]
     except (OSError, tomllib.TOMLDecodeError) as e:
         import sys
         print(f"경고: 프로필 목록 읽기 실패 ({CONFIG_FILE}): {e}", file=sys.stderr)
