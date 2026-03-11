@@ -5,8 +5,8 @@ from __future__ import annotations
 import click
 from datetime import date
 
-from oh_my_kanban.context import CliContext
-from oh_my_kanban.errors import handle_api_error
+from oh_my_kanban.providers.plane.context import PlaneContext as CliContext
+from oh_my_kanban.providers.plane.errors import handle_api_error
 from oh_my_kanban.output import click_echo_err, format_output, format_pagination_hint
 from oh_my_kanban.utils import confirm_delete, fetch_all_pages, parse_work_item_ref
 

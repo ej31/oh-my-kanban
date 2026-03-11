@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 import pytest
 from click.testing import CliRunner
 
-from oh_my_kanban.linear_context import LinearContext
+from oh_my_kanban.providers.linear.context import LinearContext
 
 
 @pytest.fixture
@@ -27,7 +27,7 @@ def runner() -> CliRunner:
 
 class TestLabelList:
     def test_label_list_with_team_option(self, runner, ctx):
-        from oh_my_kanban.commands.linear.label import label
+        from oh_my_kanban.providers.linear.commands.label import label
 
         ctx.client.execute.return_value = {
             "team": {
@@ -41,7 +41,7 @@ class TestLabelList:
         assert "lbl-1" in result.output
 
     def test_label_list_uses_context_team(self, runner, ctx):
-        from oh_my_kanban.commands.linear.label import label
+        from oh_my_kanban.providers.linear.commands.label import label
 
         ctx.client.execute.return_value = {
             "team": {
@@ -55,7 +55,7 @@ class TestLabelList:
         assert "lbl-2" in result.output
 
     def test_label_list_no_team_raises(self, runner):
-        from oh_my_kanban.commands.linear.label import label
+        from oh_my_kanban.providers.linear.commands.label import label
 
         no_team_ctx = LinearContext(_api_key="test-key", team_id="", output="json")
         no_team_ctx._client = MagicMock()
@@ -63,7 +63,7 @@ class TestLabelList:
         assert result.exit_code != 0
 
     def test_label_list_empty_returns_ok(self, runner, ctx):
-        from oh_my_kanban.commands.linear.label import label
+        from oh_my_kanban.providers.linear.commands.label import label
 
         ctx.client.execute.return_value = {"team": {"labels": {"nodes": []}}}
         result = runner.invoke(label, ["list"], obj=ctx)
@@ -73,7 +73,7 @@ class TestLabelList:
 
 class TestLabelGet:
     def test_label_get_returns_detail(self, runner, ctx):
-        from oh_my_kanban.commands.linear.label import label
+        from oh_my_kanban.providers.linear.commands.label import label
 
         ctx.client.execute.return_value = {
             "issueLabel": {
@@ -94,7 +94,7 @@ class TestLabelGet:
 class TestProjectList:
     def test_project_list_relay_pagination(self, runner, ctx):
         """paginate_relay가 2페이지 결과를 합산해 반환하는지 검증한다."""
-        from oh_my_kanban.commands.linear.project import project
+        from oh_my_kanban.providers.linear.commands.project import project
 
         ctx.client.paginate_relay.return_value = [
             {"id": "proj-1", "name": "Alpha", "state": "started"},
@@ -107,7 +107,7 @@ class TestProjectList:
         ctx.client.paginate_relay.assert_called_once()
 
     def test_project_list_first_option(self, runner, ctx):
-        from oh_my_kanban.commands.linear.project import project
+        from oh_my_kanban.providers.linear.commands.project import project
 
         ctx.client.paginate_relay.return_value = []
         result = runner.invoke(project, ["list", "--first", "10"], obj=ctx)
@@ -118,7 +118,7 @@ class TestProjectList:
         assert variables.get("first") == 10
 
     def test_project_list_default_first_is_50(self, runner, ctx):
-        from oh_my_kanban.commands.linear.project import project
+        from oh_my_kanban.providers.linear.commands.project import project
 
         ctx.client.paginate_relay.return_value = []
         runner.invoke(project, ["list"], obj=ctx)
@@ -129,7 +129,7 @@ class TestProjectList:
 
 class TestProjectGet:
     def test_project_get_returns_detail(self, runner, ctx):
-        from oh_my_kanban.commands.linear.project import project
+        from oh_my_kanban.providers.linear.commands.project import project
 
         ctx.client.execute.return_value = {
             "project": {
@@ -151,7 +151,7 @@ class TestProjectGet:
 
 class TestCycleList:
     def test_cycle_list_with_team_option(self, runner, ctx):
-        from oh_my_kanban.commands.linear.cycle import cycle
+        from oh_my_kanban.providers.linear.commands.cycle import cycle
 
         ctx.client.execute.return_value = {
             "team": {
@@ -172,7 +172,7 @@ class TestCycleList:
         assert "cyc-1" in result.output
 
     def test_cycle_list_uses_context_team(self, runner, ctx):
-        from oh_my_kanban.commands.linear.cycle import cycle
+        from oh_my_kanban.providers.linear.commands.cycle import cycle
 
         ctx.client.execute.return_value = {
             "team": {
@@ -193,7 +193,7 @@ class TestCycleList:
         assert "cyc-2" in result.output
 
     def test_cycle_list_no_team_raises(self, runner):
-        from oh_my_kanban.commands.linear.cycle import cycle
+        from oh_my_kanban.providers.linear.commands.cycle import cycle
 
         no_team_ctx = LinearContext(_api_key="test-key", team_id="", output="json")
         no_team_ctx._client = MagicMock()
@@ -201,7 +201,7 @@ class TestCycleList:
         assert result.exit_code != 0
 
     def test_cycle_list_empty_returns_ok(self, runner, ctx):
-        from oh_my_kanban.commands.linear.cycle import cycle
+        from oh_my_kanban.providers.linear.commands.cycle import cycle
 
         ctx.client.execute.return_value = {"team": {"cycles": {"nodes": []}}}
         result = runner.invoke(cycle, ["list"], obj=ctx)
@@ -210,7 +210,7 @@ class TestCycleList:
 
 class TestCycleGet:
     def test_cycle_get_returns_detail(self, runner, ctx):
-        from oh_my_kanban.commands.linear.cycle import cycle
+        from oh_my_kanban.providers.linear.commands.cycle import cycle
 
         ctx.client.execute.return_value = {
             "cycle": {

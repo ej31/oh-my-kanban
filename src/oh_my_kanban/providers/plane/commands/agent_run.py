@@ -5,8 +5,8 @@ from __future__ import annotations
 import click
 from plane.models.agent_runs import CreateAgentRun
 
-from oh_my_kanban.context import CliContext
-from oh_my_kanban.errors import handle_api_error
+from oh_my_kanban.providers.plane.context import PlaneContext as CliContext
+from oh_my_kanban.providers.plane.errors import handle_api_error
 from oh_my_kanban.output import format_output, format_pagination_hint
 
 # 에이전트 실행 출력 컬럼

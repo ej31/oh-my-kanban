@@ -11,7 +11,7 @@ import pytest
 
 def test_linear_graphql_error_stores_errors():
     """LinearGraphQLError는 errors 목록을 저장해야 한다."""
-    from oh_my_kanban.linear_errors import LinearGraphQLError
+    from oh_my_kanban.providers.linear.errors import LinearGraphQLError
 
     errs = [{"message": "Not found"}]
     exc = LinearGraphQLError(errs)
@@ -20,7 +20,7 @@ def test_linear_graphql_error_stores_errors():
 
 def test_linear_http_error_stores_status_code():
     """LinearHttpError는 status_code를 저장해야 한다."""
-    from oh_my_kanban.linear_errors import LinearHttpError
+    from oh_my_kanban.providers.linear.errors import LinearHttpError
 
     exc = LinearHttpError(404, "Not Found")
     assert exc.status_code == 404
@@ -28,7 +28,7 @@ def test_linear_http_error_stores_status_code():
 
 def test_format_graphql_error_returns_korean():
     """format_linear_error는 GraphQL 에러를 한글 메시지로 변환해야 한다."""
-    from oh_my_kanban.linear_errors import LinearGraphQLError, format_linear_error
+    from oh_my_kanban.providers.linear.errors import LinearGraphQLError, format_linear_error
 
     exc = LinearGraphQLError([{"message": "Some error"}])
     result = format_linear_error(exc)
@@ -38,7 +38,7 @@ def test_format_graphql_error_returns_korean():
 
 def test_format_http_error_401():
     """format_linear_error는 401을 인증 실패 메시지로 변환해야 한다."""
-    from oh_my_kanban.linear_errors import LinearHttpError, format_linear_error
+    from oh_my_kanban.providers.linear.errors import LinearHttpError, format_linear_error
 
     exc = LinearHttpError(401, "Unauthorized")
     result = format_linear_error(exc)
@@ -47,7 +47,7 @@ def test_format_http_error_401():
 
 def test_format_http_error_403():
     """format_linear_error는 403을 권한 부족 메시지로 변환해야 한다."""
-    from oh_my_kanban.linear_errors import LinearHttpError, format_linear_error
+    from oh_my_kanban.providers.linear.errors import LinearHttpError, format_linear_error
 
     exc = LinearHttpError(403, "Forbidden")
     result = format_linear_error(exc)
@@ -56,7 +56,7 @@ def test_format_http_error_403():
 
 def test_format_http_error_404():
     """format_linear_error는 404를 리소스 없음 메시지로 변환해야 한다."""
-    from oh_my_kanban.linear_errors import LinearHttpError, format_linear_error
+    from oh_my_kanban.providers.linear.errors import LinearHttpError, format_linear_error
 
     exc = LinearHttpError(404, "Not Found")
     result = format_linear_error(exc)
@@ -65,7 +65,7 @@ def test_format_http_error_404():
 
 def test_format_timeout_error():
     """format_linear_error는 TimeoutException을 시간 초과 메시지로 변환해야 한다."""
-    from oh_my_kanban.linear_errors import format_linear_error
+    from oh_my_kanban.providers.linear.errors import format_linear_error
 
     exc = httpx.TimeoutException("timeout")
     result = format_linear_error(exc)
@@ -74,7 +74,7 @@ def test_format_timeout_error():
 
 def test_handle_linear_error_decorator_passes_through():
     """handle_linear_error는 정상 함수 결과를 그대로 반환해야 한다."""
-    from oh_my_kanban.linear_errors import handle_linear_error
+    from oh_my_kanban.providers.linear.errors import handle_linear_error
 
     @handle_linear_error
     def good_func():
@@ -86,7 +86,7 @@ def test_handle_linear_error_decorator_passes_through():
 def test_handle_linear_error_decorator_catches_graphql_error(capsys):
     """handle_linear_error는 LinearGraphQLError를 잡아 stderr에 출력하고 sys.exit(1)해야 한다."""
     import sys
-    from oh_my_kanban.linear_errors import LinearGraphQLError, handle_linear_error
+    from oh_my_kanban.providers.linear.errors import LinearGraphQLError, handle_linear_error
 
     @handle_linear_error
     def bad_func():
@@ -100,7 +100,7 @@ def test_handle_linear_error_decorator_catches_graphql_error(capsys):
 def test_handle_linear_error_reraises_click_usage_error():
     """handle_linear_error는 click.UsageError를 다시 올려야 한다."""
     import click
-    from oh_my_kanban.linear_errors import handle_linear_error
+    from oh_my_kanban.providers.linear.errors import handle_linear_error
 
     @handle_linear_error
     def bad_func():
@@ -114,7 +114,7 @@ def test_handle_linear_error_reraises_click_usage_error():
 
 def test_linear_client_rejects_empty_api_key():
     """LinearClient는 빈 api_key로 생성 시 ValueError를 발생시켜야 한다."""
-    from oh_my_kanban.linear_client import LinearClient
+    from oh_my_kanban.providers.linear.client import LinearClient
 
     with pytest.raises(ValueError, match="api_key"):
         LinearClient("")
@@ -122,7 +122,7 @@ def test_linear_client_rejects_empty_api_key():
 
 def test_linear_client_execute_sends_correct_request():
     """execute()는 POST 요청에 query와 variables를 포함해야 한다."""
-    from oh_my_kanban.linear_client import LinearClient
+    from oh_my_kanban.providers.linear.client import LinearClient
 
     mock_response = MagicMock()
     mock_response.status_code = 200
@@ -141,8 +141,8 @@ def test_linear_client_execute_sends_correct_request():
 
 def test_linear_client_execute_raises_graphql_error_on_errors_field():
     """execute()는 errors 필드가 있으면 LinearGraphQLError를 발생시켜야 한다."""
-    from oh_my_kanban.linear_client import LinearClient
-    from oh_my_kanban.linear_errors import LinearGraphQLError
+    from oh_my_kanban.providers.linear.client import LinearClient
+    from oh_my_kanban.providers.linear.errors import LinearGraphQLError
 
     mock_response = MagicMock()
     mock_response.status_code = 200
@@ -158,8 +158,8 @@ def test_linear_client_execute_raises_graphql_error_on_errors_field():
 
 def test_linear_client_execute_raises_http_error_on_http_failure():
     """execute()는 HTTP 에러 시 LinearHttpError를 발생시켜야 한다."""
-    from oh_my_kanban.linear_client import LinearClient
-    from oh_my_kanban.linear_errors import LinearHttpError
+    from oh_my_kanban.providers.linear.client import LinearClient
+    from oh_my_kanban.providers.linear.errors import LinearHttpError
 
     mock_response = MagicMock()
     mock_response.status_code = 401
@@ -177,7 +177,7 @@ def test_linear_client_execute_raises_http_error_on_http_failure():
 
 def test_linear_client_paginate_relay_single_page():
     """paginate_relay()는 단일 페이지 결과를 올바르게 수집해야 한다."""
-    from oh_my_kanban.linear_client import LinearClient
+    from oh_my_kanban.providers.linear.client import LinearClient
 
     nodes = [{"id": "i1"}, {"id": "i2"}]
     data = {"issues": {"nodes": nodes, "pageInfo": {"hasNextPage": False, "endCursor": None}}}
@@ -190,7 +190,7 @@ def test_linear_client_paginate_relay_single_page():
 
 def test_linear_client_paginate_relay_multi_page():
     """paginate_relay()는 여러 페이지를 순회하여 모든 노드를 수집해야 한다."""
-    from oh_my_kanban.linear_client import LinearClient
+    from oh_my_kanban.providers.linear.client import LinearClient
 
     page1 = {"issues": {"nodes": [{"id": "i1"}], "pageInfo": {"hasNextPage": True, "endCursor": "c1"}}}
     page2 = {"issues": {"nodes": [{"id": "i2"}], "pageInfo": {"hasNextPage": False, "endCursor": None}}}
@@ -203,7 +203,7 @@ def test_linear_client_paginate_relay_multi_page():
 
 def test_linear_client_paginate_relay_max_pages_warning(capsys):
     """paginate_relay()는 max_pages 초과 시 경고를 출력해야 한다."""
-    from oh_my_kanban.linear_client import LinearClient
+    from oh_my_kanban.providers.linear.client import LinearClient
 
     always_next = {"issues": {"nodes": [{"id": "x"}], "pageInfo": {"hasNextPage": True, "endCursor": "cx"}}}
 
@@ -220,7 +220,7 @@ def test_linear_client_paginate_relay_max_pages_warning(capsys):
 def test_linear_context_client_raises_without_api_key():
     """LinearContext.client는 api_key 없으면 click.UsageError를 발생시켜야 한다."""
     import click
-    from oh_my_kanban.linear_context import LinearContext
+    from oh_my_kanban.providers.linear.context import LinearContext
 
     ctx = LinearContext(_api_key="", team_id="")
     with pytest.raises(click.UsageError):
@@ -229,8 +229,8 @@ def test_linear_context_client_raises_without_api_key():
 
 def test_linear_context_client_lazy_init():
     """LinearContext.client는 처음 접근 시 LinearClient를 생성해야 한다."""
-    from oh_my_kanban.linear_client import LinearClient
-    from oh_my_kanban.linear_context import LinearContext
+    from oh_my_kanban.providers.linear.client import LinearClient
+    from oh_my_kanban.providers.linear.context import LinearContext
 
     ctx = LinearContext(_api_key="lin_api_test", team_id="team1")
     assert ctx._client is None
@@ -242,7 +242,7 @@ def test_linear_context_client_lazy_init():
 def test_linear_context_require_team_raises_without_team_id():
     """LinearContext.require_team()은 team_id 없으면 click.UsageError를 발생시켜야 한다."""
     import click
-    from oh_my_kanban.linear_context import LinearContext
+    from oh_my_kanban.providers.linear.context import LinearContext
 
     ctx = LinearContext(_api_key="lin_api_test", team_id="")
     with pytest.raises(click.UsageError):
@@ -251,7 +251,7 @@ def test_linear_context_require_team_raises_without_team_id():
 
 def test_linear_context_require_team_returns_team_id():
     """LinearContext.require_team()은 team_id를 반환해야 한다."""
-    from oh_my_kanban.linear_context import LinearContext
+    from oh_my_kanban.providers.linear.context import LinearContext
 
     ctx = LinearContext(_api_key="lin_api_test", team_id="team-abc")
     assert ctx.require_team() == "team-abc"

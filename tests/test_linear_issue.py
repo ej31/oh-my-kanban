@@ -9,7 +9,7 @@ from click.testing import CliRunner
 
 def _make_ctx(api_key: str = "lin_api_test", team_id: str = "team-1", output: str = "json"):
     """테스트용 LinearContext를 생성한다."""
-    from oh_my_kanban.linear_context import LinearContext
+    from oh_my_kanban.providers.linear.context import LinearContext
     return LinearContext(_api_key=api_key, team_id=team_id, output=output)
 
 
@@ -24,7 +24,7 @@ def _invoke(cmd, args: list, obj=None, input: str | None = None):
 
 def test_issue_list_calls_paginate_relay():
     """issue list는 paginate_relay를 호출해 이슈 목록을 반환해야 한다."""
-    from oh_my_kanban.commands.linear.issue import issue_list
+    from oh_my_kanban.providers.linear.commands.issue import issue_list
 
     nodes = [{"id": "i1", "identifier": "ENG-1", "title": "첫 번째 이슈", "priority": 2}]
     ctx = _make_ctx()
@@ -36,7 +36,7 @@ def test_issue_list_calls_paginate_relay():
 
 def test_issue_list_with_team_filter():
     """issue list --team TEAM_ID는 variables에 filter를 포함해야 한다."""
-    from oh_my_kanban.commands.linear.issue import issue_list
+    from oh_my_kanban.providers.linear.commands.issue import issue_list
 
     ctx = _make_ctx()
     captured_vars = {}
@@ -55,7 +55,7 @@ def test_issue_list_with_team_filter():
 
 def test_issue_list_with_first_option():
     """issue list --first N은 variables에 first=N을 포함해야 한다."""
-    from oh_my_kanban.commands.linear.issue import issue_list
+    from oh_my_kanban.providers.linear.commands.issue import issue_list
 
     ctx = _make_ctx()
     captured_vars = {}
@@ -75,7 +75,7 @@ def test_issue_list_with_first_option():
 
 def test_issue_get_by_uuid():
     """issue get <UUID>는 execute를 호출해 이슈 상세를 반환해야 한다."""
-    from oh_my_kanban.commands.linear.issue import issue_get
+    from oh_my_kanban.providers.linear.commands.issue import issue_get
 
     ctx = _make_ctx()
     issue_data = {"id": "uuid-123", "identifier": "ENG-1", "title": "테스트"}
@@ -87,7 +87,7 @@ def test_issue_get_by_uuid():
 
 def test_issue_get_by_key_format():
     """issue get KEY-123 형식도 execute에 그대로 전달해야 한다."""
-    from oh_my_kanban.commands.linear.issue import issue_get
+    from oh_my_kanban.providers.linear.commands.issue import issue_get
 
     ctx = _make_ctx()
     issue_data = {"id": "uuid-abc", "identifier": "ENG-42", "title": "키 형식 테스트"}
@@ -108,7 +108,7 @@ def test_issue_get_by_key_format():
 
 def test_issue_create_success():
     """issue create --title --team은 issueCreate mutation을 실행해야 한다."""
-    from oh_my_kanban.commands.linear.issue import issue_create
+    from oh_my_kanban.providers.linear.commands.issue import issue_create
 
     ctx = _make_ctx()
     new_issue = {"id": "new-id", "identifier": "ENG-5", "title": "신규 이슈"}
@@ -120,7 +120,7 @@ def test_issue_create_success():
 
 def test_issue_create_with_all_options():
     """issue create는 선택적 옵션(description, priority, state, assignee)을 input에 포함해야 한다."""
-    from oh_my_kanban.commands.linear.issue import issue_create
+    from oh_my_kanban.providers.linear.commands.issue import issue_create
 
     ctx = _make_ctx()
     captured = {}
@@ -146,7 +146,7 @@ def test_issue_create_with_all_options():
 
 def test_issue_create_failure_raises_usage_error():
     """issueCreate success=False이면 UsageError를 발생시켜야 한다."""
-    from oh_my_kanban.commands.linear.issue import issue_create
+    from oh_my_kanban.providers.linear.commands.issue import issue_create
 
     ctx = _make_ctx()
     with patch.object(ctx.client, "execute", return_value={"issueCreate": {"success": False}}):
@@ -165,7 +165,7 @@ def test_issue_create_failure_raises_usage_error():
 
 def test_issue_update_success():
     """issue update <ID> --priority 3은 issueUpdate mutation을 실행해야 한다."""
-    from oh_my_kanban.commands.linear.issue import issue_update
+    from oh_my_kanban.providers.linear.commands.issue import issue_update
 
     ctx = _make_ctx()
     updated = {"id": "i1", "identifier": "ENG-1", "title": "업데이트됨"}
@@ -177,7 +177,7 @@ def test_issue_update_success():
 
 def test_issue_update_empty_input_raises_error():
     """수정 옵션 없이 issue update 호출 시 UsageError가 발생해야 한다."""
-    from oh_my_kanban.commands.linear.issue import issue_update
+    from oh_my_kanban.providers.linear.commands.issue import issue_update
 
     ctx = _make_ctx()
     runner = CliRunner()
@@ -187,7 +187,7 @@ def test_issue_update_empty_input_raises_error():
 
 def test_issue_update_failure_raises_usage_error():
     """issueUpdate success=False이면 UsageError를 발생시켜야 한다."""
-    from oh_my_kanban.commands.linear.issue import issue_update
+    from oh_my_kanban.providers.linear.commands.issue import issue_update
 
     ctx = _make_ctx()
     with patch.object(ctx.client, "execute", return_value={"issueUpdate": {"success": False}}):
@@ -200,10 +200,10 @@ def test_issue_update_failure_raises_usage_error():
 
 def test_issue_delete_confirmed():
     """issue delete는 confirm_delete=True이면 issueDelete mutation을 실행해야 한다."""
-    from oh_my_kanban.commands.linear.issue import issue_delete
+    from oh_my_kanban.providers.linear.commands.issue import issue_delete
 
     ctx = _make_ctx()
-    with patch("oh_my_kanban.commands.linear.issue.confirm_delete", return_value=True), \
+    with patch("oh_my_kanban.providers.linear.commands.issue.confirm_delete", return_value=True), \
          patch.object(ctx.client, "execute", return_value={"issueDelete": {"success": True}}):
         result = _invoke(issue_delete, ["i1"], obj=ctx)
 
@@ -213,10 +213,10 @@ def test_issue_delete_confirmed():
 
 def test_issue_delete_aborted():
     """issue delete는 confirm_delete=False이면 Abort하여 삭제하지 않아야 한다."""
-    from oh_my_kanban.commands.linear.issue import issue_delete
+    from oh_my_kanban.providers.linear.commands.issue import issue_delete
 
     ctx = _make_ctx()
-    with patch("oh_my_kanban.commands.linear.issue.confirm_delete", return_value=False):
+    with patch("oh_my_kanban.providers.linear.commands.issue.confirm_delete", return_value=False):
         runner = CliRunner()
         result = runner.invoke(issue_delete, ["i1"], obj=ctx, catch_exceptions=True)
 
@@ -226,10 +226,10 @@ def test_issue_delete_aborted():
 
 def test_issue_delete_failure_raises_usage_error():
     """issueDelete success=False이면 UsageError를 발생시켜야 한다."""
-    from oh_my_kanban.commands.linear.issue import issue_delete
+    from oh_my_kanban.providers.linear.commands.issue import issue_delete
 
     ctx = _make_ctx()
-    with patch("oh_my_kanban.commands.linear.issue.confirm_delete", return_value=True), \
+    with patch("oh_my_kanban.providers.linear.commands.issue.confirm_delete", return_value=True), \
          patch.object(ctx.client, "execute", return_value={"issueDelete": {"success": False}}):
         runner = CliRunner()
         result = runner.invoke(issue_delete, ["i1"], obj=ctx, catch_exceptions=True)
@@ -241,7 +241,7 @@ def test_issue_delete_failure_raises_usage_error():
 
 def test_comment_list_returns_nodes():
     """comment list <ISSUE_ID>는 이슈의 댓글 목록을 반환해야 한다."""
-    from oh_my_kanban.commands.linear.issue import issue_comment
+    from oh_my_kanban.providers.linear.commands.issue import issue_comment
 
     ctx = _make_ctx()
     nodes = [{"id": "c1", "body": "첫 댓글", "createdAt": "2024-01-01"}]
@@ -255,7 +255,7 @@ def test_comment_list_returns_nodes():
 
 def test_comment_list_empty():
     """comment list는 댓글이 없으면 빈 결과를 출력해야 한다."""
-    from oh_my_kanban.commands.linear.issue import issue_comment
+    from oh_my_kanban.providers.linear.commands.issue import issue_comment
 
     ctx = _make_ctx()
     data = {"issue": {"comments": {"nodes": []}}}
@@ -270,7 +270,7 @@ def test_comment_list_empty():
 
 def test_comment_create_success():
     """comment create <ISSUE_ID> --body BODY는 commentCreate mutation을 실행해야 한다."""
-    from oh_my_kanban.commands.linear.issue import issue_comment
+    from oh_my_kanban.providers.linear.commands.issue import issue_comment
 
     ctx = _make_ctx()
     comment = {"id": "c-new", "body": "새 댓글", "createdAt": "2024-01-01"}
@@ -285,7 +285,7 @@ def test_comment_create_success():
 
 def test_comment_create_sends_correct_input():
     """comment create는 issueId와 body를 input에 담아 전달해야 한다."""
-    from oh_my_kanban.commands.linear.issue import issue_comment
+    from oh_my_kanban.providers.linear.commands.issue import issue_comment
 
     ctx = _make_ctx()
     captured = {}
@@ -304,7 +304,7 @@ def test_comment_create_sends_correct_input():
 
 def test_comment_create_failure_raises_error():
     """commentCreate success=False이면 UsageError가 발생해야 한다."""
-    from oh_my_kanban.commands.linear.issue import issue_comment
+    from oh_my_kanban.providers.linear.commands.issue import issue_comment
 
     ctx = _make_ctx()
     with patch.object(ctx.client, "execute", return_value={"commentCreate": {"success": False}}):

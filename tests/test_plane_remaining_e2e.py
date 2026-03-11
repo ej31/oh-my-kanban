@@ -6,11 +6,11 @@ from unittest.mock import MagicMock
 from helpers import paginated as _paginated
 
 from oh_my_kanban.cli import cli
-from oh_my_kanban.commands.epic import epic
-from oh_my_kanban.commands.milestone import milestone
-from oh_my_kanban.commands.module import module
-from oh_my_kanban.commands.user import user
-from oh_my_kanban.commands.workspace import workspace
+from oh_my_kanban.providers.plane.commands.epic import epic
+from oh_my_kanban.providers.plane.commands.milestone import milestone
+from oh_my_kanban.providers.plane.commands.module import module
+from oh_my_kanban.providers.plane.commands.user import user
+from oh_my_kanban.providers.plane.commands.workspace import workspace
 
 # ─── module ───────────────────────────────────────────────────────────────────
 

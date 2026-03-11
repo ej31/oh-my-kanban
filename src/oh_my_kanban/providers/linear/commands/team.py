@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import click
 
-from oh_my_kanban.linear_context import LinearContext
-from oh_my_kanban.linear_errors import handle_linear_error
+from oh_my_kanban.providers.linear.context import LinearContext
+from oh_my_kanban.providers.linear.errors import handle_linear_error
 from oh_my_kanban.output import format_output
 
 _TEAMS_QUERY = "{ teams { nodes { id name key } } }"

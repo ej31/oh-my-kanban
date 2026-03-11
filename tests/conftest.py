@@ -7,7 +7,7 @@ import pytest
 from click.testing import CliRunner, Result
 
 from oh_my_kanban.cli import cli
-from oh_my_kanban.context import CliContext
+from oh_my_kanban.providers.plane.context import PlaneContext as CliContext
 
 # ---------------------------------------------------------------------------
 # 기본 픽스처

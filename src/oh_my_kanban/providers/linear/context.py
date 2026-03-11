@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 
 import click
 
-from oh_my_kanban.linear_client import LinearClient
+from oh_my_kanban.providers.linear.client import LinearClient
 
 
 @dataclass

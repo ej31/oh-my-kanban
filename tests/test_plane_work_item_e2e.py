@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 from helpers import paginated as _paginated
 
-from oh_my_kanban.commands.work_item import work_item
+from oh_my_kanban.providers.plane.commands.work_item import work_item
 
 # ─── work-item list ────────────────────────────────────────────────────────────
 

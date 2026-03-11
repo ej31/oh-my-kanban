@@ -4,7 +4,7 @@ from __future__ import annotations
 import click
 import httpx
 
-from oh_my_kanban.linear_errors import LinearGraphQLError, LinearHttpError
+from oh_my_kanban.providers.linear.errors import LinearGraphQLError, LinearHttpError
 
 
 class LinearClient:

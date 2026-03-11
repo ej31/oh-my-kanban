@@ -5,10 +5,10 @@ from unittest.mock import MagicMock
 
 from helpers import paginated as _paginated
 
-from oh_my_kanban.commands.cycle import cycle
-from oh_my_kanban.commands.label import label
-from oh_my_kanban.commands.project import project
-from oh_my_kanban.commands.state import state
+from oh_my_kanban.providers.plane.commands.cycle import cycle
+from oh_my_kanban.providers.plane.commands.label import label
+from oh_my_kanban.providers.plane.commands.project import project
+from oh_my_kanban.providers.plane.commands.state import state
 
 # ─── project ──────────────────────────────────────────────────────────────────
 

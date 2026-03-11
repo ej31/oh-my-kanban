@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import click
 
-from oh_my_kanban.context import CliContext
-from oh_my_kanban.errors import handle_api_error
+from oh_my_kanban.providers.plane.context import PlaneContext as CliContext
+from oh_my_kanban.providers.plane.errors import handle_api_error
 from oh_my_kanban.output import format_output
 
 # 사용자 정보 출력 컬럼

@@ -5,8 +5,8 @@ from __future__ import annotations
 import click
 from plane.models.labels import CreateLabel, UpdateLabel
 
-from oh_my_kanban.context import CliContext
-from oh_my_kanban.errors import handle_api_error
+from oh_my_kanban.providers.plane.context import PlaneContext as CliContext
+from oh_my_kanban.providers.plane.errors import handle_api_error
 from oh_my_kanban.output import format_output, format_pagination_hint
 
 # 출력 컬럼 정의

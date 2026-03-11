@@ -4,10 +4,10 @@ from __future__ import annotations
 from unittest.mock import patch
 
 from oh_my_kanban.cli import cli
-from oh_my_kanban.commands.cycle import cycle
-from oh_my_kanban.commands.label import label
-from oh_my_kanban.commands.work_item import work_item
-from oh_my_kanban.commands.workspace import workspace
+from oh_my_kanban.providers.plane.commands.cycle import cycle
+from oh_my_kanban.providers.plane.commands.label import label
+from oh_my_kanban.providers.plane.commands.work_item import work_item
+from oh_my_kanban.providers.plane.commands.workspace import workspace
 from oh_my_kanban.config import Config
 
 # ─── API 키 없을 때 ────────────────────────────────────────────────────────────
