@@ -18,7 +18,11 @@ _WORK_ITEM_COLUMNS = ["id", "name", "priority", "state"]
 
 @click.group()
 def cycle() -> None:
-    """사이클 관리."""
+    """사이클 관리.
+
+    Plane provider context is inherited from `omk plane`.
+    Most commands require both workspace and project context.
+    """
     pass
 
 
@@ -85,7 +89,11 @@ def cycle_create(
     end_date: str | None,
     description: str | None,
 ) -> None:
-    """새 사이클을 생성한다."""
+    """새 사이클을 생성한다.
+
+    Requires Plane workspace/project context from `omk plane`,
+    `PLANE_WORKSPACE_SLUG`, `PLANE_PROJECT_ID`, or the selected profile config.
+    """
     from plane.models.cycles import CreateCycle
 
     project_id = ctx.require_project()

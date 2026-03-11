@@ -20,7 +20,14 @@ from .context import LinearContext
 @click.group("linear")
 @click.pass_context
 def linear(ctx: click.Context) -> None:
-    """Linear 프로젝트 관리."""
+    """Linear 프로젝트 관리.
+
+    Credentials:
+      LINEAR_API_KEY or config linear.api_key
+
+    Team fallback for team-scoped commands:
+      --team > LINEAR_TEAM_ID > config linear.team_id
+    """
 
     parent_obj = ctx.obj
     if isinstance(parent_obj, AppContext):

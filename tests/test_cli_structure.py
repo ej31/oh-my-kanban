@@ -59,8 +59,15 @@ def test_top_level_does_not_show_plane_only_options(runner):
     """최상위 --help에 Plane 전용 옵션이 노출되면 안 된다."""
     result = runner.invoke(cli, ["--help"])
     assert result.exit_code == 0
-    assert "--workspace" not in result.output
-    assert "--project" not in result.output
+    assert "-w, --workspace" not in result.output
+    assert "-p, --project" not in result.output
+
+
+def test_top_level_help_guides_agents_to_provider_groups(runner):
+    """최상위 --help는 provider-specific 옵션 위치를 안내해야 한다."""
+    result = runner.invoke(cli, ["--help"])
+    assert result.exit_code == 0
+    assert "Provider-specific options live under each provider group" in result.output
 
 
 # ---------------------------------------------------------------------------
@@ -81,6 +88,7 @@ def test_plane_subgroup_shows_workspace_and_project_options(runner):
     assert result.exit_code == 0
     assert "--workspace" in result.output
     assert "--project" in result.output
+    assert "group option > environment variable > selected profile config" in result.output
 
 
 def test_plane_subgroup_shows_cycle(runner):
@@ -186,6 +194,14 @@ def test_plane_subgroup_shows_work_item_property(runner):
     result = runner.invoke(cli, ["plane", "--help"])
     assert result.exit_code == 0
     assert "work-item-property" in result.output
+
+
+def test_linear_subgroup_mentions_credential_and_team_fallback(runner):
+    """omk linear --help는 credential/team fallback을 설명해야 한다."""
+    result = runner.invoke(cli, ["linear", "--help"])
+    assert result.exit_code == 0
+    assert "LINEAR_API_KEY" in result.output
+    assert "LINEAR_TEAM_ID" in result.output
 
 
 # ---------------------------------------------------------------------------

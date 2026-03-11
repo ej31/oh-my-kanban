@@ -31,7 +31,15 @@ from .commands.workspace import workspace
 
 @click.group(
     "plane",
-    help="Plane 프로젝트 관리 (Work Items, Cycles, Modules 등).\n\n'pl'은 'plane'의 단축 alias입니다.",
+    help=(
+        "Plane 프로젝트 관리 (Work Items, Cycles, Modules 등).\n\n"
+        "Provider context:\n"
+        "  --workspace / PLANE_WORKSPACE_SLUG / config plane.workspace_slug\n"
+        "  --project   / PLANE_PROJECT_ID   / config plane.project_id\n\n"
+        "우선순위:\n"
+        "  group option > environment variable > selected profile config\n\n"
+        "'pl'은 'plane'의 단축 alias입니다."
+    ),
 )
 @click.option("--workspace", "-w", envvar="PLANE_WORKSPACE_SLUG", default=None, help="워크스페이스 슬러그")
 @click.option("--project", "-p", envvar="PLANE_PROJECT_ID", default=None, help="프로젝트 UUID")

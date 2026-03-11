@@ -34,8 +34,24 @@ oh-my-kanban is a Python CLI for working with Plane and Linear from scripts, age
 
 - Runtime stays unified under `omk`
 - Provider-specific implementation lives under `src/oh_my_kanban/providers/<name>/`
-- Legacy `commands/*`, `commands/linear/*`, `context.py`, and provider-specific root modules remain as compatibility wrappers only
-- New provider-specific code should be added under `providers/<name>/`, not under compatibility wrapper paths
+- Provider-local modules are the only canonical implementation paths
+- New provider-specific code should be added under `providers/<name>/`
+
+## Agent Workflow
+
+When an AI agent needs to operate the CLI safely, the recommended discovery order is:
+
+1. `omk config --help`
+2. `omk config show --profile PROFILE`
+3. `omk plane --help` or `omk linear --help`
+4. the target subcommand `--help`
+
+Important hidden-context rules are:
+
+- Plane workspace/project context lives on `omk plane`, not on the root CLI
+- Plane values can come from group options, environment variables, or config
+- Linear credentials come from environment variables or config
+- Team-scoped Linear commands can fall back from `--team` to `LINEAR_TEAM_ID` to config
 
 ## Installation
 

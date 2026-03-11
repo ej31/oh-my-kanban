@@ -68,7 +68,12 @@ def _validate_date(ctx: click.Context, param: click.Parameter, value: str | None
 
 @click.group("work-item")
 def work_item() -> None:
-    """작업 항목 관리."""
+    """작업 항목 관리.
+
+    Plane provider context is inherited from `omk plane`.
+    Most commands require project context from:
+      --project, PLANE_PROJECT_ID, or config plane.project_id
+    """
     pass
 
 
@@ -93,7 +98,11 @@ def work_item_list(
     order_by: str | None,
     priority: str | None,
 ) -> None:
-    """작업 항목 목록을 조회한다."""
+    """작업 항목 목록을 조회한다.
+
+    Requires Plane project context from `omk plane --project`,
+    `PLANE_PROJECT_ID`, or config `plane.project_id`.
+    """
     from plane.models.query_params import WorkItemQueryParams
 
     project_id = ctx.require_project()
@@ -176,7 +185,11 @@ def work_item_create(
     description: str | None,
     point: int | None,
 ) -> None:
-    """새 작업 항목을 생성한다."""
+    """새 작업 항목을 생성한다.
+
+    Requires Plane project context from `omk plane --project`,
+    `PLANE_PROJECT_ID`, or config `plane.project_id`.
+    """
     from plane.models.work_items import CreateWorkItem
 
     project_id = ctx.require_project()

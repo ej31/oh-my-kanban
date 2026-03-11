@@ -62,6 +62,7 @@ def test_config_init_help(runner):
 
     assert result.exit_code == 0
     assert "init" in result.output
+    assert "which providers to configure" in result.output
 
 
 def test_config_show_help(runner):
@@ -70,6 +71,7 @@ def test_config_show_help(runner):
 
     assert result.exit_code == 0
     assert "show" in result.output
+    assert "inspect effective profile values" in result.output
 
 
 def test_config_set_help(runner):
@@ -78,6 +80,15 @@ def test_config_set_help(runner):
 
     assert result.exit_code == 0
     assert "set" in result.output
+    assert "plane.project_id" in result.output
+
+
+def test_config_migrate_help(runner):
+    """omk config migrate --help는 migration 의도를 설명해야 한다."""
+    result = runner.invoke(cli, ["config", "migrate", "--help"])
+
+    assert result.exit_code == 0
+    assert "canonical namespaced" in result.output
 
 
 def test_config_profile_list_help(runner):

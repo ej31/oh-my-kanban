@@ -74,7 +74,10 @@ mutation CommentCreate($input: CommentCreateInput!) {
 
 @click.group()
 def issue() -> None:
-    """Linear 이슈 관리."""
+    """Linear 이슈 관리.
+
+    Credentials come from `LINEAR_API_KEY` or config `linear.api_key`.
+    """
     pass
 
 
@@ -84,7 +87,10 @@ def issue() -> None:
 @click.pass_obj
 @handle_linear_error
 def issue_list(ctx: LinearContext, team_id: str | None, first: int) -> None:
-    """이슈 목록을 조회한다."""
+    """이슈 목록을 조회한다.
+
+    `--team` is optional. If omitted, issues are listed without a team filter.
+    """
     variables: dict = {"first": first}
     if team_id:
         variables["filter"] = {"team": {"id": {"eq": team_id}}}
@@ -120,7 +126,11 @@ def issue_create(
     state_id: str | None,
     assignee_id: str | None,
 ) -> None:
-    """새 이슈를 생성한다."""
+    """새 이슈를 생성한다.
+
+    `--team` is required for issue creation even if `LINEAR_TEAM_ID` is set.
+    API credentials are still loaded from env/config.
+    """
     input_data: dict = {"title": title, "teamId": team_id}
     if description:
         input_data["description"] = description

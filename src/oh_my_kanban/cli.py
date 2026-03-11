@@ -24,12 +24,19 @@ def cli(
     output: str | None,
     profile: str,
 ) -> None:
-    """oh-my-kanban - 경량 프로젝트 관리 CLI.
+    """oh-my-kanban unified CLI for Plane and Linear.
 
-    커맨드 구조:
-      omk plane <command>   Plane 프로젝트 관리 (pl은 단축 alias)
-      omk linear <command>  Linear 프로젝트 관리 (ln은 단축 alias)
-      omk config <command>  설정 관리 (provider 독립)
+    Root-only options:
+      --output   default output format
+      --profile  config profile to load
+
+    Command discovery order:
+      1. omk config --help
+      2. omk plane --help
+      3. omk linear --help
+
+    Provider-specific options live under each provider group.
+    Example: omk plane --workspace MY_WORKSPACE --project PROJECT_UUID ...
     """
     cfg = load_config(profile)
     final_output = output or cfg.output or "table"

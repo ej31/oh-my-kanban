@@ -146,13 +146,28 @@ def _prompt_linear_config(existing: Config) -> dict[str, str]:
 
 @click.group()
 def config() -> None:
-    """설정 파일 관리."""
+    """설정 파일 관리.
+
+    Agent workflow:
+      1. config init    - provider-aware interactive setup
+      2. config show    - inspect effective values for a profile
+      3. config set     - update one dotted key
+      4. config migrate - rewrite legacy flat config to canonical namespaced TOML
+    """
 
 
 @config.command("init")
 @click.option("--profile", default="default", help="초기화할 프로필")
 def config_init(profile: str) -> None:
-    """대화형으로 provider-aware 설정을 생성한다."""
+    """대화형으로 provider-aware 설정을 생성한다.
+
+    Prompts for:
+      - which providers to configure (Plane, Linear)
+      - provider credentials/default values
+      - default output format
+
+    Writes canonical namespaced TOML for the selected profile.
+    """
 
     click.echo("oh-my-kanban 초기 설정을 시작합니다.")
     click.echo(f"설정 파일 위치: {CONFIG_FILE}")
@@ -191,7 +206,11 @@ def config_init(profile: str) -> None:
 @config.command("show")
 @click.option("--profile", default="default", help="조회할 프로필")
 def config_show(profile: str) -> None:
-    """현재 설정을 출력한다. API 키는 마스킹 처리된다."""
+    """현재 설정을 출력한다. API 키는 마스킹 처리된다.
+
+    Use this first if an agent needs to inspect effective profile values
+    before running provider commands.
+    """
 
     cfg = load_config(profile)
     click.echo(f"프로필      : {cfg.profile}")
@@ -231,6 +250,9 @@ def config_set(key: str, value: str, profile: str) -> None:
       plane.project_id
       linear.api_key
       linear.team_id
+
+    Example:
+      omk config set plane.project_id PROJECT_UUID
     """
 
     if key not in _PUBLIC_CONFIG_KEYS:
@@ -250,7 +272,11 @@ def config_set(key: str, value: str, profile: str) -> None:
 @click.option("--profile", default=None, help="마이그레이션할 프로필 (기본: default)")
 @click.option("--all-profiles", is_flag=True, help="저장된 모든 프로필을 마이그레이션")
 def config_migrate(profile: str | None, all_profiles: bool) -> None:
-    """legacy flat config를 canonical namespaced TOML로 다시 저장한다."""
+    """legacy flat config를 canonical namespaced TOML로 다시 저장한다.
+
+    This does not change values. It only rewrites the file into the current
+    namespaced profile format.
+    """
 
     profiles = list_profiles()
     if not profiles:
