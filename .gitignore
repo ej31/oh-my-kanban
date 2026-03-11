@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyw
+*.pyz
+*.egg-info/
+*.egg
+dist/
+build/
+*.whl
+
+# 가상환경
+.venv/
+venv/
+env/
+.env
+.env.*
+
+# 에디터
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 로그
+*.log
+
+# OMC 세션 상태 (프로젝트 메모리는 포함)
+.omc/state/
+.omc/notepad.md
+.omc/prd.json
+
+# 테스트 캐시
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
