@@ -46,6 +46,14 @@ cd oh-my-kanban
 pip install -e ".[dev]"
 ```
 
+### Interactive Setup Wizard
+
+```bash
+cd installer
+npm install
+npm run start
+```
+
 ## Quick Start
 
 ### 1. Configure Plane

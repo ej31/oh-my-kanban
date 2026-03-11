@@ -1,10 +1,24 @@
-/**
- * Future prompt contract for provider selection.
- *
- * The real implementation should present checkbox-style provider selection
- * using metadata from the runtime provider registry.
- */
+import { cancel, isCancel, multiselect } from '@clack/prompts';
 
-export type ProviderSelection = {
-  selectedProviders: string[];
-};
+import { getInstallerProviders } from '../provider-metadata.js';
+
+
+export async function promptProviderSelection(): Promise<string[]> {
+  const providers = getInstallerProviders();
+  const selected = await multiselect<string>({
+    message: 'Select providers to configure',
+    options: providers.map((provider) => ({
+      value: provider.name,
+      label: provider.installer.label,
+      hint: provider.installer.hint,
+    })),
+    required: true,
+  });
+
+  if (isCancel(selected)) {
+    cancel('Operation cancelled.');
+    process.exit(0);
+  }
+
+  return selected;
+}

@@ -4,29 +4,29 @@ from __future__ import annotations
 
 import click
 
-from oh_my_kanban.commands.agent_run import agent_run
-from oh_my_kanban.commands.customer import customer
-from oh_my_kanban.commands.cycle import cycle
-from oh_my_kanban.commands.epic import epic
-from oh_my_kanban.commands.initiative import initiative
-from oh_my_kanban.commands.intake import intake
-from oh_my_kanban.commands.label import label
-from oh_my_kanban.commands.milestone import milestone
-from oh_my_kanban.commands.module import module
-from oh_my_kanban.commands.page import page
-from oh_my_kanban.commands.project import project
-from oh_my_kanban.commands.state import state
-from oh_my_kanban.commands.sticky import sticky
-from oh_my_kanban.commands.teamspace import teamspace
-from oh_my_kanban.commands.user import user
-from oh_my_kanban.commands.work_item import work_item
-from oh_my_kanban.commands.work_item_property import work_item_property
-from oh_my_kanban.commands.work_item_type import work_item_type
-from oh_my_kanban.commands.workspace import workspace
 from oh_my_kanban.config import load_config
 from oh_my_kanban.core.app_context import AppContext
 
 from .context import PlaneContext
+from .commands.agent_run import agent_run
+from .commands.customer import customer
+from .commands.cycle import cycle
+from .commands.epic import epic
+from .commands.initiative import initiative
+from .commands.intake import intake
+from .commands.label import label
+from .commands.milestone import milestone
+from .commands.module import module
+from .commands.page import page
+from .commands.project import project
+from .commands.state import state
+from .commands.sticky import sticky
+from .commands.teamspace import teamspace
+from .commands.user import user
+from .commands.work_item import work_item
+from .commands.work_item_property import work_item_property
+from .commands.work_item_type import work_item_type
+from .commands.workspace import workspace
 
 
 @click.group(
@@ -75,4 +75,3 @@ plane.add_command(work_item_type, name="work-item-type")
 plane.add_command(work_item_property, name="work-item-property")
 plane.add_command(agent_run, name="agent-run")
 plane.add_command(sticky)
-

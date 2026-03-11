@@ -1,0 +1,32 @@
+{
+  "providers": [
+    {
+      "name": "plane",
+      "aliases": ["pl"],
+      "config_keys": [
+        "plane.base_url",
+        "plane.api_key",
+        "plane.workspace_slug",
+        "plane.project_id"
+      ],
+      "supports_self_hosted": true,
+      "installer": {
+        "label": "Plane",
+        "hint": "Projects, work items, cycles, modules"
+      }
+    },
+    {
+      "name": "linear",
+      "aliases": ["ln"],
+      "config_keys": [
+        "linear.api_key",
+        "linear.team_id"
+      ],
+      "supports_self_hosted": false,
+      "installer": {
+        "label": "Linear",
+        "hint": "Issues, teams, projects, cycles"
+      }
+    }
+  ]
+}

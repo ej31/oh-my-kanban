@@ -1,11 +1,31 @@
 {
   "name": "@oh-my-kanban/setup",
-  "private": true,
-  "version": "0.0.0-stub",
-  "description": "Phase-2 interactive installer scaffold for oh-my-kanban",
+  "version": "0.1.0",
+  "description": "Interactive setup wizard for the unified oh-my-kanban CLI",
   "type": "module",
+  "bin": {
+    "oh-my-kanban-setup": "dist/index.js"
+  },
   "scripts": {
-    "build": "echo 'installer scaffold only'",
-    "start": "node ./src/index.ts"
+    "build": "tsup src/index.ts --format esm --out-dir dist --clean",
+    "start": "tsx src/index.ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.1.0",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsup": "^8.4.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
   }
 }

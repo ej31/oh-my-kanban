@@ -24,6 +24,7 @@ env/
 .vscode/
 *.swp
 *.swo
+node_modules/
 
 # 로그
 *.log
