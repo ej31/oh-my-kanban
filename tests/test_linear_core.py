@@ -293,3 +293,27 @@ def test_load_config_reads_linear_team_id_from_env():
     with patch.dict(os.environ, {"LINEAR_TEAM_ID": "team-from-env"}):
         cfg = load_config()
     assert cfg.linear_team_id == "team-from-env"
+
+
+def test_load_config_reads_linear_keys_from_toml(tmp_path):
+    """load_config()는 TOML 설정 파일의 Linear 키를 읽어야 한다."""
+    from oh_my_kanban.config import load_config
+
+    config_file = tmp_path / "config.toml"
+    config_file.write_text(
+        '\n'.join(
+            [
+                "[default]",
+                'linear_api_key = "lin_api_from_toml"',
+                'linear_team_id = "team-from-toml"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with patch("oh_my_kanban.config.CONFIG_FILE", config_file):
+        cfg = load_config()
+
+    assert cfg.linear_api_key == "lin_api_from_toml"
+    assert cfg.linear_team_id == "team-from-toml"

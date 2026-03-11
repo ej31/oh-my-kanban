@@ -202,7 +202,10 @@ def config_show(profile: str) -> None:
     click.echo(f"설정 파일   : {CONFIG_FILE if CONFIG_FILE.exists() else str(CONFIG_FILE) + ' (없음)'}")
     click.echo()
     click.echo("환경변수로 덮어쓰기 가능:")
-    click.echo("  PLANE_BASE_URL, PLANE_API_KEY, PLANE_WORKSPACE_SLUG, PLANE_PROJECT_ID")
+    click.echo(
+        "  PLANE_BASE_URL, PLANE_API_KEY, PLANE_WORKSPACE_SLUG, PLANE_PROJECT_ID, "
+        "LINEAR_API_KEY, LINEAR_TEAM_ID"
+    )
 
     # Linear 설정 섹션
     click.echo()
@@ -227,7 +230,7 @@ def config_set(key: str, value: str, profile: str) -> None:
 
     \b
     사용 가능한 키:
-      base_url, api_key, workspace_slug, project_id, output
+      base_url, api_key, workspace_slug, project_id, output, linear_api_key, linear_team_id
     """
     if key not in _ALLOWED_KEYS:
         raise click.UsageError(

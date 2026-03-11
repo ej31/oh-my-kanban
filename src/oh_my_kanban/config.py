@@ -72,6 +72,8 @@ def load_config(profile: str = "default") -> Config:
             cfg.workspace_slug = section.get("workspace_slug", cfg.workspace_slug)
             cfg.project_id = section.get("project_id", cfg.project_id)
             cfg.output = section.get("output", cfg.output)
+            cfg.linear_api_key = section.get("linear_api_key", cfg.linear_api_key)
+            cfg.linear_team_id = section.get("linear_team_id", cfg.linear_team_id)
         except (OSError, tomllib.TOMLDecodeError) as e:
             import sys
             print(f"경고: 설정 파일 파싱 오류 ({CONFIG_FILE}): {e}", file=sys.stderr)
