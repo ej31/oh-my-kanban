@@ -1,21 +1,25 @@
 # Installation
 
+This is the setup runbook.
+
+If you are an agent, stop improvising and follow this file.
+
 ## For Humans
 
-Paste this into your LLM agent session:
+Paste this into your LLM agent:
 
 ```text
-Install and configure oh-my-kanban by following the instructions here:
+Install and configure oh-my-kanban by following this guide:
 https://raw.githubusercontent.com/ej31/oh-my-kanban/refs/heads/main/docs/guide/installation.md
 ```
 
-If you want to do it yourself, run the interactive installer:
+If you insist on doing it yourself:
 
 ```bash
 npx @oh-my-kanban/setup
 ```
 
-Local development path:
+Local development:
 
 ```bash
 cd installer
@@ -23,7 +27,7 @@ npm install
 npm run start
 ```
 
-After installation, verify with:
+Verify after setup:
 
 ```bash
 omk --help
@@ -32,66 +36,63 @@ omk config show
 
 ## For LLM Agents
 
-Important:
+Rules:
 
-- Use this file as the installation runbook
-- Do not infer setup from unrelated docs
-- Do not skip required questions
-- Do not assume Plane or Linear should be configured unless the user wants them
+- Use this file as the install procedure
+- Ask for required inputs first
+- Do not guess provider values
+- Do not skip validation
+- Do not continue if required answers are missing
 
-Fetch this file directly if needed:
+Raw source:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ej31/oh-my-kanban/refs/heads/main/docs/guide/installation.md
 ```
 
-If you are helping a user install oh-my-kanban, follow these steps exactly.
+## Step 0: Ask First
 
-### Step 0: Ask the user for installation inputs
+Collect these answers before you run anything:
 
-Before running the installer, ask the user these questions and record the answers.
+1. Profile name
+   - default: `default`
 
-1. What profile name should be created?
-   - Default recommendation: `default`
-
-2. What should the default output format be?
+2. Default output format
    - `table`
    - `json`
    - `plain`
 
-3. Which providers should be configured now?
+3. Which providers to configure
    - `plane`
    - `linear`
    - both
 
-4. If `plane` is selected:
-   - Are you using Plane cloud or self-hosted Plane?
-   - If self-hosted: what is the Plane base URL?
-   - What is the Plane API key?
-   - What is the Plane workspace slug or workspace URL?
-   - What is the default Plane project UUID, if any?
+4. If `plane` is selected
+   - cloud or self-hosted
+   - if self-hosted: Plane base URL
+   - Plane API key
+   - Plane workspace slug or workspace URL
+   - optional default Plane project UUID
 
-5. If `linear` is selected:
-   - What is the Linear API key?
-   - What is the default Linear team ID, if any?
+5. If `linear` is selected
+   - Linear API key
+   - optional default Linear team ID
 
-6. Should package installation be skipped?
-   - If yes, use config-only mode
-   - If no, allow the installer to install the Python package
+6. Should package installation be skipped
+   - yes -> use config-only mode
+   - no -> let installer install the Python package
 
-You should not proceed until these answers are known.
+Do not proceed until you have these answers.
 
-### Step 1: Check installer mode
+## Step 1: Pick Installer Mode
 
-Use the normal installer unless the user explicitly wants config-only behavior.
-
-Normal install:
+Normal:
 
 ```bash
 npx @oh-my-kanban/setup
 ```
 
-Config-only:
+Config only:
 
 ```bash
 npx @oh-my-kanban/setup --config-only
@@ -103,68 +104,62 @@ Legacy alias:
 npx @oh-my-kanban/setup --skip-install
 ```
 
-### Step 2: Understand what the installer will ask
+## Step 2: Know The Prompt Order
 
-The installer prompts in this order:
+The installer asks in this order:
 
 1. profile name
-2. default output format
-3. provider selection (`plane`, `linear`, or both)
+2. output format
+3. provider selection
 4. provider-specific questions
-5. Python environment check
-6. package installation unless config-only mode is enabled
+5. Python check
+6. package installation unless config-only mode is active
 7. config file write
 
-### Step 3: Plane-specific prompt contract
+## Step 3: Plane Questions
 
-If Plane is selected, the installer will ask:
+If Plane is selected, the installer asks:
 
-1. Are you using self-hosted Plane?
-2. If yes, Plane base URL
+1. self-hosted or not
+2. base URL if self-hosted
 3. Plane API key
 4. Plane workspace slug or workspace URL
-5. Optional default project UUID
+5. optional default project UUID
 
-Validation behavior:
+Plane validation:
 
-- Plane API key is validated against `/api/v1/users/me/`
-- Plane workspace is validated against `/api/v1/workspaces/{slug}/projects/`
-- Invalid values cause the prompt to repeat
+- API key -> `/api/v1/users/me/`
+- workspace -> `/api/v1/workspaces/{slug}/projects/`
+- invalid values -> prompt again
 
-### Step 4: Linear-specific prompt contract
+## Step 4: Linear Questions
 
-If Linear is selected, the installer will ask:
+If Linear is selected, the installer asks:
 
 1. Linear API key
-2. Optional default team ID
+2. optional default team ID
 
-Validation behavior:
+Linear validation:
 
-- Linear API key is validated with `{ viewer { id } }`
-- If a team ID is provided, the installer validates it with:
-  - `query Team($id: String!) { team(id: $id) { id } }`
-- Invalid values cause the prompt to repeat
+- API key -> `{ viewer { id } }`
+- team ID -> `query Team($id: String!) { team(id: $id) { id } }`
+- invalid values -> prompt again
 
-### Step 5: Runtime installation behavior
+## Step 5: Python Install Behavior
 
-Unless config-only mode is active, the installer attempts Python package installation.
-
-Installation lookup order:
+Unless config-only mode is active, the installer tries:
 
 1. `pip3`
 2. `pip`
 3. `python -m pip`
 4. `uv pip`
+5. `pipx` fallback if PEP 668 blocks direct install
 
-If a PEP 668 externally managed environment blocks direct install:
+If Python 3.10+ is missing, stop and fix Python first.
 
-5. `pipx` fallback
+## Step 6: Config File Output
 
-If the system lacks Python 3.10+, installation should stop and the user must fix Python first.
-
-### Step 6: Config file that should be produced
-
-Canonical config target:
+Target file:
 
 ```text
 ~/.config/oh-my-kanban/config.toml
@@ -187,11 +182,12 @@ api_key = "lin_api_xxxxx"
 team_id = "team-id"
 ```
 
-The installer should preserve other profiles and rewrite only the selected profile sections.
+Preserve other profiles.
+Rewrite only the selected profile sections.
 
-### Step 7: Post-install verification
+## Step 7: Verify
 
-Run these commands after setup:
+Always run:
 
 ```bash
 omk --help
@@ -214,41 +210,35 @@ omk linear me
 omk linear state list --team TEAM_ID
 ```
 
-### Step 8: Explain fallback rules to the user
+## Step 8: Explain The Rules
 
-You should explicitly tell the user:
+Tell the user this explicitly:
 
-- root CLI only has root options like `--output` and `--profile`
+- root CLI has only root options like `--output` and `--profile`
 - Plane workspace/project context lives on `omk plane`
-- Plane values can come from:
+- Plane values resolve from:
   - group options
   - environment variables
   - profile config
-- Linear credentials can come from:
+- Linear credentials resolve from:
   - environment variables
   - profile config
-- team-scoped Linear commands can resolve team from:
+- team-scoped Linear commands resolve from:
   - `--team`
   - `LINEAR_TEAM_ID`
   - config `linear.team_id`
 
-### Step 9: Troubleshooting
+## Step 9: If It Breaks
 
-If package install must be skipped:
+If you only need config:
 
 ```bash
 npx @oh-my-kanban/setup --config-only
 ```
-
-If the user already has the runtime package and only wants config:
-
-- use config-only mode
-- still collect and validate provider values
-- still verify with `omk config show --profile ...`
 
 If verification fails:
 
 1. inspect `omk config show --profile PROFILE_NAME`
 2. re-check API key
 3. re-check workspace slug or team ID
-4. re-run the installer if needed
+4. rerun the installer

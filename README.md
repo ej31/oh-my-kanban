@@ -3,10 +3,10 @@
 | [한국어](docs/README_kr.md) | [ENGLISH](docs/README_en.md) |
 |---|---|
 
-You are setting up one CLI for two providers: Plane and Linear.
+One CLI. Two providers. Plane and Linear.
 
-We already separated the runtime, installer, config format, and provider flows.
-Use the installation guide. Do not reverse-engineer setup from random files.
+Do not wander through the repo trying to guess setup.
+Use the install guide.
 
 ## Installation
 
@@ -15,17 +15,17 @@ Use the installation guide. Do not reverse-engineer setup from random files.
 Paste this into your coding agent:
 
 ```text
-Install and configure oh-my-kanban by following the guide here:
+Install and configure oh-my-kanban by following this guide:
 https://raw.githubusercontent.com/ej31/oh-my-kanban/refs/heads/main/docs/guide/installation.md
 ```
 
-Or read the guide directly:
+Or read it yourself:
 
 - [Installation Guide](docs/guide/installation.md)
 
 ### For LLM Agents
 
-Fetch the guide and follow it exactly:
+Fetch this and follow it exactly:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ej31/oh-my-kanban/refs/heads/main/docs/guide/installation.md
@@ -42,7 +42,7 @@ https://raw.githubusercontent.com/ej31/oh-my-kanban/refs/heads/main/docs/guide/i
 
 ## Highlights
 
-- Unified runtime: `omk`
+- Runtime: `omk`
 - Providers: `plane`, `linear`
-- Interactive installer: `npx @oh-my-kanban/setup`
-- Canonical config guide: [`docs/guide/installation.md`](docs/guide/installation.md)
+- Installer: `npx @oh-my-kanban/setup`
+- Canonical setup doc: [`docs/guide/installation.md`](docs/guide/installation.md)
