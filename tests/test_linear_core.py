@@ -341,3 +341,31 @@ def test_save_config_writes_namespaced_provider_sections(tmp_path):
     assert "[default.linear]" in saved
     assert 'workspace_slug = "team-a"' in saved
     assert 'team_id = "lin-team"' in saved
+
+
+def test_save_config_migrates_legacy_flat_section_to_namespaced(tmp_path):
+    """save_config()는 기존 flat profile을 namespaced profile로 재저장해야 한다."""
+    from oh_my_kanban.config import save_config
+
+    config_file = tmp_path / "config.toml"
+    config_file.write_text(
+        "\n".join(
+            [
+                "[default]",
+                'base_url = "https://api.plane.so"',
+                'api_key = "pl_key"',
+                'workspace_slug = "team-a"',
+                'linear_api_key = "lin_key"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with patch("oh_my_kanban.config.CONFIG_FILE", config_file):
+        save_config({}, profile="default")
+
+    saved = config_file.read_text(encoding="utf-8")
+    assert "[default.plane]" in saved
+    assert "[default.linear]" in saved
+    assert "linear_api_key" not in saved

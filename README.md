@@ -30,6 +30,13 @@ oh-my-kanban is a Python CLI for working with Plane and Linear from scripts, age
   - Viewer lookup, teams, issues, issue comments
   - States, labels, projects, cycles
 
+## Architecture
+
+- Runtime stays unified under `omk`
+- Provider-specific implementation lives under `src/oh_my_kanban/providers/<name>/`
+- Legacy `commands/*`, `commands/linear/*`, `context.py`, and provider-specific root modules remain as compatibility wrappers only
+- New provider-specific code should be added under `providers/<name>/`, not under compatibility wrapper paths
+
 ## Installation
 
 ### PyPI
@@ -49,6 +56,9 @@ pip install -e ".[dev]"
 ### Interactive Setup Wizard
 
 ```bash
+npx @oh-my-kanban/setup
+
+# local development
 cd installer
 npm install
 npm run start
@@ -165,6 +175,8 @@ omk config set plane.project_id VALUE
 omk config set output VALUE
 omk config set linear.api_key VALUE
 omk config set linear.team_id VALUE
+omk config migrate [--profile PROFILE]
+omk config migrate --all-profiles
 omk config profile list
 omk config profile use NAME
 ```

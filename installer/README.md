@@ -2,6 +2,12 @@
 
 Interactive setup wizard for the unified `oh-my-kanban` CLI.
 
+Intended published entrypoint:
+
+```bash
+npx @oh-my-kanban/setup
+```
+
 Current capabilities:
 
 - Multi-select provider setup for `plane` and `linear`
@@ -20,7 +26,8 @@ npm run start
 
 Useful flags:
 
-- `--skip-install`: skip Python package installation and only write config
+- `--config-only`: write config only and skip Python package installation
+- `--skip-install`: legacy alias for `--config-only`
 - `OMK_INSTALL_PACKAGE=<package>`: override the Python package name for testing
 
 Validation:

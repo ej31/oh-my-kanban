@@ -98,8 +98,8 @@ export async function installPackage(
   python: string,
   packageName = process.env.OMK_INSTALL_PACKAGE || 'oh-my-kanban',
 ): Promise<void> {
-  if (process.argv.includes('--skip-install')) {
-    log.warn('--skip-install detected; skipping Python package installation.');
+  if (process.argv.includes('--skip-install') || process.argv.includes('--config-only')) {
+    log.warn('Config-only mode detected; skipping Python package installation.');
     return;
   }
 

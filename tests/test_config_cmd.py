@@ -11,6 +11,7 @@ def test_config_help_shows_subcommands(runner):
     assert "init" in result.output
     assert "show" in result.output
     assert "set" in result.output
+    assert "migrate" in result.output
     assert "profile" in result.output
 
 

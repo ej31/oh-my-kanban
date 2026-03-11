@@ -85,6 +85,12 @@ describe('installPackage', () => {
     expect(mockSpawnSync).not.toHaveBeenCalled();
   });
 
+  it('skips installation with --config-only', async () => {
+    process.argv = ['node', 'index.js', '--config-only'];
+    await expect(installPackage('pip3', 'python3')).resolves.toBeUndefined();
+    expect(mockSpawnSync).not.toHaveBeenCalled();
+  });
+
   it('resolves when pip install succeeds', async () => {
     mockSpawnSync.mockReturnValueOnce({ status: 0, stderr: '', stdout: '' } as never);
     await expect(installPackage('pip3', 'python3')).resolves.toBeUndefined();

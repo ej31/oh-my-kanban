@@ -6,6 +6,10 @@
   "bin": {
     "oh-my-kanban-setup": "dist/index.js"
   },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsup src/index.ts --format esm --out-dir dist --clean",
     "start": "tsx src/index.ts",
@@ -22,10 +26,28 @@
     "typescript": "^5.8.3",
     "vitest": "^3.2.4"
   },
-  "files": [
-    "dist"
-  ],
   "engines": {
     "node": ">=20"
+  },
+  "keywords": [
+    "oh-my-kanban",
+    "setup",
+    "installer",
+    "plane",
+    "linear",
+    "npx"
+  ],
+  "license": "MIT",
+  "author": "ej31 <ej31@users.noreply.github.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ej31/oh-my-kanban.git"
+  },
+  "homepage": "https://github.com/ej31/oh-my-kanban/tree/main/installer#readme",
+  "bugs": {
+    "url": "https://github.com/ej31/oh-my-kanban/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

@@ -246,6 +246,33 @@ def config_set(key: str, value: str, profile: str) -> None:
     click.echo(f"[{profile}] {key} = {display_value} 저장 완료")
 
 
+@config.command("migrate")
+@click.option("--profile", default=None, help="마이그레이션할 프로필 (기본: default)")
+@click.option("--all-profiles", is_flag=True, help="저장된 모든 프로필을 마이그레이션")
+def config_migrate(profile: str | None, all_profiles: bool) -> None:
+    """legacy flat config를 canonical namespaced TOML로 다시 저장한다."""
+
+    profiles = list_profiles()
+    if not profiles:
+        raise click.UsageError("마이그레이션할 프로필이 없습니다.")
+
+    if all_profiles:
+        targets = profiles
+    else:
+        target = profile or "default"
+        if target not in profiles:
+            available = ", ".join(profiles)
+            raise click.UsageError(
+                f"프로필 '{target}'이 존재하지 않습니다. 사용 가능한 프로필: {available}"
+            )
+        targets = [target]
+
+    for target in targets:
+        _save_config_safe({}, profile=target)
+
+    click.echo(f"{len(targets)}개 프로필을 canonical namespaced 형식으로 저장했습니다.")
+
+
 @config.group("profile")
 def config_profile() -> None:
     """프로필 관리."""
